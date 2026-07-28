@@ -16,7 +16,10 @@ void main() {
 
   test('uses GoudyHeavyface for display styles', () {
     expect(AppTheme.light.textTheme.displayLarge?.fontFamily, 'GoudyHeavyface');
-    expect(AppTheme.light.textTheme.displayMedium?.fontFamily, 'GoudyHeavyface');
+    expect(
+      AppTheme.light.textTheme.displayMedium?.fontFamily,
+      'GoudyHeavyface',
+    );
     expect(AppTheme.light.textTheme.displaySmall?.fontFamily, 'GoudyHeavyface');
   });
 }

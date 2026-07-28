@@ -13,9 +13,7 @@ void main() {
       'assets/fonts/Avenir-Regular.ttf',
       'assets/fonts/Avenir-Heavy.ttf',
     ],
-    'GoudyHeavyface': <String>[
-      'assets/fonts/GoudyHeavyface.ttf',
-    ],
+    'GoudyHeavyface': <String>['assets/fonts/GoudyHeavyface.ttf'],
   };
 
   fontAssets.forEach((String family, List<String> paths) {
