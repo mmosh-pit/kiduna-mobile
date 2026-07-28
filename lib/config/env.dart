@@ -1,27 +1,26 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 /// Runtime environments the app can build against.
 enum Environment { dev, staging, prod }
 
 /// Environment configuration.
 ///
-/// Values are supplied at build time via `--dart-define` so secrets are never
-/// committed. Never hardcode API URLs or keys at call sites — read them here.
-///
-/// Example:
-/// ```
-/// flutter run --dart-define=ENV=prod \
-///   --dart-define=API_BASE_URL=https://api.kinship.systems
-/// ```
+/// Values are loaded at runtime from the bundled `.env` file by
+/// `flutter_dotenv` (see `main`). `.env` is never committed and must hold only
+/// non-sensitive config — it ships inside the app bundle. Never hardcode API
+/// URLs or keys at call sites; read them here.
 abstract class Env {
   const Env._();
 
-  static const String _rawEnv = String.fromEnvironment(
-    'ENV',
-    defaultValue: 'dev',
-  );
+  /// Reads a raw value from the loaded `.env`. Returns an empty string when
+  /// dotenv has not been initialised (e.g. in unit tests) so reads never throw.
+  static String _raw(String key) =>
+      dotenv.isInitialized ? (dotenv.env[key] ?? '') : '';
 
-  /// The active environment, resolved from the `ENV` define.
+  /// The active environment, resolved from `ENV`. Defaults to
+  /// [Environment.dev] when unset.
   static Environment get current {
-    switch (_rawEnv) {
+    switch (_raw('ENV')) {
       case 'prod':
         return Environment.prod;
       case 'staging':
@@ -31,12 +30,13 @@ abstract class Env {
     }
   }
 
-  /// Base URL for all API calls. Consumed by the network client (once added).
-  static const String apiBaseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'https://api.dev.kinship.systems',
-  );
+  /// Base URL for all API calls, from `API_BASE_URL`.
+  static String get apiBaseUrl => _raw('API_BASE_URL');
 
   /// Whether the app is running against the production environment.
   static bool get isProduction => current == Environment.prod;
+
+  /// Whether the required configuration was loaded. Asserted at app startup so
+  /// a missing or empty `.env` fails loudly.
+  static bool get isConfigured => apiBaseUrl.isNotEmpty;
 }

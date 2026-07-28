@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../config/constants.dart';
 import '../config/theme.dart';
 import '../features/home/screens/home_screen.dart';
+import '../l10n/app_localizations.dart';
 
 /// Root application widget.
 ///
@@ -19,6 +20,8 @@ class KidunaApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: const HomeScreen(),
     );
   }

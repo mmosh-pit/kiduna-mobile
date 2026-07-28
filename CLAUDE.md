@@ -174,10 +174,8 @@ test/
 # Project root files
 analysis_options.yaml                  # Lint rules — MANDATORY, see Section 20
 l10n.yaml                              # Localization config — see Section 21
-config/
-├── dev.json                           # Env values for dev — gitignored, see Section 23
-├── prod.json                          # Env values for prod — gitignored
-└── dev.example.json                   # Committed template with empty values
+.env                                   # Env values — gitignored, loaded by flutter_dotenv, see Section 23
+.env.example                           # Committed template with empty values
 ```
 
 ### Rules
@@ -923,9 +921,7 @@ build/
 .env
 .env.local
 .env.production
-config/dev.json
-config/prod.json
-# config/dev.example.json IS committed — template with empty values
+# .env.example IS committed — template with empty values
 
 # IDE
 .idea/
@@ -1613,53 +1609,88 @@ NEVER call MediaQuery.of(context).size.width directly inside a widget tree
 ### Rule
 
 ```
-Config values are injected at build time with --dart-define-from-file.
-No secret is ever committed. No secret is ever read from a bundled asset.
+Config values are loaded at runtime from a .env file with flutter_dotenv.
+.env is bundled as an asset and is NEVER committed — only .env.example is.
+
+Because .env ships inside the app bundle, a released binary is readable by anyone.
+.env therefore holds ONLY non-sensitive config: base URLs, feature flags, public
+DSNs. NEVER a private key or admin secret — those belong on your server.
 ```
 
-### config/dev.json (gitignored)
+### .env (gitignored)
 
-```json
-{
-  "API_BASE_URL": "https://dev-api.example.com",
-  "SENTRY_DSN": "https://...",
-  "ENABLE_LOGGING": true
-}
+```
+ENV=dev
+API_BASE_URL=https://dev-api.example.com
+SENTRY_DSN=https://...
+ENABLE_LOGGING=true
 ```
 
-`config/dev.example.json` IS committed — same keys, empty values, so a new developer
-knows what to fill in.
+`.env.example` IS committed — same keys, empty values, so a new developer knows what
+to fill in. First-run setup: `cp .env.example .env` and fill it in.
+
+### pubspec.yaml — bundle .env as an asset
+
+```yaml
+dependencies:
+  flutter_dotenv: ^5.1.0
+
+flutter:
+  assets:
+    - .env
+```
 
 ### config/env.dart
 
+`flutter_dotenv` reads at runtime, so values are getters — NOT compile-time `const`.
+Guard every read with `dotenv.isInitialized` so tests (which never call
+`dotenv.load`) do not throw `NotInitializedError`.
+
 ```dart
-class Env {
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+abstract class Env {
   const Env._();
 
-  static const apiBaseUrl = String.fromEnvironment('API_BASE_URL');
-  static const sentryDsn = String.fromEnvironment('SENTRY_DSN');
-  static const enableLogging = bool.fromEnvironment('ENABLE_LOGGING');
+  static String _raw(String key) =>
+      dotenv.isInitialized ? (dotenv.env[key] ?? '') : '';
+
+  static String get apiBaseUrl => _raw('API_BASE_URL');
+  static bool get enableLogging => _raw('ENABLE_LOGGING') == 'true';
 
   static bool get isConfigured => apiBaseUrl.isNotEmpty;
+}
+```
+
+### Load at startup (main.dart)
+
+```dart
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(); // defaults to '.env'
+  assert(Env.isConfigured, 'Missing .env config. Copy .env.example to .env.');
+  runApp(const KidunaApp());
 }
 ```
 
 ### Commands
 
 ```bash
-flutter run   --dart-define-from-file=config/dev.json
-flutter build apk --release --dart-define-from-file=config/prod.json
+flutter run                        # reads the bundled .env — no extra flags
+flutter build apk --release        # .env for the target env must be in place first
 ```
 
 ### Rules
 
 ```
-- NEVER hardcode a base URL, key, or DSN anywhere in lib/
-- NEVER put a private key or admin secret in the app — a released binary is readable by
-  anyone. Those belong on your server
-- Env values are const — read them directly, do not wrap them in a provider
-- Assert Env.isConfigured at app startup so a missing define fails loudly, not silently
-- Adding a new env key = update dev.json, prod.json, dev.example.json, and env.dart
+- NEVER hardcode a base URL, key, or DSN anywhere in lib/ — read it via Env
+- NEVER put a private key or admin secret in .env — it ships in the bundle, readable
+  by anyone. Those belong on your server
+- Env values are runtime getters (dotenv), NOT const — guard reads with
+  dotenv.isInitialized, do not wrap them in a provider
+- Call `await dotenv.load()` (defaults to '.env') before runApp, then assert
+  Env.isConfigured so a missing or empty .env fails loudly, not silently
+- Adding a new env key = update .env, .env.example, and env.dart
 ```
 
 ---
@@ -1686,8 +1717,8 @@ flutter test --coverage
 - main branch is protected: no direct push, PR only (Section 10)
 - Same commands as the verification checklist — CI must never be laxer than local
 - Claude NEVER triggers CI/CD or deploys without explicit user approval (Approval Rule)
-- Secrets come from the CI provider's secret store, written to config/prod.json at build
-  time — never committed
+- Config comes from the CI provider's secret store, written to .env at build time —
+  never committed
 ```
 
 ---

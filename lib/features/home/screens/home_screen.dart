@@ -13,7 +13,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text(AppConstants.appName)),
+      appBar: AppBar(title: Text(context.l10n.appName)),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(AppConstants.spacingLg),
@@ -27,13 +27,13 @@ class HomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: AppConstants.spacingMd),
               Text(
-                'Welcome to ${AppConstants.appName}',
+                context.l10n.welcomeTo(context.l10n.appName),
                 style: context.textStyles.headlineSmall,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: AppConstants.spacingSm),
               Text(
-                'Base project ready. Start building features.',
+                context.l10n.baseProjectReady,
                 style: context.textStyles.bodyMedium,
                 textAlign: TextAlign.center,
               ),
