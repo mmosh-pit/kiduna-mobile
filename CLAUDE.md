@@ -67,6 +67,31 @@ This document is the single source of truth for Flutter development in this proj
 
 ---
 
+## Platform Targets — Web, Mobile, and Desktop
+
+This app ships on **web, mobile, AND desktop** — that is the reason it is built in Flutter.
+Not a mobile-only app. Write every feature ONCE, in a generic, reusable way, so it behaves
+and looks consistent on all three.
+
+```
+- Build for the available SPACE, not a device class. Use ResponsiveLayout and the
+  breakpoints in core/utils/responsive.dart (see Section 22). Never hardcode a phone-only
+  or desktop-only layout — a screen must reflow from narrow to wide.
+- No platform forks unless a capability genuinely differs. When a Platform.isX / kIsWeb
+  check is truly unavoidable, isolate it behind one small helper — never scatter platform
+  checks through widgets.
+- Design inputs for touch, mouse, trackpad, AND keyboard at once: pointer events, hover
+  (MouseRegion), focus traversal, and keyboard shortcuts should all work.
+- Reusable-first: shared widgets in shared/, styling in theme tokens (Section 22), logic in
+  controllers/repositories — one implementation serves every platform.
+- Sizes are relative, not fixed to one screen. Avoid absolute pixel layouts that only look
+  right on a phone; prefer flexible constraints, Expanded/Flexible, and token spacing.
+- Verify on more than one target before a change is "done": at minimum a wide (web/desktop)
+  and a narrow (mobile) layout. `flutter build web` must stay green (see Section 24).
+```
+
+---
+
 ## 1. Project Structure
 
 ```
