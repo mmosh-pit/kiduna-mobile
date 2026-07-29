@@ -51,7 +51,9 @@ jobs:
 
       - name: Install Flutter dependencies
         run: flutter pub get
-
+      - name: env copy
+        run: |
+          cp .env.example .env
       - name: Build Android
         run: flutter build apk --debug
 
