@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../config/theme_extensions.dart';
 import '../../l10n/app_localizations.dart';
 
 /// Convenience accessors on [BuildContext] for localization, theme, media
@@ -13,6 +14,11 @@ extension ContextExtensions on BuildContext {
   ThemeData get theme => Theme.of(this);
   ColorScheme get colors => Theme.of(this).colorScheme;
   TextTheme get textStyles => Theme.of(this).textTheme;
+
+  /// Kiduna Field palette tokens. Falls back to [KidunaColors.standard] if the
+  /// extension is not registered on the active theme.
+  KidunaColors get kiduna =>
+      Theme.of(this).extension<KidunaColors>() ?? KidunaColors.standard;
 
   MediaQueryData get mediaQuery => MediaQuery.of(this);
   Size get screenSize => MediaQuery.sizeOf(this);
