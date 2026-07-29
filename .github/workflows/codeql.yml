@@ -2,9 +2,13 @@ name: "CodeQL"
 
 on:
   push:
-    branches: [main,dev]
+    branches:
+      - main
+      - dev
   pull_request:
-    branches: [main,dev]
+    branches:
+      - main
+      - dev
   schedule:
     - cron: "30 2 * * 1"
 
@@ -15,7 +19,7 @@ permissions:
 
 jobs:
   analyze:
-    name: Analyze
+    name: CodeQL Analysis
     runs-on: ubuntu-latest
 
     strategy:
@@ -25,15 +29,31 @@ jobs:
           - java-kotlin
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
 
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Build Android
+        run: flutter build apk --debug
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
