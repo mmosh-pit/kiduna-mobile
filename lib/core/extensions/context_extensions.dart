@@ -20,6 +20,14 @@ extension ContextExtensions on BuildContext {
   KidunaColors get kiduna =>
       Theme.of(this).extension<KidunaColors>() ?? KidunaColors.standard;
 
+  /// Kiduna Field typography tokens. Falls back to [KidunaText.standard].
+  KidunaText get kidunaText =>
+      Theme.of(this).extension<KidunaText>() ?? KidunaText.standard;
+
+  /// Kiduna Field layout metrics. Falls back to [KidunaMetrics.standard].
+  KidunaMetrics get metrics =>
+      Theme.of(this).extension<KidunaMetrics>() ?? KidunaMetrics.standard;
+
   MediaQueryData get mediaQuery => MediaQuery.of(this);
   Size get screenSize => MediaQuery.sizeOf(this);
   double get screenWidth => MediaQuery.sizeOf(this).width;

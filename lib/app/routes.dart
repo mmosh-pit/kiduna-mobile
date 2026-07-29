@@ -1,12 +1,16 @@
+import 'package:go_router/go_router.dart';
+
+import '../features/field/screens/field_screen.dart';
+
 /// Centralised route paths.
 ///
 /// Every navigable screen has a named path here — never hardcode path strings
-/// in widgets. The `go_router` configuration is layered on top of these once
-/// the package is added (see README → "Next steps").
+/// in widgets. Use [appRouter] as the app's `routerConfig`.
 abstract class Routes {
   const Routes._();
 
-  static const String home = '/';
+  /// The Field is the app's root.
+  static const String field = '/';
   static const String login = '/login';
   static const String settings = '/settings';
 
@@ -16,3 +20,14 @@ abstract class Routes {
 
   static String userProfilePath(String id) => '/user/$id';
 }
+
+/// The application router. All routes are declared here in one place.
+final GoRouter appRouter = GoRouter(
+  initialLocation: Routes.field,
+  routes: <RouteBase>[
+    GoRoute(
+      path: Routes.field,
+      builder: (context, state) => const FieldScreen(),
+    ),
+  ],
+);

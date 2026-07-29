@@ -32,7 +32,11 @@ abstract class AppTheme {
       scaffoldBackgroundColor: colorScheme.surface,
       fontFamily: bodyFontFamily,
       appBarTheme: const AppBarTheme(centerTitle: true),
-      extensions: const <ThemeExtension<dynamic>>[KidunaColors.standard],
+      extensions: const <ThemeExtension<dynamic>>[
+        KidunaColors.standard,
+        KidunaText.standard,
+        KidunaMetrics.standard,
+      ],
     );
     return base.copyWith(textTheme: _applyDisplayFont(base.textTheme));
   }
