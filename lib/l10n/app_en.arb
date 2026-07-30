@@ -124,5 +124,13 @@
         "type": "String"
       }
     }
-  }
+  },
+  "persona": "Persona",
+  "aliceCatalyst": "Alice — Catalyst",
+  "view": "View",
+  "viewNcev": "T1 · S1 · 1.0 — Newly Created Ecosystem View (NCEV)",
+  "viewAev": "T1 · S1 · 1.1 — Advanced Ecosystem View (AEV)",
+  "viewSceneRough": "T2 · S1 · 1.0 — Kinship Duna Scene Rough",
+  "viewSceneRoughV2": "T2 · S1 · 1.1 — Kinship Duna Scene Rough v2",
+  "viewSceneRoughV3": "T2 · S1 · 1.2 — Kinship Duna Scene Rough v3"
 }
