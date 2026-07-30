@@ -1,58 +1,86 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:kiduna_mobile/app/routes.dart';
 import 'package:kiduna_mobile/config/theme.dart';
 import 'package:kiduna_mobile/l10n/app_localizations.dart';
 import 'package:kiduna_mobile/shared/widgets/app_header.dart';
 
+const Key _surfaceKey = ValueKey('header-surface-dropdown');
 const Key _viewKey = ValueKey('header-view-dropdown');
 const Key _personaKey = ValueKey('header-persona-dropdown');
 const String _aliceLabel = 'Alice — Catalyst';
+const String _ncevLabel = 'T1 · S1 · 1.0 — Newly Created Ecosystem View (NCEV)';
 const String _aevLabel = 'T1 · S1 · 1.1 — Advanced Ecosystem View (AEV)';
 
-Future<void> _pump(
+/// A minimal router that renders the header on both the Field and AEV paths so
+/// the View dropdown can navigate between them.
+GoRouter _buildRouter() => GoRouter(
+  initialLocation: Routes.field,
+  routes: [
+    GoRoute(
+      path: Routes.field,
+      builder: (_, _) => const Scaffold(body: AppHeader()),
+    ),
+    GoRoute(
+      path: Routes.aev,
+      builder: (_, _) => const Scaffold(body: AppHeader()),
+    ),
+  ],
+);
+
+Future<GoRouter> _pump(
   WidgetTester tester, {
   Size size = const Size(1200, 800),
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
+  final router = _buildRouter();
   await tester.pumpWidget(
-    MaterialApp(
+    MaterialApp.router(
       theme: AppTheme.light,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      home: const Scaffold(body: AppHeader()),
+      routerConfig: router,
     ),
   );
+  return router;
 }
 
 void main() {
-  testWidgets('renders the logo and both the view and persona dropdowns', (
+  testWidgets('renders the logo and the surface, view, and persona dropdowns', (
     tester,
   ) async {
+    // Default 1200px is above the desktop breakpoint so Surface shows.
     await _pump(tester);
 
     expect(find.byType(AppHeader), findsOneWidget);
     expect(find.byType(SvgPicture), findsOneWidget);
-    expect(find.byType(DropdownButton<String>), findsNWidgets(2));
+    // Surface + View + Persona at desktop widths.
+    expect(find.byType(DropdownButton<String>), findsNWidgets(3));
+    expect(find.byKey(_surfaceKey), findsOneWidget);
     expect(find.byKey(_viewKey), findsOneWidget);
     expect(find.byKey(_personaKey), findsOneWidget);
+    expect(find.text(_ncevLabel), findsWidgets);
     expect(find.text(_aliceLabel), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('changing the View keeps the selected Persona', (tester) async {
-    await _pump(tester);
+  testWidgets('selecting the AEV view navigates and keeps the persona', (
+    tester,
+  ) async {
+    final router = await _pump(tester);
+    expect(router.routerDelegate.currentConfiguration.uri.path, Routes.field);
 
-    // Open the View dropdown and pick the Advanced Ecosystem View.
     await tester.tap(find.byKey(_viewKey));
     await tester.pumpAndSettle();
     await tester.tap(find.text(_aevLabel).last);
     await tester.pumpAndSettle();
 
-    // View reflects the new selection; Persona is untouched.
-    expect(find.text(_aevLabel), findsWidgets);
+    // Navigated to the AEV route; persona is untouched by the View change.
+    expect(router.routerDelegate.currentConfiguration.uri.path, Routes.aev);
     expect(find.text(_aliceLabel), findsWidgets);
     expect(tester.takeException(), isNull);
   });

@@ -13,6 +13,7 @@ class RealmContextPill extends StatelessWidget {
     required this.inspectOpen,
     required this.onInspect,
     this.width,
+    this.viewToggle,
   });
 
   final FieldRealm realm;
@@ -21,6 +22,9 @@ class RealmContextPill extends StatelessWidget {
 
   /// Fixed pill width; when null the pill sizes to its content.
   final double? width;
+
+  /// Optional control shown before Inspect (the AEV Atlas/Scene toggle).
+  final Widget? viewToggle;
 
   @override
   Widget build(BuildContext context) {
@@ -69,6 +73,7 @@ class RealmContextPill extends StatelessWidget {
               ],
             ),
           ),
+          if (viewToggle != null) ...[const SizedBox(width: 13), viewToggle!],
           const SizedBox(width: 13),
           _InspectButton(active: inspectOpen, onTap: onInspect),
         ],

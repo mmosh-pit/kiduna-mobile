@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/assets.dart';
 import '../../../data/models/field_realm.dart';
 import '../../../data/models/ki_topic.dart';
+import '../data/field_composition.dart';
 import '../data/field_fixtures.dart';
+import '../data/realm_atlas.dart';
 
 /// Which capacity set a capacity panel belongs to.
 enum CapacityTarget { realm, ally }
@@ -15,6 +17,7 @@ class FieldState {
   const FieldState({
     required this.kiTopic,
     this.currentRealm = FieldFixtures.kinshipDuna,
+    this.currentRealmId = 'kinship-duna',
     this.inspectOpen = false,
     this.actionsVisible = true,
     this.fieldFocus = 100,
@@ -25,10 +28,16 @@ class FieldState {
     this.realmPortraitOpen = false,
     this.allyPortraitOpen = false,
     this.preservedMessage,
+    this.selectedPlacement,
+    this.realmGravity = const {},
+    this.realmPath = const ['kinship-duna'],
   });
 
   final KiTopic kiTopic;
   final FieldRealm currentRealm;
+
+  /// The atlas id of the realm the constellation is showing.
+  final String currentRealmId;
   final bool inspectOpen;
   final bool actionsVisible;
   final double fieldFocus;
@@ -44,9 +53,21 @@ class FieldState {
   final bool allyPortraitOpen;
   final String? preservedMessage;
 
+  /// The currently selected realm in the constellation (null = nothing selected).
+  final FieldPlacement? selectedPlacement;
+
+  /// Per-realm gravity overrides (realm-id → 1..5).
+  final Map<String, int> realmGravity;
+
+  /// Breadcrumb of realm ids from the Ecosystem root to the current realm.
+  final List<String> realmPath;
+
+  String? get selectedRealmId => selectedPlacement?.realm.id;
+
   FieldState copyWith({
     KiTopic? kiTopic,
     FieldRealm? currentRealm,
+    String? currentRealmId,
     bool? inspectOpen,
     bool? actionsVisible,
     double? fieldFocus,
@@ -58,10 +79,15 @@ class FieldState {
     bool? allyPortraitOpen,
     String? preservedMessage,
     bool clearPreserved = false,
+    FieldPlacement? selectedPlacement,
+    bool clearSelection = false,
+    Map<String, int>? realmGravity,
+    List<String>? realmPath,
   }) {
     return FieldState(
       kiTopic: kiTopic ?? this.kiTopic,
       currentRealm: currentRealm ?? this.currentRealm,
+      currentRealmId: currentRealmId ?? this.currentRealmId,
       inspectOpen: inspectOpen ?? this.inspectOpen,
       actionsVisible: actionsVisible ?? this.actionsVisible,
       fieldFocus: fieldFocus ?? this.fieldFocus,
@@ -74,6 +100,11 @@ class FieldState {
       preservedMessage: clearPreserved
           ? null
           : (preservedMessage ?? this.preservedMessage),
+      selectedPlacement: clearSelection
+          ? null
+          : (selectedPlacement ?? this.selectedPlacement),
+      realmGravity: realmGravity ?? this.realmGravity,
+      realmPath: realmPath ?? this.realmPath,
     );
   }
 }
@@ -152,6 +183,63 @@ class FieldController extends Notifier<FieldState> {
 
   void setAllyPortraitOpen(bool open) =>
       state = state.copyWith(allyPortraitOpen: open);
+
+  /// Selects a realm in the constellation and tells Ki about it.
+  void selectAtlasRealm(FieldPlacement placement) {
+    final realm = placement.realm;
+    state = state.copyWith(
+      selectedPlacement: placement,
+      kiTopic: KiTopic(
+        title: realm.name,
+        body: placement.reason,
+        invitation:
+            'Inspect ${realm.name}, adjust its Gravity if useful, or '
+            'enter it to make its Possible Actions current.',
+      ),
+    );
+  }
+
+  void clearSelection() => state = state.copyWith(clearSelection: true);
+
+  /// Sets the gravity level (1–5) for a realm.
+  void setGravity(String realmId, int level) {
+    final clamped = level.clamp(1, 5);
+    state = state.copyWith(
+      realmGravity: {...state.realmGravity, realmId: clamped},
+    );
+  }
+
+  int gravityFor(String realmId) => state.realmGravity[realmId] ?? 3;
+
+  /// Enters the selected realm: it becomes the new current realm, the
+  /// constellation re-renders to show its children, and Ki updates.
+  void enterAtlasRealm(AtlasRealm realm) {
+    final emblem = realm.type == AtlasRealmType.institution ||
+            realm.type == AtlasRealmType.ecosystem
+        ? 'conceptual'
+        : realm.type.emblemKey;
+    state = state.copyWith(
+      currentRealm: FieldRealm(
+        name: realm.name,
+        type: realm.type.label,
+        emblemAsset: AppAssets.realmEmblem(emblem),
+      ),
+      currentRealmId: realm.id,
+      clearSelection: true,
+      actionsVisible: true,
+      inspectOpen: false,
+      realmPath: [...state.realmPath, realm.id],
+      kiTopic: KiTopic(
+        title: 'Inside ${realm.name}',
+        body:
+            'Alice is now inside ${realm.name}, a ${realm.type.label}. '
+            '${realm.purpose}',
+        invitation:
+            'Possible Actions shows what can be done here. Inspect any '
+            'nested Realm or use the breadcrumb to go back.',
+      ),
+    );
+  }
 
   /// Creates a Realm, enters it, and closes the Form panel.
   void createRealm({required String name, required String type}) {

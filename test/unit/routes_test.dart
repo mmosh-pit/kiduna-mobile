@@ -6,6 +6,10 @@ void main() {
     expect(Routes.field, '/');
   });
 
+  test('the AEV has its own studio path', () {
+    expect(Routes.aev, '/studio/aev');
+  });
+
   test('builds a concrete user-profile path from an id', () {
     expect(Routes.userProfilePath('42'), '/user/42');
   });

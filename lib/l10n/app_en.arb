@@ -48,5 +48,99 @@
   "viewAev": "T1 · S1 · 1.1 — Advanced Ecosystem View (AEV)",
   "viewSceneRough": "T2 · S1 · 1.0 — Kinship Duna Scene Rough",
   "viewSceneRoughV2": "T2 · S1 · 1.1 — Kinship Duna Scene Rough v2",
-  "viewSceneRoughV3": "T2 · S1 · 1.2 — Kinship Duna Scene Rough v3"
+  "viewSceneRoughV3": "T2 · S1 · 1.2 — Kinship Duna Scene Rough v3",
+  "studioNeedsMoreRoom": "Studio needs a little more room.",
+  "reopenAtWiderWidth": "Reopen this View at 1024px or wider.",
+  "viewComingSoon": "This View isn't available yet.",
+  "atlas": "Atlas",
+  "scene": "Scene",
+  "yourAllies": "Your Allies",
+  "messageKi": "Message Ki…",
+  "aevKiWelcome": "Welcome Alice. Kinship Duna is the current Realm. The Field shows the other Realms visible through this Source’s authority and relationships.",
+  "aevKiWelcomeDetail": "Possible Actions starts with Kinship Duna. Select another Realm to inspect what may be done there.",
+  "whatShouldIDoFirst": "What should I do first?",
+  "tellMeMoreAboutKinshipDuna": "Tell me more about Kinship Duna.",
+  "surface": "Surface",
+  "kidunaWeb": "Kiduna Web",
+  "kidunaStudio": "Kiduna Studio",
+  "kidunaLive": "Kiduna Live",
+  "kidunaExpress": "Kiduna Express",
+  "kidunaTv": "Kiduna TV",
+  "comingLater": "coming later",
+  "stories": "Stories",
+  "downloadDesignKit": "Download Studio Design Kit v. 1.7",
+  "selectedInTheField": "Selected in the Field",
+  "currentRealmLabel": "Current Realm",
+  "yourRole": "Your role",
+  "stationedAlly": "Stationed Ally",
+  "noneStationed": "None stationed",
+  "nestedRealms": "Nested Realms",
+  "legalStatus": "Legal status",
+  "designFixtureNotYetVerified": "Design fixture · Not yet verified",
+  "gravityLabel": "Gravity",
+  "gravityQuiet": "Quiet",
+  "gravityAvailable": "Available",
+  "gravityRelevant": "Relevant",
+  "gravityCentral": "Central",
+  "gravityVital": "Vital",
+  "gravityQuietMeaning": "Legitimate context, but not currently relevant",
+  "gravityAvailableMeaning": "Related and easy to find",
+  "gravityRelevantMeaning": "Connected to current interests or work",
+  "gravityCentralMeaning": "Directly involved in current responsibility or Focus",
+  "gravityVitalMeaning": "Requires sustained awareness or consequential attention",
+  "whyIsThisHere": "Why is this here?",
+  "enterRealmName": "Enter {name}",
+  "@enterRealmName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "whyRealmIsHere": "Why {name} is here",
+  "@whyRealmIsHere": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "gravityIsContextual": "Its current Gravity is {level} · {name}. Gravity is contextual and inspectable; it is not a score or ranking.",
+  "@gravityIsContextual": {
+    "placeholders": {
+      "level": {
+        "type": "int"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "inspectRealmInvitation": "Inspect {name}, adjust its Gravity if useful, or enter it to make its Possible Actions current.",
+  "@inspectRealmInvitation": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "setGravityFor": "Set Gravity for {name}",
+  "@setGravityFor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "gravityOfRealm": "Gravity of {name}: {level}",
+  "@gravityOfRealm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "level": {
+        "type": "String"
+      }
+    }
+  }
 }
