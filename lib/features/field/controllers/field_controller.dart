@@ -16,6 +16,7 @@ class FieldState {
     required this.kiTopic,
     this.currentRealm = FieldFixtures.kinshipDuna,
     this.inspectOpen = false,
+    this.actionsVisible = true,
     this.fieldFocus = 100,
     this.kiFraction = 0.30,
     this.openActions = const [],
@@ -29,6 +30,7 @@ class FieldState {
   final KiTopic kiTopic;
   final FieldRealm currentRealm;
   final bool inspectOpen;
+  final bool actionsVisible;
   final double fieldFocus;
 
   /// Ki's share of the width on desktop (0.25–0.34).
@@ -46,6 +48,7 @@ class FieldState {
     KiTopic? kiTopic,
     FieldRealm? currentRealm,
     bool? inspectOpen,
+    bool? actionsVisible,
     double? fieldFocus,
     double? kiFraction,
     List<String>? openActions,
@@ -60,6 +63,7 @@ class FieldState {
       kiTopic: kiTopic ?? this.kiTopic,
       currentRealm: currentRealm ?? this.currentRealm,
       inspectOpen: inspectOpen ?? this.inspectOpen,
+      actionsVisible: actionsVisible ?? this.actionsVisible,
       fieldFocus: fieldFocus ?? this.fieldFocus,
       kiFraction: kiFraction ?? this.kiFraction,
       openActions: openActions ?? this.openActions,
@@ -81,6 +85,8 @@ class FieldController extends Notifier<FieldState> {
 
   void toggleInspect() =>
       state = state.copyWith(inspectOpen: !state.inspectOpen);
+
+  void closeActions() => state = state.copyWith(actionsVisible: false);
 
   void setFieldFocus(double value) => state = state.copyWith(fieldFocus: value);
 

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/extensions/context_extensions.dart';
 import '../../../shared/layouts/responsive_layout.dart';
+import '../../../shared/widgets/app_header.dart';
 import '../controllers/field_controller.dart';
 import '../data/field_fixtures.dart';
 import '../widgets/capacity_choices.dart';
@@ -13,6 +14,7 @@ import '../widgets/field_panel.dart';
 import '../widgets/inspect_panel.dart';
 import '../widgets/invite_panel.dart';
 import '../widgets/ki_region.dart';
+import '../widgets/navigation_panel.dart';
 import '../widgets/portrait_designer.dart';
 import '../widgets/possible_actions.dart';
 import '../widgets/realm_context_pill.dart';
@@ -30,9 +32,16 @@ class FieldScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.kiduna.field,
-      body: ResponsiveLayout(
-        desktop: (_) => const _FieldKiWide(),
-        mobile: (_) => const _FieldKiNarrow(),
+      body: Column(
+        children: [
+          const AppHeader(),
+          Expanded(
+            child: ResponsiveLayout(
+              desktop: (_) => const _FieldKiWide(),
+              mobile: (_) => const _FieldKiNarrow(),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -163,8 +172,21 @@ class _FieldStack extends ConsumerWidget {
                   realm: realm,
                   inspectOpen: state.inspectOpen,
                   onInspect: controller.toggleInspect,
+                  width: (bounds.width * 0.4).clamp(320.0, 500.0),
                 ),
               ),
+            ),
+            FieldPanel(
+              key: const ValueKey('panel-navigation'),
+              label: l10n.navigation,
+              bounds: bounds,
+              // Spans from just right of the realm pill (left 540) to just left
+              // of Compute (right ~300), matching the prototype's stretched
+              // Navigation panel.
+              width: (bounds.width - 840).clamp(220.0, 620.0),
+              opacity: opacity,
+              initialOffset: Offset(clampLeft(540), 22),
+              child: NavigationPanel(realmName: realm.name),
             ),
             FieldPanel(
               key: const ValueKey('panel-compute'),
@@ -176,25 +198,28 @@ class _FieldStack extends ConsumerWidget {
               initialOffset: Offset(clampLeft(bounds.width - 256 - 22), 22),
               child: const ComputeCard(),
             ),
-            FieldPanel(
-              key: const ValueKey('panel-actions'),
-              label: l10n.possibleActions,
-              bounds: bounds,
-              width: 380,
-              opacity: opacity,
-              initialOffset: Offset(
-                clampLeft((bounds.width - 380) / 2),
-                bounds.height * 0.24,
+            if (state.actionsVisible)
+              FieldPanel(
+                key: const ValueKey('panel-actions'),
+                label: l10n.possibleActions,
+                bounds: bounds,
+                width: 540,
+                opacity: opacity,
+                accent: true,
+                initialOffset: Offset(
+                  clampLeft((bounds.width - 540) / 2),
+                  bounds.height * 0.28,
+                ),
+                onClose: controller.closeActions,
+                child: const PossibleActions(),
               ),
-              child: const PossibleActions(),
-            ),
             if (state.inspectOpen)
               FieldPanel(
                 key: const ValueKey('panel-inspect'),
-                label: '${l10n.inspect} · ${realm.name}',
+                label: '${l10n.inspect} ${realm.name}',
                 summary: realm.name,
                 bounds: bounds,
-                width: 360,
+                width: 430,
                 opacity: opacity,
                 initialOffset: const Offset(22, 96),
                 onClose: controller.toggleInspect,

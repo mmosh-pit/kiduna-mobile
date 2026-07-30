@@ -39,5 +39,6 @@
   "design": "Design",
   "refine": "Refine",
   "portraitDirection": "Portrait direction",
-  "createPossiblePortraits": "Create possible portraits"
+  "createPossiblePortraits": "Create possible portraits",
+  "navigation": "Navigation"
 }

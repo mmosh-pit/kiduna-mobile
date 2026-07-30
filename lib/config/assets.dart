@@ -9,6 +9,10 @@ abstract class AppAssets {
   /// The Kiduna mark (SVG), used for the Ki identity.
   static const String kidunaMark = 'assets/icons/kiduna-mark.svg';
 
+  /// The linear Kiduna logo lockup (SVG), used in the Design Lab header.
+  static const String kidunaLogo =
+      'assets/icons/kiduna-logo-linear-skyblue.svg';
+
   /// Generic Realm emblem for a Realm [type], e.g. `organization`, `community`.
   static String realmEmblem(String type) =>
       'assets/images/realm-emblems/$type.jpg';

@@ -6,8 +6,7 @@ import '../controllers/field_controller.dart';
 import '../data/field_fixtures.dart';
 
 /// The Possible Actions panel body: a 2×2 grid of the Actions available now.
-/// Selecting one asks Ki about it (opening its working panel arrives in a later
-/// phase).
+/// Selecting one opens its working panel and asks Ki about it.
 class PossibleActions extends ConsumerWidget {
   const PossibleActions({super.key});
 
@@ -19,8 +18,15 @@ class PossibleActions extends ConsumerWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
+        Container(
           padding: const EdgeInsets.fromLTRB(19, 18, 19, 15),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: context.kiduna.camel.withValues(alpha: 0.14),
+              ),
+            ),
+          ),
           child: Text(
             context.l10n.aFewActionsYouCanTakeNow,
             style: context.kidunaText.headingLarge.copyWith(
@@ -36,6 +42,10 @@ class PossibleActions extends ConsumerWidget {
                   child: _ActionButton(
                     action: actions[column],
                     onTap: () => controller.chooseAction(actions[column]),
+                    // Only internal dividers: right border on the left column,
+                    // bottom border on the top row.
+                    rightBorder: column.isEven,
+                    bottomBorder: column < 2,
                   ),
                 ),
             ],
@@ -46,15 +56,23 @@ class PossibleActions extends ConsumerWidget {
 }
 
 class _ActionButton extends StatelessWidget {
-  const _ActionButton({required this.action, required this.onTap});
+  const _ActionButton({
+    required this.action,
+    required this.onTap,
+    required this.rightBorder,
+    required this.bottomBorder,
+  });
 
   final FieldAction action;
   final VoidCallback onTap;
+  final bool rightBorder;
+  final bool bottomBorder;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.kiduna;
     final text = context.kidunaText;
+    final line = colors.camel.withValues(alpha: 0.1);
     return InkWell(
       onTap: onTap,
       child: Container(
@@ -62,8 +80,8 @@ class _ActionButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           border: Border(
-            right: BorderSide(color: colors.camel.withValues(alpha: 0.1)),
-            bottom: BorderSide(color: colors.camel.withValues(alpha: 0.1)),
+            right: rightBorder ? BorderSide(color: line) : BorderSide.none,
+            bottom: bottomBorder ? BorderSide(color: line) : BorderSide.none,
           ),
         ),
         child: Row(
@@ -95,11 +113,18 @@ class _ActionButton extends StatelessWidget {
             Expanded(
               child: Text(
                 action.label,
-                style: text.body.copyWith(color: colors.text),
+                style: text.body.copyWith(
+                  color: colors.text,
+                  fontWeight: FontWeight.w700,
+                  height: 1.35,
+                ),
               ),
             ),
             const SizedBox(width: 8),
-            Text('→', style: text.body.copyWith(color: colors.sky)),
+            Text(
+              '→',
+              style: text.body.copyWith(color: colors.sky, fontSize: 12),
+            ),
           ],
         ),
       ),

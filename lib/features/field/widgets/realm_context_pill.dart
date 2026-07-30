@@ -12,18 +12,23 @@ class RealmContextPill extends StatelessWidget {
     required this.realm,
     required this.inspectOpen,
     required this.onInspect,
+    this.width,
   });
 
   final FieldRealm realm;
   final bool inspectOpen;
   final VoidCallback onInspect;
 
+  /// Fixed pill width; when null the pill sizes to its content.
+  final double? width;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.kiduna;
     final text = context.kidunaText;
     return Container(
-      constraints: const BoxConstraints(minHeight: 66, maxWidth: 500),
+      width: width,
+      constraints: const BoxConstraints(minHeight: 66),
       padding: const EdgeInsets.fromLTRB(6, 6, 7, 6),
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -38,7 +43,6 @@ class RealmContextPill extends StatelessWidget {
         border: Border.all(color: colors.camel.withValues(alpha: 0.28)),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
           EnamelIcon(
             kind: EnamelKind.ecosystem,
@@ -46,7 +50,7 @@ class RealmContextPill extends StatelessWidget {
             emblemAsset: realm.emblemAsset,
           ),
           const SizedBox(width: 13),
-          Flexible(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,

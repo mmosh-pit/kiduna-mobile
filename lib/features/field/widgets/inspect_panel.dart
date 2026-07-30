@@ -52,7 +52,7 @@ class InspectPanel extends ConsumerWidget {
           ),
         ),
         ConstrainedBox(
-          constraints: const BoxConstraints(maxHeight: 320),
+          constraints: const BoxConstraints(maxHeight: 540),
           child: SingleChildScrollView(
             child: Column(
               children: [

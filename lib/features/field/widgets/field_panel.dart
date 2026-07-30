@@ -26,6 +26,7 @@ class FieldPanel extends StatefulWidget {
     this.initialOffset = const Offset(24, 24),
     this.initialMode = FieldPanelMode.expanded,
     this.opacity = 1,
+    this.accent = false,
     this.onClose,
   });
 
@@ -47,6 +48,10 @@ class FieldPanel extends StatefulWidget {
   final Offset initialOffset;
   final FieldPanelMode initialMode;
   final double opacity;
+
+  /// When true the panel uses the gold emphasis border + glow (Possible
+  /// Actions).
+  final bool accent;
 
   /// When provided the first control is Close (removing the panel); otherwise
   /// it is Collapse.
@@ -107,14 +112,23 @@ class _FieldPanelState extends State<FieldPanel> {
             colors.surface.withValues(alpha: 0.9),
           ],
         ),
-        border: Border.all(color: colors.camel.withValues(alpha: 0.3)),
+        border: Border.all(
+          color: widget.accent
+              ? colors.gold.withValues(alpha: 0.48)
+              : colors.camel.withValues(alpha: 0.3),
+        ),
         borderRadius: radius,
-        boxShadow: const [
-          BoxShadow(
+        boxShadow: [
+          const BoxShadow(
             color: Color(0x6B000000),
             blurRadius: 52,
             offset: Offset(0, 18),
           ),
+          if (widget.accent)
+            BoxShadow(
+              color: colors.gold.withValues(alpha: 0.06),
+              blurRadius: 28,
+            ),
         ],
       ),
       child: Column(
