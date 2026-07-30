@@ -42,19 +42,6 @@ class _PresentPanelState extends ConsumerState<PresentPanel> {
     return purpose ?? '';
   }
 
-  String _emblemForType(String type) {
-    const known = [
-      'Organization',
-      'Alliance',
-      'Community',
-      'Program',
-      'Project',
-      'Relationship',
-    ];
-    final emblem = known.contains(type) ? type.toLowerCase() : 'conceptual';
-    return AppAssets.realmEmblem(emblem);
-  }
-
   @override
   void dispose() {
     _name.dispose();
@@ -117,14 +104,9 @@ class _PresentPanelState extends ConsumerState<PresentPanel> {
             ),
             child: Row(
               children: [
-                Container(
-                  width: 74,
-                  height: 74,
+                DecoratedBox(
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(
-                      color: colors.gold.withValues(alpha: 0.4),
-                    ),
                     boxShadow: [
                       BoxShadow(
                         color: colors.gold.withValues(alpha: 0.1),
@@ -134,7 +116,7 @@ class _PresentPanelState extends ConsumerState<PresentPanel> {
                   ),
                   child: ClipOval(
                     child: Image.asset(
-                      _emblemForType(_type),
+                      AppAssets.realmEmblem(_type),
                       width: 74,
                       height: 74,
                       fit: BoxFit.cover,

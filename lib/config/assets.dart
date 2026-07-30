@@ -13,9 +13,22 @@ abstract class AppAssets {
   static const String kidunaLogo =
       'assets/icons/kiduna-logo-linear-skyblue.svg';
 
-  /// Generic Realm emblem for a Realm [type], e.g. `organization`, `community`.
-  static String realmEmblem(String type) =>
-      'assets/images/realm-emblems/$type.jpg';
+  static const Set<String> _knownEmblems = {
+    'organization',
+    'alliance',
+    'community',
+    'program',
+    'project',
+    'relationship',
+    'conceptual',
+  };
+
+  /// Realm emblem for a [type]. Unknown types fall back to `conceptual.jpg`.
+  static String realmEmblem(String type) {
+    final key = type.toLowerCase();
+    final emblem = _knownEmblems.contains(key) ? key : 'conceptual';
+    return 'assets/images/realm-emblems/$emblem.jpg';
+  }
 
   /// Ally Portrait for a [persona] (`01`/`04`/`05`) in a given [state]
   /// (`open`/`engaged`/`focused`/`dreaming`).

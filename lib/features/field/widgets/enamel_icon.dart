@@ -31,9 +31,8 @@ class EnamelIcon extends StatelessWidget {
     final colors = context.kiduna;
     final isKi = kind == EnamelKind.ki;
     final rim = isKi ? colors.sky : colors.gold;
-    final orbitColor = isKi
-        ? colors.sky.withValues(alpha: 0.38)
-        : colors.gold.withValues(alpha: 0.32);
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    final cacheSize = (size * dpr).round();
     return Semantics(
       excludeSemantics: true,
       child: SizedBox(
@@ -44,7 +43,6 @@ class EnamelIcon extends StatelessWidget {
             Container(
               width: size,
               height: size,
-              padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: const LinearGradient(
@@ -60,50 +58,17 @@ class EnamelIcon extends StatelessWidget {
                     ? context.shadows.kiEnamelIcon
                     : context.shadows.enamelIcon,
               ),
-              foregroundDecoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    colors.cream.withValues(alpha: 0.1),
-                    const Color(0x00000000),
-                  ],
-                  stops: const [0, 0.58],
-                ),
-              ),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: _enamelCore,
-                  border: Border.all(
-                    color: colors.cream.withValues(alpha: 0.28),
-                  ),
-                ),
-                child: ClipOval(
-                  child: isKi
-                      ? Center(
-                          child: SvgPicture.asset(
-                            AppAssets.kidunaMark,
-                            width: size * 0.6,
-                          ),
-                        )
-                      : (emblemAsset == null
-                            ? const SizedBox.shrink()
-                            : SizedBox.expand(
-                                child: Image.asset(
-                                  emblemAsset!,
-                                  fit: BoxFit.cover,
-                                  semanticLabel: context.l10n.realmEmblem,
-                                ),
-                              )),
-                ),
-              ),
             ),
             Positioned.fill(
               child: Container(
                 margin: const EdgeInsets.all(3),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: orbitColor),
+                  border: Border.all(
+                    color: isKi
+                        ? colors.sky.withValues(alpha: 0.38)
+                        : colors.gold.withValues(alpha: 0.32),
+                  ),
                 ),
               ),
             ),
@@ -126,6 +91,48 @@ class EnamelIcon extends StatelessWidget {
               color: colors.cream,
               size: size,
               position: _StudPos.left,
+            ),
+            Positioned.fill(
+              child: Container(
+                margin: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _enamelCore,
+                  border: Border.all(
+                    color: colors.cream.withValues(alpha: 0.28),
+                  ),
+                ),
+                foregroundDecoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      colors.cream.withValues(alpha: 0.1),
+                      const Color(0x00000000),
+                    ],
+                    stops: const [0, 0.58],
+                  ),
+                ),
+                child: ClipOval(
+                  child: isKi
+                      ? Center(
+                          child: SvgPicture.asset(
+                            AppAssets.kidunaMark,
+                            width: size * 0.6,
+                          ),
+                        )
+                      : (emblemAsset == null
+                            ? const SizedBox.shrink()
+                            : SizedBox.expand(
+                                child: Image.asset(
+                                  emblemAsset!,
+                                  fit: BoxFit.cover,
+                                  cacheWidth: cacheSize,
+                                  cacheHeight: cacheSize,
+                                  semanticLabel: context.l10n.realmEmblem,
+                                ),
+                              )),
+                ),
+              ),
             ),
           ],
         ),
@@ -169,7 +176,7 @@ class _EnamelStud extends StatelessWidget {
           shape: BoxShape.circle,
           color: color,
           boxShadow: [
-            BoxShadow(color: color.withValues(alpha: 0.65), blurRadius: 5),
+            BoxShadow(color: color.withValues(alpha: 0.4), blurRadius: 2),
           ],
         ),
       ),

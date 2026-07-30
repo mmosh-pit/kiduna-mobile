@@ -1,3 +1,4 @@
+import '../../../config/assets.dart';
 import '../../../data/models/field_realm.dart';
 import '../../../data/models/ki_topic.dart';
 
@@ -30,10 +31,10 @@ typedef Capacity = ({String id, String label, String detail, String icon});
 abstract class FieldFixtures {
   const FieldFixtures._();
 
-  static const FieldRealm kinshipDuna = FieldRealm(
+  static final FieldRealm kinshipDuna = FieldRealm(
     name: 'Kinship Duna',
     type: 'Ecosystem',
-    emblemAsset: 'assets/images/realm-emblems/organization.jpg',
+    emblemAsset: AppAssets.realmEmblem('organization'),
   );
 
   /// The five Capacities of a Realm or Ally (Shape / Design your Ally).
