@@ -1,0 +1,9 @@
+# Localization generation config (see CLAUDE.md Section 21).
+#
+# Generated into lib/l10n (non-synthetic, as the synthetic package is
+# deprecated) and gitignored — `flutter pub get` regenerates it.
+arb-dir: lib/l10n
+template-arb-file: app_en.arb
+output-localization-file: app_localizations.dart
+output-dir: lib/l10n
+nullable-getter: false
