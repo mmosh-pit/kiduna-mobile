@@ -1,3 +1,4 @@
+import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kiduna_mobile/config/theme.dart';
@@ -18,23 +19,25 @@ Future<void> _pump(WidgetTester tester, {required bool reduceMotion}) async {
   );
 }
 
+bool _isGameWidget(Widget widget) => widget is GameWidget;
+
 void main() {
-  testWidgets('paints the deep field and animates when motion is allowed', (
-    tester,
-  ) async {
+  testWidgets('renders the Flame field game and animates when motion is '
+      'allowed', (tester) async {
     await _pump(tester, reduceMotion: false);
 
     expect(find.byType(FieldBackground), findsOneWidget);
+    expect(find.byWidgetPredicate(_isGameWidget), findsOneWidget);
     await tester.pump(const Duration(seconds: 1));
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('paints statically when reduced motion is requested', (
+  testWidgets('renders statically when reduced motion is requested', (
     tester,
   ) async {
     await _pump(tester, reduceMotion: true);
 
-    expect(find.byType(FieldBackground), findsOneWidget);
+    expect(find.byWidgetPredicate(_isGameWidget), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }
