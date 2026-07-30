@@ -40,3 +40,8 @@ class CacheException extends AppException {
 class ValidationException extends AppException {
   const ValidationException([super.message]);
 }
+
+/// Request timed out (connect or receive).
+class ApiTimeoutException extends AppException {
+  const ApiTimeoutException([super.message]);
+}

@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kiduna_mobile/config/theme.dart';
 import 'package:kiduna_mobile/features/field/widgets/field_panel.dart';
+import 'package:kiduna_mobile/l10n/app_localizations.dart';
 
 Future<void> _pump(WidgetTester tester, Widget panel) async {
   await tester.pumpWidget(
     MaterialApp(
       theme: AppTheme.light,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: SizedBox(
           width: 600,

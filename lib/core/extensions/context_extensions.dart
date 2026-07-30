@@ -28,6 +28,10 @@ extension ContextExtensions on BuildContext {
   KidunaMetrics get metrics =>
       Theme.of(this).extension<KidunaMetrics>() ?? KidunaMetrics.standard;
 
+  /// Kiduna Field shadow tokens. Falls back to [KidunaShadows.standard].
+  KidunaShadows get shadows =>
+      Theme.of(this).extension<KidunaShadows>() ?? KidunaShadows.standard;
+
   MediaQueryData get mediaQuery => MediaQuery.of(this);
   Size get screenSize => MediaQuery.sizeOf(this);
   double get screenWidth => MediaQuery.sizeOf(this).width;

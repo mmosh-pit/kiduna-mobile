@@ -1,7 +1,9 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 
+import '../../../config/kiduna_motion.dart';
 import '../../../core/extensions/context_extensions.dart';
 
 /// Display modes for a [FieldPanel], mirroring the prototype panel contract.
@@ -100,6 +102,7 @@ class _FieldPanelState extends State<FieldPanel> {
   Widget build(BuildContext context) {
     final colors = context.kiduna;
     final metrics = context.metrics;
+    final reducedMotion = MediaQuery.disableAnimationsOf(context);
     final radius = BorderRadius.circular(metrics.radiusPanel);
     final panel = Container(
       width: widget.width,
@@ -119,11 +122,7 @@ class _FieldPanelState extends State<FieldPanel> {
         ),
         borderRadius: radius,
         boxShadow: [
-          const BoxShadow(
-            color: Color(0x6B000000),
-            blurRadius: 52,
-            offset: Offset(0, 18),
-          ),
+          ...context.shadows.panel,
           if (widget.accent)
             BoxShadow(
               color: colors.gold.withValues(alpha: 0.06),
@@ -141,7 +140,19 @@ class _FieldPanelState extends State<FieldPanel> {
                 : (widget.summary ?? widget.label),
             emphasised: _mode != FieldPanelMode.expanded,
             onDrag: _drag,
-            onFirst: widget.onClose ?? () => _setMode(FieldPanelMode.collapsed),
+            onFirst: widget.onClose != null
+                ? () async {
+                    final message = context.l10n.panelClosed(widget.label);
+                    final direction = Directionality.of(context);
+                    final view = View.of(context);
+                    widget.onClose!();
+                    await SemanticsService.sendAnnouncement(
+                      view,
+                      message,
+                      direction,
+                    );
+                  }
+                : () => _setMode(FieldPanelMode.collapsed),
             firstIsClose: widget.onClose != null,
             onMinimize: () => _setMode(FieldPanelMode.minimized),
             onExpand: () => _setMode(FieldPanelMode.expanded),
@@ -165,8 +176,15 @@ class _FieldPanelState extends State<FieldPanel> {
             child: ClipRRect(
               borderRadius: radius,
               child: BackdropFilter(
-                filter: ui.ImageFilter.blur(sigmaX: 7, sigmaY: 7),
-                child: panel,
+                filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                child: AnimatedSize(
+                  duration: reducedMotion
+                      ? Duration.zero
+                      : KidunaMotion.panelIn,
+                  curve: KidunaMotion.panelCurve,
+                  alignment: Alignment.topCenter,
+                  child: panel,
+                ),
               ),
             ),
           ),
@@ -215,13 +233,23 @@ class _PanelChrome extends StatelessWidget {
             children: [
               _ChromeButton(
                 glyph: firstIsClose ? '×' : '‹',
-                tooltip: firstIsClose ? 'Close' : 'Collapse',
+                tooltip: firstIsClose
+                    ? context.l10n.close
+                    : context.l10n.collapse,
                 onTap: onFirst,
               ),
               const SizedBox(width: 4),
-              _ChromeButton(glyph: '–', tooltip: 'Minimize', onTap: onMinimize),
+              _ChromeButton(
+                glyph: '–',
+                tooltip: context.l10n.minimize,
+                onTap: onMinimize,
+              ),
               const SizedBox(width: 4),
-              _ChromeButton(glyph: '↗', tooltip: 'Expand', onTap: onExpand),
+              _ChromeButton(
+                glyph: '↗',
+                tooltip: context.l10n.expand,
+                onTap: onExpand,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -234,7 +262,7 @@ class _PanelChrome extends StatelessWidget {
                 ),
               ),
               Text(
-                '⋮⋮',
+                '⋮',
                 style: context.kidunaText.micro.copyWith(
                   color: colors.quiet.withValues(alpha: 0.6),
                 ),
@@ -281,7 +309,10 @@ class _ChromeButton extends StatelessWidget {
             ),
             child: Text(
               glyph,
-              style: TextStyle(color: colors.muted, fontSize: 10, height: 1),
+              style: context.kidunaText.label.copyWith(
+                color: colors.muted,
+                height: 1,
+              ),
             ),
           ),
         ),

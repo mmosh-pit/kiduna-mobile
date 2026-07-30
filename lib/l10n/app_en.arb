@@ -41,6 +41,90 @@
   "portraitDirection": "Portrait direction",
   "createPossiblePortraits": "Create possible portraits",
   "navigation": "Navigation",
+  "close": "Close",
+  "collapse": "Collapse",
+  "minimize": "Minimize",
+  "expand": "Expand",
+  "resizeFieldAndKi": "Resize Field and Ki",
+  "whatYouMostCommonlyCallThem": "What you most commonly call them",
+  "nameThisRealm": "Name this Realm",
+  "whatShouldThisRealmBringIntoBeing": "What should this Realm bring into being?",
+  "warmConstellation": "Warm constellation",
+  "celestialGuide": "Celestial guide",
+  "deepFieldCompanion": "Deep-field companion",
+  "livingGrove": "Living grove",
+  "radiantBridge": "Radiant bridge",
+  "celestialBeacon": "Celestial beacon",
+  "ancientWarmAlertCelestialEnamelHint": "Ancient, warm, alert, celestial enamel...",
+  "focused": "Focused",
+  "dreaming": "Dreaming",
+  "engaged": "Engaged",
+  "openState": "Open",
+  "invitationMessageFor": "{name}, Alice has invited you to join Kinship Duna. This is a personal invitation — when you arrive, Ki will know who sent you and help you find your way.",
+  "@invitationMessageFor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "realmCreatedTitle": "{name} created",
+  "@realmCreatedTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "copiedToClipboard": "Copied to clipboard",
+  "capacities": "Capacities",
+  "member": "Member",
+  "sevenDays": "7 days",
+  "friend": "Friend",
+  "realmEmblem": "Realm emblem",
+  "panelClosed": "{name} panel closed",
+  "@panelClosed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "realmPortrait": "Realm Portrait",
+  "defaultPortraitDescription": "The default Community Portrait is used until you deliberately create a custom one.",
+  "askKi": "Ask Ki",
+  "requiredField": "* Required",
+  "change": "Change",
+  "create": "Create",
+  "privateHandshakeOptional": "Private handshake · optional",
+  "shareASecretWordOrPhrase": "Share a secret word or phrase.",
+  "invitationNotesHint": "Tell Ki about your relationship, the reason for the invitation, and any notes you have that will help Ki welcome your guest and make them feel at home. All notes you include will be marked \"Personal\" and only available to you.",
+  "presentName": "Name",
+  "savePresentation": "Save presentation",
+  "presentPurposeHint": "What should {name} make possible?",
+  "@presentPurposeHint": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "presentPortraitDescription": "Default {type} Portrait. Create a custom close-range identity whenever it becomes useful.",
+  "@presentPortraitDescription": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "whatRealmKnowsAndCanDo": "What {name} knows and what it can do",
+  "@whatRealmKnowsAndCanDo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "persona": "Persona",
   "aliceCatalyst": "Alice — Catalyst",
   "view": "View",

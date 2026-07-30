@@ -36,6 +36,7 @@ abstract class AppTheme {
         KidunaColors.standard,
         KidunaText.standard,
         KidunaMetrics.standard,
+        KidunaShadows.standard,
       ],
     );
     return base.copyWith(textTheme: _applyDisplayFont(base.textTheme));

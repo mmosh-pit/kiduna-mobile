@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../config/kiduna_motion.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../data/field_fixtures.dart';
 import 'field_inputs.dart';
@@ -16,80 +17,117 @@ class InvitePanel extends StatefulWidget {
 
 class _InvitePanelState extends State<InvitePanel> {
   final TextEditingController _name = TextEditingController();
+  final TextEditingController _handshake = TextEditingController();
   final TextEditingController _notes = TextEditingController();
-  final Set<String> _roles = {'Member'};
-  String _expiration = '7 days';
+  String _role = 'Member';
+  late String _expiration;
   bool _prepared = false;
+  bool _initialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      _expiration = context.l10n.sevenDays;
+      _initialized = true;
+    }
+  }
 
   @override
   void dispose() {
     _name.dispose();
+    _handshake.dispose();
     _notes.dispose();
     super.dispose();
   }
 
-  String get _message {
-    final name = _name.text.trim().isEmpty ? 'Friend' : _name.text.trim();
-    final roles = _roles.isEmpty ? 'Member' : _roles.join(' and ');
-    return '$name, Alice has invited you to join Kinship Duna as $roles. '
-        'Open your personal invitation: ${FieldFixtures.invitationLink}\n'
-        'Or enter Kinship Code: ${FieldFixtures.invitationCode}\n\n'
-        'This invitation expires in $_expiration.';
+  String _buildMessage(BuildContext context) {
+    final l10n = context.l10n;
+    final name = _name.text.trim().isEmpty ? l10n.friend : _name.text.trim();
+    return l10n.invitationMessageFor(name);
   }
 
   @override
   Widget build(BuildContext context) {
+    final reducedMotion = MediaQuery.disableAnimationsOf(context);
     return Padding(
       padding: const EdgeInsets.all(18),
-      child: _prepared ? _review(context) : _form(context),
+      child: AnimatedSwitcher(
+        duration: reducedMotion ? Duration.zero : KidunaMotion.panelIn,
+        child: _prepared ? _review(context) : _form(context),
+      ),
     );
   }
 
   Widget _form(BuildContext context) {
     final l10n = context.l10n;
     return Column(
+      key: const ValueKey('form'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        FieldTextInput(
-          label: '${l10n.nameYouUseForThem} *',
-          controller: _name,
-          hint: 'What you most commonly call them',
-        ),
-        const SizedBox(height: 12),
-        FieldDropdown(
-          label: l10n.expiration,
-          value: _expiration,
-          options: FieldFixtures.expirations,
-          onChanged: (value) => setState(() => _expiration = value),
-        ),
-        const SizedBox(height: 12),
-        FieldLabel(text: l10n.proposedRole),
-        const SizedBox(height: 6),
-        Wrap(
-          spacing: 6,
-          runSpacing: 6,
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            for (final role in FieldFixtures.roles)
-              FilterChip(
-                label: Text(role),
-                selected: _roles.contains(role),
-                onSelected: (on) =>
-                    setState(() => on ? _roles.add(role) : _roles.remove(role)),
+            Expanded(
+              child: FieldTextInput(
+                label: '${l10n.nameYouUseForThem} *',
+                controller: _name,
+                hint: l10n.whatYouMostCommonlyCallThem,
               ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: FieldDropdown(
+                label: l10n.expiration,
+                value: _expiration,
+                options: FieldFixtures.expirations,
+                onChanged: (value) => setState(() => _expiration = value),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: FieldDropdown(
+                label: l10n.proposedRole,
+                value: _role,
+                options: FieldFixtures.roles,
+                onChanged: (value) => setState(() => _role = value),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: FieldTextInput(
+                label: l10n.privateHandshakeOptional,
+                controller: _handshake,
+                hint: l10n.shareASecretWordOrPhrase,
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 12),
         FieldTextInput(
           label: l10n.notes,
           controller: _notes,
-          hint: 'Personal to you. Helps Ki welcome your guest.',
-          maxLines: 3,
+          hint: l10n.invitationNotesHint,
+          maxLines: 5,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          l10n.requiredField,
+          style: context.kidunaText.micro.copyWith(color: context.kiduna.quiet),
         ),
         const SizedBox(height: 14),
-        FieldPrimaryButton(
-          label: l10n.prepareInvitation,
-          onPressed: () => setState(() => _prepared = true),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: FieldPrimaryButton(
+            label: l10n.prepareInvitation,
+            onPressed: () => setState(() => _prepared = true),
+          ),
         ),
       ],
     );
@@ -99,6 +137,7 @@ class _InvitePanelState extends State<InvitePanel> {
     final colors = context.kiduna;
     final text = context.kidunaText;
     return Column(
+      key: const ValueKey('review'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -115,7 +154,7 @@ class _InvitePanelState extends State<InvitePanel> {
             borderRadius: BorderRadius.circular(context.metrics.radiusMd),
           ),
           child: Text(
-            _message,
+            _buildMessage(context),
             style: text.bodySmall.copyWith(color: colors.muted),
           ),
         ),
@@ -175,6 +214,11 @@ class _CopyRow extends StatelessWidget {
         OutlinedButton(
           onPressed: () async {
             await Clipboard.setData(ClipboardData(text: value));
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(context.l10n.copiedToClipboard)),
+              );
+            }
           },
           child: Text(action),
         ),

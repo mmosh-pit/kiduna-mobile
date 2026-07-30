@@ -2,14 +2,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../config/assets.dart';
+import '../../../core/enums/capacity_target.dart';
 import '../../../data/models/field_realm.dart';
 import '../../../data/models/ki_topic.dart';
 import '../data/field_composition.dart';
 import '../data/field_fixtures.dart';
 import '../data/realm_atlas.dart';
-
-/// Which capacity set a capacity panel belongs to.
-enum CapacityTarget { realm, ally }
 
 /// UI state for the Field.
 @immutable
@@ -17,6 +15,8 @@ class FieldState {
   const FieldState({
     required this.kiTopic,
     this.currentRealm = FieldFixtures.kinshipDuna,
+    this.isLoading = false,
+    this.error,
     this.currentRealmId = 'kinship-duna',
     this.inspectOpen = false,
     this.actionsVisible = true,
@@ -35,14 +35,14 @@ class FieldState {
 
   final KiTopic kiTopic;
   final FieldRealm currentRealm;
-
-  /// The atlas id of the realm the constellation is showing.
-  final String currentRealmId;
+  final bool isLoading;
+  final String? error;
   final bool inspectOpen;
   final bool actionsVisible;
   final double fieldFocus;
+  final String currentRealmId;
 
-  /// Ki's share of the width on desktop (0.25–0.34).
+  /// Ki's share of the width on desktop (0.25-0.34).
   final double kiFraction;
 
   /// Ids of open working panels (`invite`, `realm`, `shape`, `ally`).
@@ -67,6 +67,9 @@ class FieldState {
   FieldState copyWith({
     KiTopic? kiTopic,
     FieldRealm? currentRealm,
+    bool? isLoading,
+    String? error,
+    bool clearError = false,
     String? currentRealmId,
     bool? inspectOpen,
     bool? actionsVisible,
@@ -87,7 +90,9 @@ class FieldState {
     return FieldState(
       kiTopic: kiTopic ?? this.kiTopic,
       currentRealm: currentRealm ?? this.currentRealm,
+      isLoading: isLoading ?? this.isLoading,
       currentRealmId: currentRealmId ?? this.currentRealmId,
+      error: clearError ? null : (error ?? this.error),
       inspectOpen: inspectOpen ?? this.inspectOpen,
       actionsVisible: actionsVisible ?? this.actionsVisible,
       fieldFocus: fieldFocus ?? this.fieldFocus,
@@ -259,8 +264,41 @@ class FieldController extends Notifier<FieldState> {
             'Ki has created $name as a $type and brought Alice inside it. '
             'Kinship Duna remains its containing Ecosystem and return path.',
         invitation:
-            'Ki can help shape the new Realm’s purpose, boundaries, '
+            "Ki can help shape the new Realm's purpose, boundaries, "
             'capacities, and people through dialogue.',
+      ),
+    );
+  }
+
+  void savePresentation({required String name, required String type}) {
+    final emblem = const [
+      'Organization',
+      'Alliance',
+      'Community',
+      'Program',
+      'Project',
+      'Relationship',
+    ].contains(type)
+        ? type.toLowerCase()
+        : 'conceptual';
+    state = state.copyWith(
+      currentRealm: FieldRealm(
+        name: name,
+        type: type,
+        emblemAsset: AppAssets.realmEmblem(emblem),
+      ),
+      openActions:
+          state.openActions.where((item) => item != 'present').toList(),
+    );
+    askAbout(
+      KiTopic(
+        title: '$name presentation updated',
+        body:
+            'The Realm now presents as $name, a $type. Its stable Realm '
+            'identity and authority have not changed.',
+        invitation:
+            'Ki can help refine the purpose or prepare a different Portrait '
+            'without publishing anything.',
       ),
     );
   }

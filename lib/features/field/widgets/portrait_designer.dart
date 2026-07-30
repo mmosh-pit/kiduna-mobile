@@ -9,18 +9,6 @@ enum PortraitKind { ally, realm }
 
 typedef _Option = ({String id, String label});
 
-const List<_Option> _allyOptions = [
-  (id: '01', label: 'Warm constellation'),
-  (id: '04', label: 'Celestial guide'),
-  (id: '05', label: 'Deep-field companion'),
-];
-
-const List<_Option> _realmOptions = [
-  (id: 'grove', label: 'Living grove'),
-  (id: 'bridge', label: 'Radiant bridge'),
-  (id: 'beacon', label: 'Celestial beacon'),
-];
-
 /// Describe-and-choose flow for an Ally or Realm Portrait. Compact: describe,
 /// generate possibilities, choose one; an Ally preview shows the four States.
 class PortraitDesigner extends StatefulWidget {
@@ -43,8 +31,21 @@ class _PortraitDesignerState extends State<PortraitDesigner> {
     super.dispose();
   }
 
-  List<_Option> get _options =>
-      widget.kind == PortraitKind.ally ? _allyOptions : _realmOptions;
+  List<_Option> _options(BuildContext context) {
+    final l10n = context.l10n;
+    if (widget.kind == PortraitKind.ally) {
+      return [
+        (id: '01', label: l10n.warmConstellation),
+        (id: '04', label: l10n.celestialGuide),
+        (id: '05', label: l10n.deepFieldCompanion),
+      ];
+    }
+    return [
+      (id: 'grove', label: l10n.livingGrove),
+      (id: 'bridge', label: l10n.radiantBridge),
+      (id: 'beacon', label: l10n.celestialBeacon),
+    ];
+  }
 
   String _image(String id) => widget.kind == PortraitKind.ally
       ? AppAssets.allyPortrait(id, 'open')
@@ -52,6 +53,7 @@ class _PortraitDesignerState extends State<PortraitDesigner> {
 
   @override
   Widget build(BuildContext context) {
+    final options = _options(context);
     return Padding(
       padding: const EdgeInsets.all(18),
       child: Column(
@@ -61,7 +63,7 @@ class _PortraitDesignerState extends State<PortraitDesigner> {
           FieldTextInput(
             label: context.l10n.portraitDirection,
             controller: _prompt,
-            hint: 'Ancient, warm, alert, celestial enamel…',
+            hint: context.l10n.ancientWarmAlertCelestialEnamelHint,
             maxLines: 3,
           ),
           const SizedBox(height: 14),
@@ -75,7 +77,7 @@ class _PortraitDesignerState extends State<PortraitDesigner> {
               spacing: 10,
               runSpacing: 10,
               children: [
-                for (final option in _options)
+                for (final option in options)
                   _PortraitOption(
                     label: option.label,
                     image: _image(option.id),
@@ -111,37 +113,42 @@ class _PortraitOption extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.kiduna;
-    return InkWell(
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(context.metrics.radiusMd),
-              border: Border.all(
-                color: selected
-                    ? colors.sky
-                    : colors.camel.withValues(alpha: 0.3),
-                width: selected ? 2 : 1,
+    return Semantics(
+      selected: selected,
+      label: label,
+      child: InkWell(
+        onTap: onTap,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(context.metrics.radiusMd),
+                border: Border.all(
+                  color: selected
+                      ? colors.sky
+                      : colors.camel.withValues(alpha: 0.3),
+                  width: selected ? 2 : 1,
+                ),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(context.metrics.radiusMd),
+                child: Image.asset(
+                  image,
+                  width: 92,
+                  height: 92,
+                  fit: BoxFit.cover,
+                  semanticLabel: label,
+                ),
               ),
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(context.metrics.radiusMd),
-              child: Image.asset(
-                image,
-                width: 92,
-                height: 92,
-                fit: BoxFit.cover,
-              ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: context.kidunaText.micro.copyWith(color: colors.muted),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: context.kidunaText.micro.copyWith(color: colors.muted),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -158,6 +165,22 @@ class _AllyStates extends StatelessWidget {
     'engaged',
     'open',
   ];
+
+  static String _stateLabel(String state, BuildContext context) {
+    final l10n = context.l10n;
+    switch (state) {
+      case 'focused':
+        return l10n.focused;
+      case 'dreaming':
+        return l10n.dreaming;
+      case 'engaged':
+        return l10n.engaged;
+      case 'open':
+        return l10n.openState;
+      default:
+        return state;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -176,11 +199,12 @@ class _AllyStates extends StatelessWidget {
                   width: 66,
                   height: 66,
                   fit: BoxFit.cover,
+                  semanticLabel: state,
                 ),
               ),
               const SizedBox(height: 3),
               Text(
-                state,
+                _stateLabel(state, context),
                 style: context.kidunaText.micro.copyWith(
                   color: context.kiduna.quiet,
                 ),
