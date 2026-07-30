@@ -41,6 +41,7 @@ class RealmContextPill extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(context.metrics.radiusPill),
         border: Border.all(color: colors.camel.withValues(alpha: 0.28)),
+        boxShadow: context.shadows.realmPill,
       ),
       child: Row(
         children: [

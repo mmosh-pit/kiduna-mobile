@@ -55,15 +55,22 @@ class ComputeCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                context.l10n.openResources,
-                style: text.label.copyWith(color: colors.sky),
+          Semantics(
+            button: true,
+            label: context.l10n.openResources,
+            child: InkWell(
+              onTap: () {},
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    context.l10n.openResources,
+                    style: text.label.copyWith(color: colors.sky),
+                  ),
+                  Icon(Icons.north_east, size: 12, color: colors.sky),
+                ],
               ),
-              Icon(Icons.north_east, size: 12, color: colors.sky),
-            ],
+            ),
           ),
         ],
       ),

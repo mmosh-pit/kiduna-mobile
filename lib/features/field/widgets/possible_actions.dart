@@ -73,59 +73,66 @@ class _ActionButton extends StatelessWidget {
     final colors = context.kiduna;
     final text = context.kidunaText;
     final line = colors.camel.withValues(alpha: 0.1);
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 76),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          border: Border(
-            right: rightBorder ? BorderSide(color: line) : BorderSide.none,
-            bottom: bottomBorder ? BorderSide(color: line) : BorderSide.none,
+    return Semantics(
+      button: true,
+      label: action.label,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 76),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            border: Border(
+              right: rightBorder ? BorderSide(color: line) : BorderSide.none,
+              bottom: bottomBorder ? BorderSide(color: line) : BorderSide.none,
+            ),
           ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    colors.sky.withValues(alpha: 0.12),
-                    colors.raised.withValues(alpha: 0.7),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      colors.sky.withValues(alpha: 0.12),
+                      colors.raised.withValues(alpha: 0.7),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(
+                    context.metrics.radiusPanel,
+                  ),
+                  border: Border.all(color: colors.sky.withValues(alpha: 0.52)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: colors.sky.withValues(alpha: 0.1),
+                      blurRadius: 12,
+                    ),
                   ],
                 ),
-                borderRadius: BorderRadius.circular(
-                  context.metrics.radiusPanel,
-                ),
-                border: Border.all(color: colors.sky.withValues(alpha: 0.52)),
-              ),
-              child: Text(
-                action.icon,
-                style: TextStyle(color: colors.sky, fontSize: 17, height: 1),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                action.label,
-                style: text.body.copyWith(
-                  color: colors.text,
-                  fontWeight: FontWeight.w700,
-                  height: 1.35,
+                child: Text(
+                  action.icon,
+                  style: text.bodyLg.copyWith(color: colors.sky, height: 1),
                 ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              '→',
-              style: text.body.copyWith(color: colors.sky, fontSize: 12),
-            ),
-          ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  action.label,
+                  style: text.body.copyWith(
+                    color: colors.text,
+                    fontWeight: FontWeight.w700,
+                    height: 1.35,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text('→', style: text.caption.copyWith(color: colors.sky)),
+            ],
+          ),
         ),
       ),
     );

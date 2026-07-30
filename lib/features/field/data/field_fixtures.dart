@@ -5,7 +5,13 @@ import '../../../data/models/ki_topic.dart';
 typedef FieldFact = ({String label, String value, KiTopic topic});
 
 /// An entry in the Possible Actions grid.
-typedef FieldAction = ({String id, String label, String icon, KiTopic topic});
+typedef FieldAction = ({
+  String id,
+  String label,
+  String panelLabel,
+  String icon,
+  KiTopic topic,
+});
 
 /// A suggested-prompt chip offered beneath the Ki thread.
 typedef KiChip = ({String label, KiTopic topic});
@@ -120,6 +126,7 @@ abstract class FieldFixtures {
     (
       id: 'invite',
       label: 'Invite people to join you here',
+      panelLabel: 'Prepare a Kiduna Invitation',
       icon: '⇄',
       topic: KiTopic(
         title: 'Invite someone',
@@ -134,6 +141,7 @@ abstract class FieldFixtures {
     (
       id: 'realm',
       label: 'Form a New Realm',
+      panelLabel: 'Form a New Realm',
       icon: '✦',
       topic: KiTopic(
         title: 'Form a New Realm',
@@ -148,6 +156,7 @@ abstract class FieldFixtures {
     (
       id: 'shape',
       label: 'Shape Kinship Duna',
+      panelLabel: 'Shape Kinship Duna',
       icon: '◈',
       topic: KiTopic(
         title: 'Shape Kinship Duna',
@@ -160,17 +169,18 @@ abstract class FieldFixtures {
       ),
     ),
     (
-      id: 'ally',
-      label: 'Design your Ally',
-      icon: '✺',
+      id: 'present',
+      label: 'Present Kinship Duna',
+      panelLabel: 'Present Kinship Duna',
+      icon: '◎',
       topic: KiTopic(
-        title: 'Design your Ally',
+        title: 'Present Kinship Duna',
         body:
-            'Your Ally can adapt how information is organized, explained, and '
-            'brought to your attention while remaining inside your boundaries.',
+            'Presentation controls how Kinship Duna is named, described, '
+            'typed, and recognized when it appears close in the Field.',
         invitation:
-            'Use the working panel or tell Ki how Alice prefers to work; Ki '
-            'can help shape the Ally through dialogue.',
+            'Edit the Realm directly in the working panel or ask Ki to help '
+            'clarify how it should present.',
       ),
     ),
   ];

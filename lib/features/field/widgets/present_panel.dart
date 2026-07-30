@@ -7,18 +7,53 @@ import '../controllers/field_controller.dart';
 import '../data/field_fixtures.dart';
 import 'field_inputs.dart';
 
-/// The Form a New Realm working panel: name, type, and purpose, then Create.
-class RealmPanel extends ConsumerStatefulWidget {
-  const RealmPanel({super.key});
+/// The Present working panel: edit the current Realm's name, type, purpose,
+/// and portrait presentation — matching the prototype's PresentationPanel.
+class PresentPanel extends ConsumerStatefulWidget {
+  const PresentPanel({super.key});
 
   @override
-  ConsumerState<RealmPanel> createState() => _RealmPanelState();
+  ConsumerState<PresentPanel> createState() => _PresentPanelState();
 }
 
-class _RealmPanelState extends ConsumerState<RealmPanel> {
-  final TextEditingController _name = TextEditingController();
-  final TextEditingController _purpose = TextEditingController();
-  String _type = 'Community';
+class _PresentPanelState extends ConsumerState<PresentPanel> {
+  late TextEditingController _name;
+  late TextEditingController _purpose;
+  late String _type;
+  bool _initialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      final realm = ref.read(fieldControllerProvider).currentRealm;
+      _name = TextEditingController(text: realm.name);
+      _purpose = TextEditingController(text: _realmPurpose());
+      _type = realm.type;
+      _initialized = true;
+    }
+  }
+
+  String _realmPurpose() {
+    final purpose = FieldFixtures.facts
+        .where((f) => f.label == 'Purpose')
+        .map((f) => f.value)
+        .firstOrNull;
+    return purpose ?? '';
+  }
+
+  String _emblemForType(String type) {
+    const known = [
+      'Organization',
+      'Alliance',
+      'Community',
+      'Program',
+      'Project',
+      'Relationship',
+    ];
+    final emblem = known.contains(type) ? type.toLowerCase() : 'conceptual';
+    return AppAssets.realmEmblem(emblem);
+  }
 
   @override
   void dispose() {
@@ -43,9 +78,8 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
             children: [
               Expanded(
                 child: FieldTextInput(
-                  label: l10n.realmName,
+                  label: l10n.presentName,
                   controller: _name,
-                  hint: l10n.nameThisRealm,
                 ),
               ),
               const SizedBox(width: 12),
@@ -53,7 +87,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
                 child: FieldDropdown(
                   label: l10n.typeLabel,
                   value: _type,
-                  options: FieldFixtures.realmTypes,
+                  options: _presentTypes,
                   onChanged: (value) => setState(() => _type = value),
                 ),
               ),
@@ -63,7 +97,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
           FieldTextInput(
             label: l10n.purpose,
             controller: _purpose,
-            hint: l10n.whatShouldThisRealmBringIntoBeing,
+            hint: l10n.presentPurposeHint(_name.text),
             maxLines: 3,
           ),
           const SizedBox(height: 16),
@@ -100,7 +134,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
                   ),
                   child: ClipOval(
                     child: Image.asset(
-                      AppAssets.realmEmblem(_type.toLowerCase()),
+                      _emblemForType(_type),
                       width: 74,
                       height: 74,
                       fit: BoxFit.cover,
@@ -122,7 +156,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
                       ),
                       const SizedBox(height: 5),
                       Text(
-                        l10n.defaultPortraitDescription,
+                        l10n.presentPortraitDescription(_type),
                         style: text.micro.copyWith(
                           color: colors.muted,
                           fontSize: 9,
@@ -146,7 +180,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
                     ),
                   ),
                   child: Text(
-                    l10n.create,
+                    l10n.change,
                     style: text.label.copyWith(
                       color: colors.skyButtonInk,
                       fontWeight: FontWeight.w700,
@@ -159,18 +193,12 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
           const SizedBox(height: 14),
           Align(
             alignment: Alignment.centerLeft,
-            child: ValueListenableBuilder<TextEditingValue>(
-              valueListenable: _name,
-              builder: (context, value, _) {
-                final canCreate = value.text.trim().isNotEmpty;
-                return FieldPrimaryButton(
-                  label: l10n.createRealmAction,
-                  onPressed: canCreate
-                      ? () => ref
-                            .read(fieldControllerProvider.notifier)
-                            .createRealm(name: value.text.trim(), type: _type)
-                      : null,
-                );
+            child: FieldPrimaryButton(
+              label: l10n.savePresentation,
+              onPressed: () {
+                ref
+                    .read(fieldControllerProvider.notifier)
+                    .savePresentation(name: _name.text.trim(), type: _type);
               },
             ),
           ),
@@ -178,4 +206,16 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
       ),
     );
   }
+
+  static const List<String> _presentTypes = [
+    'Ecosystem',
+    'Organization',
+    'Alliance',
+    'Community',
+    'Program',
+    'Project',
+    'Relationship',
+    'Institution',
+    'Concept',
+  ];
 }

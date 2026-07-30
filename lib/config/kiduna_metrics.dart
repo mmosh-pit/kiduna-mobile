@@ -11,9 +11,12 @@ import 'package:flutter/material.dart';
 @immutable
 class KidunaMetrics extends ThemeExtension<KidunaMetrics> {
   const KidunaMetrics({
+    required this.radiusXs,
     required this.radiusSm,
     required this.radiusMd,
     required this.radiusPanel,
+    required this.radiusLg,
+    required this.radiusXl,
     required this.radiusPill,
     required this.hairline,
     required this.enamelIcon,
@@ -22,6 +25,9 @@ class KidunaMetrics extends ThemeExtension<KidunaMetrics> {
     required this.boundaryWidth,
     required this.desktopMinWidth,
   });
+
+  /// Smallest radius (`4px` — buttons).
+  final double radiusXs;
 
   /// Small control radius (`border-radius: 5px`).
   final double radiusSm;
@@ -32,7 +38,13 @@ class KidunaMetrics extends ThemeExtension<KidunaMetrics> {
   /// Field panel radius (`10px`).
   final double radiusPanel;
 
-  /// Fully rounded pills and chips (`999px`).
+  /// Card radius (`14px`).
+  final double radiusLg;
+
+  /// Large panel radius (`20px`).
+  final double radiusXl;
+
+  /// Fully rounded pills and chips (`9999px`).
   final double radiusPill;
 
   /// Hairline border width (`1px`).
@@ -56,10 +68,13 @@ class KidunaMetrics extends ThemeExtension<KidunaMetrics> {
 
   /// Canonical Field metrics — matches the prototype exactly.
   static const KidunaMetrics standard = KidunaMetrics(
+    radiusXs: 4,
     radiusSm: 5,
     radiusMd: 6,
     radiusPanel: 10,
-    radiusPill: 999,
+    radiusLg: 14,
+    radiusXl: 20,
+    radiusPill: 9999,
     hairline: 1,
     enamelIcon: 64,
     kiEnamelIcon: 58,
@@ -70,9 +85,12 @@ class KidunaMetrics extends ThemeExtension<KidunaMetrics> {
 
   @override
   KidunaMetrics copyWith({
+    double? radiusXs,
     double? radiusSm,
     double? radiusMd,
     double? radiusPanel,
+    double? radiusLg,
+    double? radiusXl,
     double? radiusPill,
     double? hairline,
     double? enamelIcon,
@@ -82,9 +100,12 @@ class KidunaMetrics extends ThemeExtension<KidunaMetrics> {
     double? desktopMinWidth,
   }) {
     return KidunaMetrics(
+      radiusXs: radiusXs ?? this.radiusXs,
       radiusSm: radiusSm ?? this.radiusSm,
       radiusMd: radiusMd ?? this.radiusMd,
       radiusPanel: radiusPanel ?? this.radiusPanel,
+      radiusLg: radiusLg ?? this.radiusLg,
+      radiusXl: radiusXl ?? this.radiusXl,
       radiusPill: radiusPill ?? this.radiusPill,
       hairline: hairline ?? this.hairline,
       enamelIcon: enamelIcon ?? this.enamelIcon,
