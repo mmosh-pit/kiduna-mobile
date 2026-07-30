@@ -10,9 +10,9 @@ import '../data/field_fixtures.dart';
 /// UI state for the Field.
 @immutable
 class FieldState {
-  const FieldState({
+  FieldState({
     required this.kiTopic,
-    this.currentRealm = FieldFixtures.kinshipDuna,
+    FieldRealm? currentRealm,
     this.isLoading = false,
     this.error,
     this.inspectOpen = false,
@@ -25,7 +25,7 @@ class FieldState {
     this.realmPortraitOpen = false,
     this.allyPortraitOpen = false,
     this.preservedMessage,
-  });
+  }) : currentRealm = currentRealm ?? FieldFixtures.kinshipDuna;
 
   final KiTopic kiTopic;
   final FieldRealm currentRealm;
@@ -88,7 +88,7 @@ class FieldState {
 /// Drives the Field's UI state. All interaction lives here, not in widgets.
 class FieldController extends Notifier<FieldState> {
   @override
-  FieldState build() => const FieldState(kiTopic: FieldFixtures.defaultKi);
+  FieldState build() => FieldState(kiTopic: FieldFixtures.defaultKi);
 
   void toggleInspect() =>
       state = state.copyWith(inspectOpen: !state.inspectOpen);
@@ -162,12 +162,11 @@ class FieldController extends Notifier<FieldState> {
 
   /// Creates a Realm, enters it, and closes the Form panel.
   void createRealm({required String name, required String type}) {
-    final emblem = type == 'Institution' ? 'conceptual' : type.toLowerCase();
     state = state.copyWith(
       currentRealm: FieldRealm(
         name: name,
         type: type,
-        emblemAsset: AppAssets.realmEmblem(emblem),
+        emblemAsset: AppAssets.realmEmblem(type),
       ),
       openActions: state.openActions.where((item) => item != 'realm').toList(),
     );
@@ -185,24 +184,15 @@ class FieldController extends Notifier<FieldState> {
   }
 
   void savePresentation({required String name, required String type}) {
-    final emblem = const [
-      'Organization',
-      'Alliance',
-      'Community',
-      'Program',
-      'Project',
-      'Relationship',
-    ].contains(type)
-        ? type.toLowerCase()
-        : 'conceptual';
     state = state.copyWith(
       currentRealm: FieldRealm(
         name: name,
         type: type,
-        emblemAsset: AppAssets.realmEmblem(emblem),
+        emblemAsset: AppAssets.realmEmblem(type),
       ),
-      openActions:
-          state.openActions.where((item) => item != 'present').toList(),
+      openActions: state.openActions
+          .where((item) => item != 'present')
+          .toList(),
     );
     askAbout(
       KiTopic(
