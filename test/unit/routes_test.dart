@@ -10,6 +10,10 @@ void main() {
     expect(Routes.aev, '/studio/aev');
   });
 
+  test('the login screen has the /login path', () {
+    expect(Routes.login, '/login');
+  });
+
   test('builds a concrete user-profile path from an id', () {
     expect(Routes.userProfilePath('42'), '/user/42');
   });

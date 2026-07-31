@@ -311,5 +311,15 @@
     "placeholders": {
       "count": { "type": "int" }
     }
-  }
+  },
+
+  "welcomeBack": "Welcome back",
+  "signInToContinue": "Sign in to continue to Kiduna",
+  "emailLabel": "Email",
+  "emailHint": "Enter your email",
+  "emailRequired": "Please enter your email",
+  "passwordLabel": "Password",
+  "passwordHint": "Enter your password",
+  "passwordRequired": "Please enter your password",
+  "logIn": "Log in"
 }

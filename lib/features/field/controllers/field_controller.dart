@@ -3,8 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../config/assets.dart';
 import '../../../core/enums/capacity_target.dart';
+import '../../../core/errors/exceptions.dart';
+import '../../../core/utils/logger.dart';
 import '../../../data/models/field_realm.dart';
+import '../../../data/models/invitation_request.dart';
+import '../../../data/models/invitation_response.dart';
 import '../../../data/models/ki_topic.dart';
+import '../../../data/services/invitation_service.dart';
+import '../../../features/auth/controllers/auth_controller.dart';
 import '../data/field_composition.dart';
 import '../data/field_fixtures.dart';
 import '../data/realm_atlas.dart';
@@ -31,6 +37,9 @@ class FieldState {
     this.selectedPlacement,
     this.realmGravity = const {},
     this.realmPath = const ['kinship-duna'],
+    this.invitationResponse,
+    this.invitationLoading = false,
+    this.invitationError,
   }) : currentRealm = currentRealm ?? FieldFixtures.kinshipDuna;
 
   final KiTopic kiTopic;
@@ -62,6 +71,15 @@ class FieldState {
   /// Breadcrumb of realm ids from the Ecosystem root to the current realm.
   final List<String> realmPath;
 
+  /// The last successfully generated invitation (null until first prepare).
+  final InvitationResponse? invitationResponse;
+
+  /// Whether an invitation generation API call is in flight.
+  final bool invitationLoading;
+
+  /// Error message from the last failed invitation attempt.
+  final String? invitationError;
+
   String? get selectedRealmId => selectedPlacement?.realm.id;
 
   FieldState copyWith({
@@ -86,6 +104,11 @@ class FieldState {
     bool clearSelection = false,
     Map<String, int>? realmGravity,
     List<String>? realmPath,
+    InvitationResponse? invitationResponse,
+    bool? invitationLoading,
+    String? invitationError,
+    bool clearInvitation = false,
+    bool clearInvitationError = false,
   }) {
     return FieldState(
       kiTopic: kiTopic ?? this.kiTopic,
@@ -110,6 +133,13 @@ class FieldState {
           : (selectedPlacement ?? this.selectedPlacement),
       realmGravity: realmGravity ?? this.realmGravity,
       realmPath: realmPath ?? this.realmPath,
+      invitationResponse: clearInvitation
+          ? null
+          : (invitationResponse ?? this.invitationResponse),
+      invitationLoading: invitationLoading ?? this.invitationLoading,
+      invitationError: clearInvitationError
+          ? null
+          : (invitationError ?? this.invitationError),
     );
   }
 }
@@ -219,7 +249,8 @@ class FieldController extends Notifier<FieldState> {
   /// Enters the selected realm: it becomes the new current realm, the
   /// constellation re-renders to show its children, and Ki updates.
   void enterAtlasRealm(AtlasRealm realm) {
-    final emblem = realm.type == AtlasRealmType.institution ||
+    final emblem =
+        realm.type == AtlasRealmType.institution ||
             realm.type == AtlasRealmType.ecosystem
         ? 'conceptual'
         : realm.type.emblemKey;
@@ -292,6 +323,87 @@ class FieldController extends Notifier<FieldState> {
       ),
     );
   }
+
+  // ── Invitation API ───────────────────────────────────────────────────
+
+  /// Generate an invitation code via the backend API.
+  ///
+  /// Reads the logged-in user's wallet from [authControllerProvider], sends
+  /// the form fields to `POST /api/v1/codes`, and stores the response so the
+  /// review panel can display the real code, link, and message.
+  Future<void> prepareInvitation({
+    required String recipientName,
+    required String role,
+    required String expiration,
+    String? handshake,
+    String? notes,
+  }) async {
+    // Read wallet from auth state.
+    final auth = ref.read(authControllerProvider);
+    final wallet = auth.user?.wallet;
+    if (wallet == null || wallet.isEmpty) {
+      state = state.copyWith(
+        invitationError: 'You must be logged in to send invitations.',
+      );
+      return;
+    }
+
+    state = state.copyWith(invitationLoading: true, clearInvitationError: true);
+
+    try {
+      final request = InvitationRequest(
+        wallet: wallet,
+        recipientName: recipientName,
+        role: role,
+        expiration: expiration,
+        handshake: handshake,
+        notes: notes,
+      );
+
+      final response = await InvitationService.instance.generate(request);
+
+      state = state.copyWith(
+        invitationResponse: response,
+        invitationLoading: false,
+        kiTopic: const KiTopic(
+          title: 'Invitation prepared',
+          body:
+              'Ki has prepared a personal invitation, a unique Kinship Link, '
+              'and its equivalent Kinship Code for review.',
+          invitation:
+              'The optional private handshake remains separate and is never '
+              'included in the invitation, link, or code.',
+        ),
+      );
+
+      AppLogger.info(
+        'Invitation prepared: ${response.code}',
+        tag: 'FieldController',
+      );
+    } on UnauthorizedException {
+      state = state.copyWith(
+        invitationLoading: false,
+        invitationError: 'Session expired. Please log in again.',
+      );
+    } on NetworkException {
+      state = state.copyWith(
+        invitationLoading: false,
+        invitationError: 'Unable to connect. Please check your internet.',
+      );
+    } on AppException catch (e) {
+      state = state.copyWith(
+        invitationLoading: false,
+        invitationError: e.message ?? 'Failed to create invitation.',
+      );
+    }
+  }
+
+  /// Reset invitation state (e.g. when the invite panel closes).
+  void clearInvitation() => state = state.copyWith(
+    clearInvitation: true,
+    clearInvitationError: true,
+    invitationLoading: false,
+  );
 }
 
 final fieldControllerProvider = NotifierProvider<FieldController, FieldState>(

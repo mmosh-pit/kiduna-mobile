@@ -189,8 +189,7 @@ class _RealmNode extends StatelessWidget {
                   children: [
                     if (selected) _SignalPulse(size: crestSize, accent: accent),
                     _CrestOrbit(size: crestSize, accent: accent),
-                    if (selected)
-                      _CrestEdge(size: crestSize, accent: accent),
+                    if (selected) _CrestEdge(size: crestSize, accent: accent),
                     Container(
                       width: crestSize,
                       height: crestSize,
@@ -214,10 +213,26 @@ class _RealmNode extends StatelessWidget {
                         child: ColorFiltered(
                           colorFilter: selected
                               ? const ColorFilter.matrix(<double>[
-                                  1.08, 0, 0, 0, 0,
-                                  0, 1.08, 0, 0, 0,
-                                  0, 0, 1.08, 0, 0,
-                                  0, 0, 0, 1, 0,
+                                  1.08,
+                                  0,
+                                  0,
+                                  0,
+                                  0,
+                                  0,
+                                  1.08,
+                                  0,
+                                  0,
+                                  0,
+                                  0,
+                                  0,
+                                  1.08,
+                                  0,
+                                  0,
+                                  0,
+                                  0,
+                                  0,
+                                  1,
+                                  0,
                                 ])
                               : const ColorFilter.mode(
                                   Colors.transparent,
@@ -340,10 +355,7 @@ class _CrestEdge extends StatelessWidget {
           width: 1.5,
         ),
         boxShadow: [
-          BoxShadow(
-            color: accent.withValues(alpha: 0.4),
-            blurRadius: 10,
-          ),
+          BoxShadow(color: accent.withValues(alpha: 0.4), blurRadius: 10),
         ],
       ),
     );

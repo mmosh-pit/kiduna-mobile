@@ -33,10 +33,14 @@ abstract class Env {
   /// Base URL for all API calls, from `API_BASE_URL`.
   static String get apiBaseUrl => _raw('API_BASE_URL');
 
+  /// Base URL for authentication calls (kinship-backend), from `AUTH_API_URL`.
+  static String get authApiUrl => _raw('AUTH_API_URL');
+
   /// Whether the app is running against the production environment.
   static bool get isProduction => current == Environment.prod;
 
   /// Whether the required configuration was loaded. Asserted at app startup so
   /// a missing or empty `.env` fails loudly.
-  static bool get isConfigured => apiBaseUrl.isNotEmpty;
+  static bool get isConfigured =>
+      apiBaseUrl.isNotEmpty && authApiUrl.isNotEmpty;
 }
