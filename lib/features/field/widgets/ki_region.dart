@@ -39,24 +39,21 @@ class _KiRegionState extends ConsumerState<KiRegion> {
     return DecoratedBox(
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          begin: Alignment(-0.7, -1),
-          end: Alignment(0.7, 1),
+          begin: Alignment(-0.26, -1.0),
+          end: Alignment(0.26, 1.0),
           colors: [Color(0xFF100F0B), Color(0xFF100B08), Color(0xFF0B0806)],
-          stops: [0, 0.57, 1],
+          stops: [0.0, 0.57, 1.0],
         ),
         border: Border(
           left: BorderSide(color: colors.sky.withValues(alpha: 0.12)),
         ),
       ),
       child: DecoratedBox(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: RadialGradient(
-            center: const Alignment(-0.8, -0.96),
-            radius: 0.31,
-            colors: [
-              colors.sky.withValues(alpha: 0.085),
-              const Color(0x00000000),
-            ],
+            center: Alignment(-0.8, -0.96),
+            radius: 0.7,
+            colors: [Color(0x1503CCD9), Color(0x00000000)],
           ),
         ),
         child: Column(
@@ -92,26 +89,90 @@ class _KiHeader extends StatelessWidget {
     final colors = context.kiduna;
     final text = context.kidunaText;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 21, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 21),
+      constraints: const BoxConstraints(minHeight: 104),
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(color: colors.camel.withValues(alpha: 0.14)),
         ),
       ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final showAllies = constraints.maxWidth > 320;
+          return Row(
+            children: [
+              EnamelIcon(
+                kind: EnamelKind.ki,
+                size: context.metrics.kiEnamelIcon,
+              ),
+              const SizedBox(width: 17),
+              Expanded(
+                child: Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        context.l10n.ki,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: text.display.copyWith(color: colors.cream),
+                      ),
+                    ),
+                    if (showAllies) ...[
+                      const SizedBox(width: 12),
+                      const _AlliesButton(count: 2),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              _FocusControl(focus: focus, onFocus: onFocus),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _AlliesButton extends StatelessWidget {
+  const _AlliesButton({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.kiduna;
+    final text = context.kidunaText;
+    return OutlinedButton(
+      onPressed: () {},
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(0, 34),
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        foregroundColor: colors.sky,
+        backgroundColor: colors.sky.withValues(alpha: 0.045),
+        side: BorderSide(color: colors.sky.withValues(alpha: 0.25)),
+        shape: const StadiumBorder(),
+        textStyle: text.micro.copyWith(fontWeight: FontWeight.w700),
+      ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          EnamelIcon(kind: EnamelKind.ki, size: context.metrics.kiEnamelIcon),
-          const SizedBox(width: 17),
-          Expanded(
+          Text(context.l10n.yourAllies),
+          const SizedBox(width: 7),
+          Container(
+            constraints: const BoxConstraints(minWidth: 18),
+            height: 18,
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: const Color.fromRGBO(10, 6, 4, 0.13),
+              borderRadius: BorderRadius.circular(999),
+            ),
             child: Text(
-              context.l10n.ki,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: text.display.copyWith(color: colors.cream),
+              '$count',
+              style: text.micro.copyWith(fontSize: 8, color: colors.sky),
             ),
           ),
-          const SizedBox(width: 12),
-          _FocusControl(focus: focus, onFocus: onFocus),
         ],
       ),
     );
@@ -129,7 +190,7 @@ class _FocusControl extends StatelessWidget {
     final colors = context.kiduna;
     final text = context.kidunaText;
     return SizedBox(
-      width: 96,
+      width: 82,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
@@ -141,11 +202,13 @@ class _FocusControl extends StatelessWidget {
                 child: Text(
                   context.l10n.fieldFocus.toUpperCase(),
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: text.micro.copyWith(color: colors.muted),
+                  overflow: TextOverflow.clip,
+                  style: text.micro.copyWith(
+                    color: colors.muted,
+                    letterSpacing: 0.48,
+                  ),
                 ),
               ),
-              const SizedBox(width: 4),
               Text(
                 '${focus.round()}%',
                 style: text.micro.copyWith(
@@ -155,6 +218,7 @@ class _FocusControl extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 6),
           SliderTheme(
             data: SliderThemeData(
               trackHeight: 2,
@@ -223,7 +287,10 @@ class _PreservedBubble extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: context.kidunaText.bodySmall.copyWith(color: colors.muted),
+        style: context.kidunaText.body.copyWith(
+          color: colors.muted,
+          height: 1.45,
+        ),
       ),
     );
   }
@@ -259,7 +326,7 @@ class _TopicContent extends StatelessWidget {
             const SizedBox(height: 14),
             Text(
               topic.invitation,
-              style: text.caption.copyWith(color: colors.muted),
+              style: text.caption.copyWith(color: colors.muted, height: 1.5),
             ),
           ],
         ],

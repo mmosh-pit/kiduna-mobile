@@ -145,7 +145,7 @@ class _FieldPanelState extends State<FieldPanel> {
                     final message = context.l10n.panelClosed(widget.label);
                     final direction = Directionality.of(context);
                     widget.onClose!();
-                    await SemanticsService.announce(message, direction);
+                    await SemanticsService.sendAnnouncement(View.of(context), message, direction);
                   }
                 : () => _setMode(FieldPanelMode.collapsed),
             firstIsClose: widget.onClose != null,
@@ -257,9 +257,10 @@ class _PanelChrome extends StatelessWidget {
                 ),
               ),
               Text(
-                '⋮',
+                '⋮⋮',
                 style: context.kidunaText.micro.copyWith(
-                  color: colors.quiet.withValues(alpha: 0.6),
+                  color: colors.muted.withValues(alpha: 0.35),
+                  letterSpacing: -1.28,
                 ),
               ),
             ],

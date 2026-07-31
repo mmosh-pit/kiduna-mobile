@@ -15,6 +15,8 @@ import 'package:flutter/material.dart';
 class KidunaColors extends ThemeExtension<KidunaColors> {
   const KidunaColors({
     required this.field,
+    required this.stageBackground,
+    required this.kiBackground,
     required this.deep,
     required this.surface,
     required this.raised,
@@ -80,6 +82,12 @@ class KidunaColors extends ThemeExtension<KidunaColors> {
 
   /// Deepest Field background (`--field`).
   final Color field;
+
+  /// Stage / viewport background (M0.3 `.stage`).
+  final Color stageBackground;
+
+  /// Ki panel background (M0.3 `.ki`).
+  final Color kiBackground;
 
   /// Darkest ink and composer ground (`--deep`).
   final Color deep;
@@ -270,6 +278,8 @@ class KidunaColors extends ThemeExtension<KidunaColors> {
   /// Canonical Field palette — matches the prototype token values exactly.
   static const KidunaColors standard = KidunaColors(
     field: Color(0xFF0A0604),
+    stageBackground: Color(0xFF08090A),
+    kiBackground: Color(0xFF0D0F10),
     deep: Color(0xFF060304),
     surface: Color(0xFF1C140D),
     raised: Color(0xFF271B11),
@@ -336,6 +346,8 @@ class KidunaColors extends ThemeExtension<KidunaColors> {
   @override
   KidunaColors copyWith({
     Color? field,
+    Color? stageBackground,
+    Color? kiBackground,
     Color? deep,
     Color? surface,
     Color? raised,
@@ -400,6 +412,8 @@ class KidunaColors extends ThemeExtension<KidunaColors> {
   }) {
     return KidunaColors(
       field: field ?? this.field,
+      stageBackground: stageBackground ?? this.stageBackground,
+      kiBackground: kiBackground ?? this.kiBackground,
       deep: deep ?? this.deep,
       surface: surface ?? this.surface,
       raised: raised ?? this.raised,
@@ -471,6 +485,8 @@ class KidunaColors extends ThemeExtension<KidunaColors> {
     }
     return KidunaColors(
       field: Color.lerp(field, other.field, t)!,
+      stageBackground: Color.lerp(stageBackground, other.stageBackground, t)!,
+      kiBackground: Color.lerp(kiBackground, other.kiBackground, t)!,
       deep: Color.lerp(deep, other.deep, t)!,
       surface: Color.lerp(surface, other.surface, t)!,
       raised: Color.lerp(raised, other.raised, t)!,

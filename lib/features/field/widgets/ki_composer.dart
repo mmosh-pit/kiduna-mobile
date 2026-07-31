@@ -16,7 +16,7 @@ class KiComposer extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(19, 0, 19, 17),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: colors.deep.withValues(alpha: 0.78),
+          color: const Color.fromRGBO(6, 3, 4, 0.78),
           border: Border.all(color: colors.camel.withValues(alpha: 0.23)),
           borderRadius: BorderRadius.circular(7),
         ),
@@ -26,10 +26,14 @@ class KiComposer extends StatelessWidget {
               child: TextField(
                 controller: controller,
                 onSubmitted: (_) => onSend(),
-                style: context.kidunaText.body.copyWith(color: colors.text),
+                style: context.kidunaText.body.copyWith(
+                  color: colors.text,
+                  fontSize: 13,
+                ),
                 decoration: InputDecoration(
                   hintText: '${context.l10n.messageKi}…',
                   hintStyle: context.kidunaText.body.copyWith(
+                    fontSize: 13,
                     color: colors.cream.withValues(alpha: 0.58),
                   ),
                   border: InputBorder.none,
@@ -39,16 +43,35 @@ class KiComposer extends StatelessWidget {
                 ),
               ),
             ),
-            IconButton(
-              onPressed: () {},
-              tooltip: context.l10n.startVoiceInput,
-              icon: Icon(Icons.mic_none, size: 18, color: colors.sky),
-              constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
-              padding: EdgeInsets.zero,
-            ),
+            _VoiceButton(onPressed: () {}),
             _SendButton(controller: controller, onSend: onSend),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _VoiceButton extends StatelessWidget {
+  const _VoiceButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.kiduna;
+    return SizedBox(
+      width: 40,
+      height: 48,
+      child: IconButton(
+        onPressed: onPressed,
+        tooltip: context.l10n.startVoiceInput,
+        padding: EdgeInsets.zero,
+        style: IconButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+        ),
+        icon: Icon(Icons.mic_none, size: 18, color: colors.sky),
       ),
     );
   }
@@ -70,19 +93,33 @@ class _SendButton extends StatelessWidget {
         return Semantics(
           button: true,
           label: context.l10n.sendToKi,
-          child: IconButton(
-            onPressed: enabled ? onSend : null,
-            tooltip: context.l10n.sendToKi,
-            style: IconButton.styleFrom(
-              backgroundColor: enabled
-                  ? colors.sky
-                  : colors.sky.withValues(alpha: 0.09),
-              foregroundColor: colors.surface,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(6),
+          child: SizedBox(
+            width: 40,
+            height: 48,
+            child: Center(
+              child: SizedBox(
+                width: 34,
+                height: 36,
+                child: TextButton(
+                  onPressed: enabled ? onSend : null,
+                  style: TextButton.styleFrom(
+                    backgroundColor: enabled
+                        ? colors.sky
+                        : colors.sky.withValues(alpha: 0.09),
+                    foregroundColor: enabled ? colors.deep : colors.quiet,
+                    padding: EdgeInsets.zero,
+                    minimumSize: Size.zero,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    textStyle: context.kidunaText.body.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  child: const Text('↑'),
+                ),
               ),
             ),
-            icon: const Text('↑'),
           ),
         );
       },

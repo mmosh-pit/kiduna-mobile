@@ -77,6 +77,19 @@
     }
   },
   "copiedToClipboard": "Copied to clipboard",
+  "invitationIntendedOnlyFor": "This invitation is intended only for {name} and expires once used.",
+  "@invitationIntendedOnlyFor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "sendThroughKi": "Send through Ki",
+  "invitationCopied": "Invitation copied",
+  "linkCopied": "Link copied",
+  "codeCopied": "Code copied",
+  "yourAllies": "Your Allies",
   "capacities": "Capacities",
   "member": "Member",
   "sevenDays": "7 days",
@@ -225,6 +238,77 @@
       "level": {
         "type": "String"
       }
+    }
+  },
+  "wisdom": "Wisdom",
+  "whatRealmMayKnow": "What {name} may know",
+  "@whatRealmMayKnow": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "presence": "Presence",
+  "howRealmBehaves": "How {name} behaves",
+  "@howRealmBehaves": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "connections": "Connections",
+  "accountsRealmMayReach": "Accounts {name} may reach",
+  "@accountsRealmMayReach": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "automations": "Automations",
+  "whatKeepsWorkingFor": "What keeps working for {name}",
+  "@whatKeepsWorkingFor": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "skills": "Skills",
+  "whatRealmKnowsHowToDo": "What {name} knows how to do",
+  "@whatRealmKnowsHowToDo": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "edit": "Edit",
+  "remove": "Remove",
+  "delete": "Delete",
+  "connect": "Connect",
+  "disconnect": "Disconnect",
+  "connected": "Connected",
+  "uploadFiles": "Upload files",
+  "uploadSkills": "Upload Skills",
+  "dropSourcesHere": "Drop sources here",
+  "dropZoneFormats": "TXT, MD, DOC, DOCX, or PDF. Sources are prepared as Wisdom Drops in Markdown.",
+  "createNewWisdomWithKi": "Create new Wisdom with Ki",
+  "developNewPresenceWithKi": "Develop a new Presence with Ki",
+  "createNewSkillWithKi": "Create a new Skill with Ki",
+  "currentSystemInstructions": "Current system instructions",
+  "presenceRequired": "A Presence is always required. It may be changed or reset, but it cannot be deleted.",
+  "resetToDefault": "Reset to default",
+  "trigger": "Trigger",
+  "prepareSelectedAutomations": "Prepare selected Automations",
+  "everyAccountSpecificAndVerified": "Every account is specific and verified",
+  "stopWhenAuthorityExpires": "Stop when authority expires, the work conflicts, or Alice pauses it.",
+  "connectedDisconnect": "Connected · Disconnect",
+  "googleDocsOrDriveLink": "Google Docs or Drive link",
+  "checkAccess": "Check access",
+  "openInGoogleDocs": "Open in Google Docs",
+  "nSelectedDraft": "{count} selected · Draft",
+  "@nSelectedDraft": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "nSkillsAvailable": "{count} Skills available",
+  "@nSkillsAvailable": {
+    "placeholders": {
+      "count": { "type": "int" }
     }
   }
 }

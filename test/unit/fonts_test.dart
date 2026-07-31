@@ -10,10 +10,13 @@ void main() {
   const Map<String, List<String>> fontAssets = <String, List<String>>{
     'Avenir': <String>[
       'assets/fonts/Avenir-Book.ttf',
-      'assets/fonts/Avenir-Regular.ttf',
       'assets/fonts/Avenir-Heavy.ttf',
     ],
     'GoudyHeavyface': <String>['assets/fonts/GoudyHeavyface.ttf'],
+    'IBMPlexSans': <String>[
+      'assets/fonts/IBMPlexSans-Regular.ttf',
+      'assets/fonts/IBMPlexSans-Medium.ttf',
+    ],
   };
 
   fontAssets.forEach((String family, List<String> paths) {

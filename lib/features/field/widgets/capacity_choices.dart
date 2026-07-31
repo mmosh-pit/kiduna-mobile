@@ -129,7 +129,7 @@ class _CapacityRow extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 10),
           Tooltip(
             message: context.l10n.askKi,
             child: Container(
