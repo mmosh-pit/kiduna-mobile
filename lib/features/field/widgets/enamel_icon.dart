@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../config/assets.dart';
+import '../../../config/kiduna_colors.dart';
 import '../../../core/extensions/context_extensions.dart';
 
 // Enamel-core fill values from the prototype `.enamelIcon`; one-off painting
@@ -20,11 +21,33 @@ class EnamelIcon extends StatelessWidget {
     required this.kind,
     required this.size,
     this.emblemAsset,
+    this.fallbackInitial,
   });
 
   final EnamelKind kind;
   final double size;
   final String? emblemAsset;
+
+  /// Single character shown when the emblem image fails to load.
+  final String? fallbackInitial;
+
+  Widget _buildFallback(KidunaColors colors) {
+    final letter = fallbackInitial;
+    if (letter == null || letter.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Center(
+      child: Text(
+        letter,
+        style: TextStyle(
+          fontFamily: 'GoudyHeavyface',
+          fontSize: size * 0.38,
+          color: colors.cream.withValues(alpha: 0.48),
+          height: 1,
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -121,14 +144,17 @@ class EnamelIcon extends StatelessWidget {
                           ),
                         )
                       : (emblemAsset == null
-                            ? const SizedBox.shrink()
+                            ? _buildFallback(colors)
                             : SizedBox.expand(
                                 child: Image.asset(
                                   emblemAsset!,
                                   fit: BoxFit.cover,
                                   cacheWidth: cacheSize,
                                   cacheHeight: cacheSize,
+                                  gaplessPlayback: true,
                                   semanticLabel: context.l10n.realmEmblem,
+                                  errorBuilder: (_, __, ___) =>
+                                      _buildFallback(colors),
                                 ),
                               )),
                 ),

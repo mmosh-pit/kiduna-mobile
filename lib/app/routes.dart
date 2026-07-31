@@ -2,6 +2,7 @@ import 'package:go_router/go_router.dart';
 
 import '../features/field/screens/aev_screen.dart';
 import '../features/field/screens/field_screen.dart';
+import '../features/field/screens/nested_realm_screen.dart';
 
 /// Centralised route paths.
 ///
@@ -19,6 +20,12 @@ abstract class Routes {
   static const String login = '/login';
   static const String settings = '/settings';
 
+  /// Nested Realm view — T1 · S1 · 1.1 scoped to a specific realm.
+  static const String realm = '/studio/aev/realm/:realmId';
+
+  static String realmPath({required String realmId}) =>
+      '/studio/aev/realm/$realmId';
+
   /// Path pattern for a user profile. Use [userProfilePath] to build a concrete
   /// path from an `id`.
   static const String userProfile = '/user/:id';
@@ -35,5 +42,10 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => const FieldScreen(),
     ),
     GoRoute(path: Routes.aev, builder: (context, state) => const AevScreen()),
+    GoRoute(
+      path: Routes.realm,
+      builder: (context, state) =>
+          NestedRealmScreen(realmId: state.pathParameters['realmId']!),
+    ),
   ],
 );

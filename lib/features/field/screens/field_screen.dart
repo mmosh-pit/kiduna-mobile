@@ -178,12 +178,7 @@ class _FieldCanvas extends StatelessWidget {
     return Positioned.fill(
       child: ColoredBox(
         color: context.kiduna.field,
-        child: InteractiveViewer(
-          minScale: 0.68,
-          maxScale: 1.45,
-          boundaryMargin: const EdgeInsets.all(160),
-          child: const FieldBackground(),
-        ),
+        child: const FieldBackground(),
       ),
     );
   }

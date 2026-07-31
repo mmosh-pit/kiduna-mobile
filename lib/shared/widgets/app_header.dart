@@ -37,7 +37,7 @@ const List<String> _viewIds = [
 
 /// Maps the current router location to the selected view id.
 String _viewIdForLocation(String location) =>
-    location == Routes.aev ? 'aev' : 'ncev';
+    location.startsWith('/studio/aev') ? 'aev' : 'ncev';
 
 /// Maps a view id to its route, or `null` for views with no page yet.
 String? _routeForViewId(String id) {

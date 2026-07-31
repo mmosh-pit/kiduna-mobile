@@ -49,10 +49,15 @@ class AdvancedActionsPanel extends ConsumerWidget {
     super.key,
     required this.placement,
     this.isCurrent = false,
+    this.onEnter,
   });
 
   final FieldPlacement placement;
   final bool isCurrent;
+
+  /// Called when the user taps "Enter [realm]". The host screen provides
+  /// navigation logic (GoRouter push).
+  final ValueChanged<AtlasRealm>? onEnter;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -64,40 +69,27 @@ class AdvancedActionsPanel extends ConsumerWidget {
       ),
     );
     final realm = placement.realm;
-    final nestedCount = visibleChildren(
-      realm.id,
-      DesignPersona.alice,
-    ).length;
+    final nestedCount = visibleChildren(realm.id, DesignPersona.alice).length;
 
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _Header(
-            realm: realm,
-            isCurrent: isCurrent,
-          ),
-          _FactGrid(
-            realm: realm,
-            nestedCount: nestedCount,
-          ),
+          _Header(realm: realm, isCurrent: isCurrent),
+          _FactGrid(realm: realm, nestedCount: nestedCount),
           _GravityControl(
             realmName: realm.name,
             gravity: gravity,
             onChanged: (level) => controller.setGravity(realm.id, level),
           ),
           if (placement.reason.isNotEmpty)
-            _WhyButton(
-              realm: realm,
-              placement: placement,
-              gravity: gravity,
-            ),
-          if (!isCurrent)
+            _WhyButton(realm: realm, placement: placement, gravity: gravity),
+          if (!isCurrent && onEnter != null)
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
               child: _EnterButton(
                 label: l10n.enterRealmName(realm.name),
-                onTap: () => controller.enterAtlasRealm(realm),
+                onTap: () => onEnter!(realm),
               ),
             ),
           const SizedBox(height: 4),
@@ -118,16 +110,12 @@ class _Header extends StatelessWidget {
     final colors = context.kiduna;
     final text = context.kidunaText;
     final l10n = context.l10n;
-    final label = isCurrent
-        ? l10n.currentRealmLabel
-        : l10n.selectedInTheField;
+    final label = isCurrent ? l10n.currentRealmLabel : l10n.selectedInTheField;
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 17, 18, 14),
       decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(
-            color: colors.camel.withValues(alpha: 0.14),
-          ),
+          bottom: BorderSide(color: colors.camel.withValues(alpha: 0.14)),
         ),
       ),
       child: Column(
@@ -152,10 +140,7 @@ class _Header extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             realm.purpose,
-            style: text.bodySmall.copyWith(
-              color: colors.muted,
-              height: 1.5,
-            ),
+            style: text.bodySmall.copyWith(color: colors.muted, height: 1.5),
           ),
         ],
       ),
@@ -173,17 +158,11 @@ class _FactGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.kiduna;
     final l10n = context.l10n;
-    final border = BorderSide(
-      color: colors.camel.withValues(alpha: 0.1),
-    );
+    final border = BorderSide(color: colors.camel.withValues(alpha: 0.1));
 
     return Wrap(
       children: [
-        _FactCell(
-          label: l10n.yourRole,
-          value: 'Catalyst',
-          border: border,
-        ),
+        _FactCell(label: l10n.yourRole, value: 'Catalyst', border: border),
         _FactCell(
           label: l10n.stationedAlly,
           value: l10n.noneStationed,
@@ -273,9 +252,7 @@ class _GravityControl extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(14, 13, 14, 11),
       decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(
-            color: colors.camel.withValues(alpha: 0.12),
-          ),
+          bottom: BorderSide(color: colors.camel.withValues(alpha: 0.12)),
         ),
       ),
       child: Column(
@@ -319,8 +296,10 @@ class _GravityControl extends StatelessWidget {
               min: 1,
               max: 5,
               divisions: 4,
-              semanticFormatterCallback: (v) =>
-                  l10n.gravityOfRealm(realmName, _gravityName(context, v.round())),
+              semanticFormatterCallback: (v) => l10n.gravityOfRealm(
+                realmName,
+                _gravityName(context, v.round()),
+              ),
               onChanged: (v) => onChanged(v.round()),
             ),
           ),
@@ -467,10 +446,7 @@ class _WhyButton extends ConsumerWidget {
                     color: colors.sky,
                   ),
                 ),
-                Text(
-                  '→',
-                  style: TextStyle(color: colors.sky),
-                ),
+                Text('→', style: TextStyle(color: colors.sky)),
               ],
             ),
           ),
@@ -511,10 +487,7 @@ class _EnterButton extends StatelessWidget {
                   color: colors.skyButtonInk,
                 ),
               ),
-              Text(
-                '→',
-                style: TextStyle(color: colors.skyButtonInk),
-              ),
+              Text('→', style: TextStyle(color: colors.skyButtonInk)),
             ],
           ),
         ),

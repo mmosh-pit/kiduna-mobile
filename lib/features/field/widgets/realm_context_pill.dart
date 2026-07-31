@@ -53,6 +53,9 @@ class RealmContextPill extends StatelessWidget {
             kind: EnamelKind.ecosystem,
             size: context.metrics.enamelIcon,
             emblemAsset: realm.emblemAsset,
+            fallbackInitial: realm.name.isNotEmpty
+                ? realm.name.characters.first
+                : null,
           ),
           const SizedBox(width: 13),
           Expanded(

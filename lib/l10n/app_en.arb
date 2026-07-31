@@ -226,5 +226,17 @@
         "type": "String"
       }
     }
-  }
+  },
+  "navigateToRealm": "Navigate to {name}",
+  "@navigateToRealm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "realmBreadcrumb": "Realm breadcrumb",
+  "noNestedRealmsVisible": "No nested Realms are visible here.",
+  "useNavigationOrAskKi": "Use Navigation to return, or ask Ki what could be formed here.",
+  "allyNoneStationed": "Ally · None stationed"
 }
