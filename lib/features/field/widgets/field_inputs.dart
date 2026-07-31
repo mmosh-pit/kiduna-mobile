@@ -2,44 +2,61 @@ import 'package:flutter/material.dart';
 
 import '../../../core/extensions/context_extensions.dart';
 
-/// A small caption label above a field, styled per the prototype `.taskForm`.
-/// Includes a Ki-assist icon (small sky circle) matching the design kit.
+/// CSS `.fieldTitle` — label text + 24px circular "→" ask-Ki button.
 class FieldLabel extends StatelessWidget {
-  const FieldLabel({super.key, required this.text});
+  const FieldLabel({super.key, required this.text, this.onAskKi});
 
   final String text;
+  final VoidCallback? onAskKi;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.kiduna;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Flexible(
-          child: Text(
-            text,
-            style: context.kidunaText.label.copyWith(color: colors.cream),
-          ),
-        ),
-        const SizedBox(width: 6),
-        Container(
-          width: 24,
-          height: 24,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: colors.sky.withValues(alpha: 0.055),
-            border: Border.all(color: colors.sky.withValues(alpha: 0.28)),
-          ),
-          child: Text(
-            '?',
-            style: context.kidunaText.micro.copyWith(
-              color: colors.sky,
-              height: 1,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 26),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              text,
+              style: context.kidunaText.label.copyWith(color: colors.cream),
             ),
           ),
+          const SizedBox(width: 8),
+          _AskKiButton(onPressed: onAskKi),
+        ],
+      ),
+    );
+  }
+}
+
+class _AskKiButton extends StatelessWidget {
+  const _AskKiButton({required this.onPressed});
+
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.kiduna;
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        width: 24,
+        height: 24,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: colors.sky.withValues(alpha: 0.055),
+          border: Border.all(color: colors.sky.withValues(alpha: 0.28)),
         ),
-      ],
+        child: Text(
+          '→',
+          style: context.kidunaText.micro.copyWith(
+            color: colors.sky,
+            height: 1,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -48,6 +65,7 @@ InputDecoration _decoration(
   BuildContext context,
   String? hint, {
   bool isMultiLine = false,
+  double? minHeight,
 }) {
   final colors = context.kiduna;
   final inputStyle = context.kidunaText.caption.copyWith(height: 1.4);
@@ -65,7 +83,7 @@ InputDecoration _decoration(
         ? const EdgeInsets.fromLTRB(10, 9, 10, 9)
         : const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
     constraints: BoxConstraints(
-      minHeight: isMultiLine ? 70 : 37,
+      minHeight: minHeight ?? (isMultiLine ? 70 : 37),
       maxHeight: isMultiLine ? double.infinity : 37,
     ),
     border: border,
@@ -82,12 +100,16 @@ class FieldTextInput extends StatelessWidget {
     required this.controller,
     this.hint,
     this.maxLines = 1,
+    this.minHeight,
+    this.onAskKi,
   });
 
   final String label;
   final TextEditingController controller;
   final String? hint;
   final int maxLines;
+  final double? minHeight;
+  final VoidCallback? onAskKi;
 
   @override
   Widget build(BuildContext context) {
@@ -95,7 +117,7 @@ class FieldTextInput extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        FieldLabel(text: label),
+        FieldLabel(text: label, onAskKi: onAskKi),
         const SizedBox(height: 6),
         TextField(
           controller: controller,
@@ -104,7 +126,12 @@ class FieldTextInput extends StatelessWidget {
             color: context.kiduna.text,
             height: 1.4,
           ),
-          decoration: _decoration(context, hint, isMultiLine: isMultiLine),
+          decoration: _decoration(
+            context,
+            hint,
+            isMultiLine: isMultiLine,
+            minHeight: minHeight,
+          ),
         ),
       ],
     );
@@ -119,19 +146,21 @@ class FieldDropdown extends StatelessWidget {
     required this.value,
     required this.options,
     required this.onChanged,
+    this.onAskKi,
   });
 
   final String label;
   final String value;
   final List<String> options;
   final ValueChanged<String> onChanged;
+  final VoidCallback? onAskKi;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        FieldLabel(text: label),
+        FieldLabel(text: label, onAskKi: onAskKi),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
           initialValue: value,
@@ -175,6 +204,7 @@ class FieldPrimaryButton extends StatelessWidget {
       onPressed: onPressed,
       style: ElevatedButton.styleFrom(
         minimumSize: const Size(0, 36),
+        padding: const EdgeInsets.symmetric(horizontal: 14),
         backgroundColor: colors.sky,
         foregroundColor: colors.skyButtonInk,
         disabledBackgroundColor: colors.sky.withValues(alpha: 0.09),

@@ -4,13 +4,17 @@ import '../../../core/enums/capacity_target.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../controllers/field_controller.dart';
 import '../data/field_fixtures.dart';
+import 'automations_panel.dart';
 import 'capacity_choices.dart';
-import 'capacity_panel.dart';
+import 'connections_panel.dart';
 import 'field_panel.dart';
 import 'invite_panel.dart';
 import 'portrait_designer.dart';
+import 'presence_panel_cap.dart';
 import 'present_panel.dart';
 import 'realm_panel.dart';
+import 'skills_panel.dart';
+import 'wisdom_panel.dart';
 
 /// The dynamically opened working panels: open actions, capacity panels,
 /// and portrait designers.
@@ -102,7 +106,7 @@ class FieldWorkingPanels extends StatelessWidget {
   Widget _actionBody(String id) {
     switch (id) {
       case 'invite':
-        return const InvitePanel();
+        return InvitePanel(askAbout: controller.askAbout);
       case 'realm':
         return const RealmPanel();
       case 'shape':
@@ -124,11 +128,29 @@ class FieldWorkingPanels extends StatelessWidget {
       key: ValueKey('$prefix-cap-$id'),
       label: capacity.label,
       bounds: bounds,
-      width: 340,
+      width: 760,
       opacity: opacity,
-      initialOffset: _staggeredOffset(340, index),
+      initialOffset: _staggeredOffset(760, index),
       onClose: () => controller.closeCapacity(target, id),
-      child: CapacityPanel(detail: capacity.detail),
+      child: _capacityBody(id),
     );
+  }
+
+  Widget _capacityBody(String id) {
+    final realmName = state.currentRealm.name;
+    switch (id) {
+      case 'wisdom':
+        return WisdomPanel(realmName: realmName);
+      case 'presence':
+        return PresenceCapacityPanel(realmName: realmName);
+      case 'connections':
+        return ConnectionsPanel(realmName: realmName);
+      case 'automations':
+        return AutomationsPanel(realmName: realmName);
+      case 'skills':
+        return SkillsPanel(realmName: realmName);
+      default:
+        return const SizedBox.shrink();
+    }
   }
 }

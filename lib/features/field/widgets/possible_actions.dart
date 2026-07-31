@@ -115,7 +115,11 @@ class _ActionButton extends StatelessWidget {
                 ),
                 child: Text(
                   action.icon,
-                  style: text.bodyLg.copyWith(color: colors.sky, height: 1),
+                  style: text.bodyLg.copyWith(
+                    color: colors.sky,
+                    height: 1,
+                    fontSize: 17,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),

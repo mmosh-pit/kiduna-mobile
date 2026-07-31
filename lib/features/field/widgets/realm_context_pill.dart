@@ -33,7 +33,7 @@ class RealmContextPill extends StatelessWidget {
     return Container(
       width: width,
       constraints: const BoxConstraints(minHeight: 66),
-      padding: const EdgeInsets.fromLTRB(6, 6, 7, 6),
+      padding: const EdgeInsets.fromLTRB(0, 6, 7, 6),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -65,7 +65,10 @@ class RealmContextPill extends StatelessWidget {
               children: [
                 Text(
                   realm.type.toUpperCase(),
-                  style: text.eyebrow.copyWith(color: colors.sky),
+                  style: text.eyebrow.copyWith(
+                    color: colors.sky,
+                    letterSpacing: 2.0,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(

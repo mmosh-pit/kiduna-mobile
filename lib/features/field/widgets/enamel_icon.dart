@@ -62,6 +62,7 @@ class EnamelIcon extends StatelessWidget {
         width: size,
         height: size,
         child: Stack(
+          clipBehavior: Clip.none,
           children: [
             Container(
               width: size,
@@ -185,12 +186,11 @@ class _EnamelStud extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final half = size / 2 - _stud / 2;
-    const edge = 3 - _stud / 2;
     final (double left, double top) = switch (position) {
-      _StudPos.top => (half, edge),
-      _StudPos.right => (size - 3 - _stud / 2, half),
-      _StudPos.bottom => (half, size - 3 - _stud / 2),
-      _StudPos.left => (edge, half),
+      _StudPos.top => (half, -3.0),
+      _StudPos.right => (size - 1, half),
+      _StudPos.bottom => (half, size - 1),
+      _StudPos.left => (-3.0, half),
     };
     return Positioned(
       left: left,
@@ -202,7 +202,7 @@ class _EnamelStud extends StatelessWidget {
           shape: BoxShape.circle,
           color: color,
           boxShadow: [
-            BoxShadow(color: color.withValues(alpha: 0.4), blurRadius: 2),
+            BoxShadow(color: color.withValues(alpha: 0.65), blurRadius: 5),
           ],
         ),
       ),

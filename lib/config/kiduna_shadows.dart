@@ -19,6 +19,7 @@ class KidunaShadows extends ThemeExtension<KidunaShadows> {
     required this.realmPill,
     required this.enamelIcon,
     required this.kiEnamelIcon,
+    required this.kiRegion,
   });
 
   /// Subtle depth (`--shadow-sm`).
@@ -50,6 +51,9 @@ class KidunaShadows extends ThemeExtension<KidunaShadows> {
 
   /// Ki enamel icon multi-ring glow.
   final List<BoxShadow> kiEnamelIcon;
+
+  /// Ki region left-edge shadow (M0.3 `.ki` box-shadow).
+  final List<BoxShadow> kiRegion;
 
   /// Canonical Field shadows — matches the prototype exactly.
   static const KidunaShadows standard = KidunaShadows(
@@ -102,6 +106,13 @@ class KidunaShadows extends ThemeExtension<KidunaShadows> {
       BoxShadow(spreadRadius: 5, color: Color(0x4203CCD9)),
       BoxShadow(blurRadius: 24, color: Color(0x1F03CCD9)),
     ],
+    kiRegion: [
+      BoxShadow(
+        offset: Offset(-18, 0),
+        blurRadius: 50,
+        color: Color(0x38000000),
+      ),
+    ],
   );
 
   @override
@@ -116,6 +127,7 @@ class KidunaShadows extends ThemeExtension<KidunaShadows> {
     List<BoxShadow>? realmPill,
     List<BoxShadow>? enamelIcon,
     List<BoxShadow>? kiEnamelIcon,
+    List<BoxShadow>? kiRegion,
   }) {
     return KidunaShadows(
       sm: sm ?? this.sm,
@@ -128,6 +140,7 @@ class KidunaShadows extends ThemeExtension<KidunaShadows> {
       realmPill: realmPill ?? this.realmPill,
       enamelIcon: enamelIcon ?? this.enamelIcon,
       kiEnamelIcon: kiEnamelIcon ?? this.kiEnamelIcon,
+      kiRegion: kiRegion ?? this.kiRegion,
     );
   }
 

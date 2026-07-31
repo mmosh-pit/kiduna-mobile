@@ -7,7 +7,6 @@ import 'package:kiduna_mobile/config/theme.dart';
 import 'package:kiduna_mobile/l10n/app_localizations.dart';
 import 'package:kiduna_mobile/shared/widgets/app_header.dart';
 
-const Key _surfaceKey = ValueKey('header-surface-dropdown');
 const Key _viewKey = ValueKey('header-view-dropdown');
 const Key _personaKey = ValueKey('header-persona-dropdown');
 const String _aliceLabel = 'Alice — Catalyst';
@@ -50,17 +49,14 @@ Future<GoRouter> _pump(
 }
 
 void main() {
-  testWidgets('renders the logo and the surface, view, and persona dropdowns', (
+  testWidgets('renders the logo and the view and persona dropdowns', (
     tester,
   ) async {
-    // Default 1200px is above the desktop breakpoint so Surface shows.
     await _pump(tester);
 
     expect(find.byType(AppHeader), findsOneWidget);
     expect(find.byType(SvgPicture), findsOneWidget);
-    // Surface + View + Persona at desktop widths.
-    expect(find.byType(DropdownButton<String>), findsNWidgets(3));
-    expect(find.byKey(_surfaceKey), findsOneWidget);
+    expect(find.byType(DropdownButton<String>), findsNWidgets(2));
     expect(find.byKey(_viewKey), findsOneWidget);
     expect(find.byKey(_personaKey), findsOneWidget);
     expect(find.text(_ncevLabel), findsWidgets);
