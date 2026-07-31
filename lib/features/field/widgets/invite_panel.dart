@@ -1,26 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../config/kiduna_colors.dart';
 import '../../../config/kiduna_motion.dart';
 import '../../../config/kiduna_text.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../data/models/ki_topic.dart';
+import '../controllers/field_controller.dart';
 import '../data/field_fixtures.dart';
 import 'field_inputs.dart';
 
 /// The Invite working panel: a form to prepare a one-person invitation, which
-/// swaps to a review of the personal message, unique link, and Kinship Code.
-class InvitePanel extends StatefulWidget {
+/// calls the backend API and then swaps to a review of the personal message,
+/// unique link, and Kinship Code.
+class InvitePanel extends ConsumerStatefulWidget {
   const InvitePanel({super.key, this.askAbout});
 
   final ValueChanged<KiTopic>? askAbout;
 
   @override
-  State<InvitePanel> createState() => _InvitePanelState();
+  ConsumerState<InvitePanel> createState() => _InvitePanelState();
 }
 
-class _InvitePanelState extends State<InvitePanel> {
+class _InvitePanelState extends ConsumerState<InvitePanel> {
   final TextEditingController _name = TextEditingController();
   final TextEditingController _handshake = TextEditingController();
   final TextEditingController _notes = TextEditingController();
@@ -61,22 +64,34 @@ class _InvitePanelState extends State<InvitePanel> {
     );
   }
 
-  void _prepare() {
-    final l10n = context.l10n;
-    final name = _name.text.trim().isEmpty ? l10n.friend : _name.text.trim();
-    _message = TextEditingController(text: l10n.invitationMessageFor(name));
-    setState(() => _prepared = true);
-    widget.askAbout?.call(
-      const KiTopic(
-        title: 'Invitation prepared',
-        body:
-            'Ki has prepared a personal invitation, a unique Kinship Link, and '
-            'its equivalent Kinship Code for review.',
-        invitation:
-            'The optional private handshake remains separate and is never '
-            'included in the invitation, link, or code.',
-      ),
+  Future<void> _prepare() async {
+    final name = _name.text.trim();
+    if (name.isEmpty) {
+      setState(() {});
+      return;
+    }
+
+    final controller = ref.read(fieldControllerProvider.notifier);
+    await controller.prepareInvitation(
+      recipientName: name,
+      role: _roles.join(', '),
+      expiration: _expiration,
+      handshake: _handshake.text.trim().isEmpty ? null : _handshake.text.trim(),
+      notes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
     );
+
+    if (!mounted) {
+      return;
+    }
+
+    // Check if API succeeded — read fresh state.
+    final state = ref.read(fieldControllerProvider);
+    if (state.invitationResponse != null) {
+      _message = TextEditingController(
+        text: state.invitationResponse!.invitationMessage,
+      );
+      setState(() => _prepared = true);
+    }
   }
 
   Future<void> _copy(String label, String value) async {
@@ -89,18 +104,27 @@ class _InvitePanelState extends State<InvitePanel> {
 
   @override
   Widget build(BuildContext context) {
+    final invLoading = ref.watch(
+      fieldControllerProvider.select((s) => s.invitationLoading),
+    );
+    final invError = ref.watch(
+      fieldControllerProvider.select((s) => s.invitationError),
+    );
     final reducedMotion = MediaQuery.disableAnimationsOf(context);
     return Padding(
       padding: const EdgeInsets.all(18),
       child: AnimatedSwitcher(
         duration: reducedMotion ? Duration.zero : KidunaMotion.panelIn,
-        child: _prepared ? _review(context) : _form(context),
+        child: _prepared
+            ? _review(context)
+            : _form(context, isLoading: invLoading, error: invError),
       ),
     );
   }
 
-  Widget _form(BuildContext context) {
+  Widget _form(BuildContext context, {bool isLoading = false, String? error}) {
     final l10n = context.l10n;
+    final colors = context.kiduna;
     return Column(
       key: const ValueKey('form'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -186,12 +210,42 @@ class _InvitePanelState extends State<InvitePanel> {
             ),
           ),
         ),
+        if (error != null) ...[
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.error_outline, size: 16, color: colors.gold),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    error,
+                    style: context.kidunaText.bodySmall.copyWith(
+                      color: colors.gold,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
         Align(
           alignment: Alignment.centerLeft,
-          child: FieldPrimaryButton(
-            label: l10n.prepareInvitation,
-            onPressed: _prepare,
-          ),
+          child: isLoading
+              ? SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    color: colors.sky,
+                  ),
+                )
+              : FieldPrimaryButton(
+                  label: l10n.prepareInvitation,
+                  onPressed: _prepare,
+                ),
         ),
       ],
     );
@@ -201,7 +255,12 @@ class _InvitePanelState extends State<InvitePanel> {
     final l10n = context.l10n;
     final colors = context.kiduna;
     final text = context.kidunaText;
-    final name = _name.text.trim().isEmpty ? l10n.friend : _name.text.trim();
+    final invitation = ref.read(fieldControllerProvider).invitationResponse;
+    final name =
+        invitation?.recipientName ??
+        (_name.text.trim().isEmpty ? l10n.friend : _name.text.trim());
+    final link = invitation?.invitationLink ?? '';
+    final code = invitation?.code ?? '';
     return Column(
       key: const ValueKey('review'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -221,16 +280,16 @@ class _InvitePanelState extends State<InvitePanel> {
         const SizedBox(height: 14),
         _InvitationPartRow(
           label: l10n.uniqueLink,
-          value: FieldFixtures.invitationLink,
+          value: link,
           action: l10n.copyLink,
-          onCopy: () => _copy(l10n.linkCopied, FieldFixtures.invitationLink),
+          onCopy: () => _copy(l10n.linkCopied, link),
         ),
         const SizedBox(height: 8),
         _InvitationPartRow(
           label: l10n.kinshipCode,
-          value: FieldFixtures.invitationCode,
+          value: code,
           action: l10n.copyCode,
-          onCopy: () => _copy(l10n.codeCopied, FieldFixtures.invitationCode),
+          onCopy: () => _copy(l10n.codeCopied, code),
         ),
         const SizedBox(height: 14),
         Align(
