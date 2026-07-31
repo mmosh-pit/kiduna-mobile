@@ -9,8 +9,7 @@ import '../data/field_fixtures.dart';
 import 'enamel_icon.dart';
 import 'ki_composer.dart';
 
-/// The Ki region — the intelligence the Source converses with. Shows Ki's
-/// current message, the Field-focus control, suggested prompts, and a composer.
+/// The Ki region — CSS `.ki`. The intelligence the Source converses with.
 class KiRegion extends ConsumerStatefulWidget {
   const KiRegion({super.key});
 
@@ -34,35 +33,35 @@ class _KiRegionState extends ConsumerState<KiRegion> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.kiduna;
     final state = ref.watch(fieldControllerProvider);
+
+    // CSS .ki: background #0d0f10, border-left 1px solid rgba(242,234,223,.1),
+    // box-shadow -18px 0 50px rgba(0,0,0,.22), padding 28px 24px 22px
     return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment(-0.26, -1.0),
-          end: Alignment(0.26, 1.0),
-          colors: [Color(0xFF100F0B), Color(0xFF100B08), Color(0xFF0B0806)],
-          stops: [0.0, 0.57, 1.0],
-        ),
+      decoration: const BoxDecoration(
+        color: Color(0xFF0D0F10),
         border: Border(
-          left: BorderSide(color: colors.sky.withValues(alpha: 0.12)),
+          left: BorderSide(color: Color(0x1AF2EADF)), // rgba(242,234,223,.1)
         ),
-      ),
-      child: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: RadialGradient(
-            center: Alignment(-0.8, -0.96),
-            radius: 0.7,
-            colors: [Color(0x1503CCD9), Color(0x00000000)],
+        boxShadow: [
+          BoxShadow(
+            offset: Offset(-18, 0),
+            blurRadius: 50,
+            color: Color(0x38000000), // rgba(0,0,0,.22)
           ),
-        ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 28, 24, 22),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _KiHeader(
               focus: state.fieldFocus,
-              onFocus: ref.read(fieldControllerProvider.notifier).setFieldFocus,
+              onFocus:
+                  ref.read(fieldControllerProvider.notifier).setFieldFocus,
             ),
+            const SizedBox(height: 12),
             Expanded(
               child: _KiThread(
                 topic: state.kiTopic,
@@ -70,6 +69,7 @@ class _KiRegionState extends ConsumerState<KiRegion> {
               ),
             ),
             const _KiChips(),
+            const SizedBox(height: 8),
             KiComposer(controller: _composer, onSend: _send),
           ],
         ),
@@ -78,6 +78,7 @@ class _KiRegionState extends ConsumerState<KiRegion> {
   }
 }
 
+/// CSS `.ki header` — flex row, align-items center, gap 12px.
 class _KiHeader extends StatelessWidget {
   const _KiHeader({required this.focus, required this.onFocus});
 
@@ -86,54 +87,36 @@ class _KiHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.kiduna;
-    final text = context.kidunaText;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 21),
-      constraints: const BoxConstraints(minHeight: 104),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: colors.camel.withValues(alpha: 0.14)),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // CSS `.ki header img` — 46×46, border-radius 50%, shadow
+        EnamelIcon(
+          kind: EnamelKind.ki,
+          size: context.metrics.kiEnamelIcon,
         ),
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final showAllies = constraints.maxWidth > 320;
-          return Row(
-            children: [
-              EnamelIcon(
-                kind: EnamelKind.ki,
-                size: context.metrics.kiEnamelIcon,
-              ),
-              const SizedBox(width: 17),
-              Expanded(
-                child: Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        context.l10n.ki,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: text.display.copyWith(color: colors.cream),
-                      ),
-                    ),
-                    if (showAllies) ...[
-                      const SizedBox(width: 12),
-                      const _AlliesButton(count: 2),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              _FocusControl(focus: focus, onFocus: onFocus),
-            ],
-          );
-        },
-      ),
+        const SizedBox(width: 12), // CSS gap: 12px
+        // CSS `.ki header strong` — Goudy 18px, weight 400
+        Text(
+          context.l10n.ki,
+          style: const TextStyle(
+            fontFamily: 'GoudyHeavyface',
+            fontSize: 18,
+            fontWeight: FontWeight.w400,
+            color: Color(0xFFF2EADF), // --cream
+          ),
+        ),
+        const SizedBox(width: 12),
+        const _AlliesButton(count: 2),
+        const Spacer(),
+        _FocusControl(focus: focus, onFocus: onFocus),
+      ],
     );
   }
 }
 
+/// CSS `.alliesButton` — outline pill, NOT filled. Border only, transparent bg.
+/// Teal text + count badge.
 class _AlliesButton extends StatelessWidget {
   const _AlliesButton({required this.count});
 
@@ -141,47 +124,54 @@ class _AlliesButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.kiduna;
-    final text = context.kidunaText;
-    return OutlinedButton(
-      onPressed: () {},
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size(0, 34),
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        foregroundColor: colors.sky,
-        backgroundColor: colors.sky.withValues(alpha: 0.045),
-        side: BorderSide(color: colors.sky.withValues(alpha: 0.25)),
-        shape: const StadiumBorder(),
-        textStyle: text.micro.copyWith(
-          fontSize: 9,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(context.l10n.yourAllies),
-          const SizedBox(width: 7),
-          Container(
-            constraints: const BoxConstraints(minWidth: 18),
-            height: 18,
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: const Color.fromRGBO(10, 6, 4, 0.13),
-              borderRadius: BorderRadius.circular(999),
+    // CSS: border 1px solid rgba(155,202,208,.28), background transparent,
+    // border-radius pill, color #84bac7, font-size ~9px
+    return GestureDetector(
+      onTap: () {},
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Container(
+          height: 30,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: Colors.transparent, // NOT filled
+            border: Border.all(
+              color: const Color(0x479BCAD0), // rgba(155,202,208,.28)
             ),
-            child: Text(
-              '$count',
-              style: text.micro.copyWith(fontSize: 8, color: colors.sky),
-            ),
+            borderRadius: BorderRadius.circular(999),
           ),
-        ],
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Your Allies',
+                style: TextStyle(
+                  fontFamily: 'Avenir',
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF84BAC7),
+                  letterSpacing: 0.3,
+                ),
+              ),
+              const SizedBox(width: 5),
+              Text(
+                '$count',
+                style: const TextStyle(
+                  fontFamily: 'Avenir',
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF84BAC7),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 }
 
+/// CSS `.focusControl` — label text on top, slider below. Column layout.
 class _FocusControl extends StatelessWidget {
   const _FocusControl({required this.focus, required this.onFocus});
 
@@ -190,53 +180,67 @@ class _FocusControl extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.kiduna;
-    final text = context.kidunaText;
     return SizedBox(
-      width: 82,
+      width: 100,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.end,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          // "FIELD  100%" on row 1, "FOCUS" on row 2 — right aligned
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Flexible(
-                child: Text(
-                  context.l10n.fieldFocus.toUpperCase(),
-                  maxLines: 1,
-                  overflow: TextOverflow.clip,
-                  style: text.micro.copyWith(
-                    color: colors.muted,
-                    letterSpacing: 0.48,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'FIELD',
+                    style: TextStyle(
+                      fontFamily: 'Avenir',
+                      fontSize: 6,
+                      fontWeight: FontWeight.w400,
+                      color: Color(0xFF918B82),
+                      letterSpacing: 0.84,
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${focus.round()}%',
+                    style: const TextStyle(
+                      fontFamily: 'Avenir',
+                      fontSize: 6,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF03CCD9),
+                    ),
+                  ),
+                ],
               ),
-              Text(
-                '${focus.round()}%',
-                style: text.micro.copyWith(
-                  color: colors.sky,
-                  fontWeight: FontWeight.w700,
+              const Text(
+                'FOCUS',
+                style: TextStyle(
+                  fontFamily: 'Avenir',
+                  fontSize: 6,
+                  fontWeight: FontWeight.w400,
+                  color: Color(0xFF918B82),
+                  letterSpacing: 0.84,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
+          // Slider below the label — full width of container
           SizedBox(
-            height: 14,
+            height: 18,
             child: SliderTheme(
-              data: SliderThemeData(
-                trackHeight: 2,
-                activeTrackColor: colors.sky,
-                inactiveTrackColor: colors.sky.withValues(alpha: 0.18),
-                thumbColor: colors.sky,
-                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
-                overlayShape: SliderComponentShape.noOverlay,
+              data: const SliderThemeData(
+                trackHeight: 3,
+                activeTrackColor: Color(0xFF03CCD9),
+                inactiveTrackColor: Color(0x2E03CCD9), // sky 18%
+                thumbColor: Color(0xFF03CCD9),
+                thumbShape: RoundSliderThumbShape(enabledThumbRadius: 6),
+                overlayShape: RoundSliderOverlayShape(overlayRadius: 0),
               ),
-              child: Semantics(
-                label: context.l10n.fieldFocus,
-                child: Slider(value: focus, max: 100, onChanged: onFocus),
-              ),
+              child: Slider(value: focus, max: 100, onChanged: onFocus),
             ),
           ),
         ],
@@ -245,6 +249,7 @@ class _FocusControl extends StatelessWidget {
   }
 }
 
+/// CSS `.kiThread` — scrollable message area with left border accent.
 class _KiThread extends StatelessWidget {
   const _KiThread({required this.topic, required this.preserved});
 
@@ -254,8 +259,9 @@ class _KiThread extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final reducedMotion = MediaQuery.disableAnimationsOf(context);
+    // CSS: .kiMessage margin 12px 0 18px
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(21, 40, 21, 20),
+      padding: const EdgeInsets.fromLTRB(0, 24, 0, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -272,6 +278,7 @@ class _KiThread extends StatelessWidget {
   }
 }
 
+/// CSS `blockquote` in .kiThread — user's preserved message.
 class _PreservedBubble extends StatelessWidget {
   const _PreservedBubble({required this.text});
 
@@ -279,24 +286,26 @@ class _PreservedBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.kiduna;
     return Container(
-      margin: const EdgeInsets.only(left: 27, bottom: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: colors.cream.withValues(alpha: 0.035),
-        border: Border.all(color: colors.camel.withValues(alpha: 0.16)),
+        color: const Color(0x09F2EADF), // cream ~3.5%
+        border: Border.all(color: const Color(0x29C19A6B)), // camel 16%
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(7),
           topRight: Radius.circular(7),
-          bottomRight: Radius.circular(7),
-          bottomLeft: Radius.circular(2),
+          bottomRight: Radius.circular(2),
+          bottomLeft: Radius.circular(7),
         ),
       ),
       child: Text(
         text,
-        style: context.kidunaText.body.copyWith(
-          color: colors.muted,
+        style: const TextStyle(
+          fontFamily: 'Avenir',
+          fontSize: 13,
+          fontWeight: FontWeight.w400,
+          color: Color(0xFFCBBCAC), // muted
           height: 1.45,
         ),
       ),
@@ -304,6 +313,7 @@ class _PreservedBubble extends StatelessWidget {
   }
 }
 
+/// CSS `.kiMessage` — left border accent + topic content.
 class _TopicContent extends StatelessWidget {
   const _TopicContent({super.key, required this.topic});
 
@@ -311,30 +321,60 @@ class _TopicContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.kiduna;
-    final text = context.kidunaText;
+    // CSS: left border is subtle teal — from the screenshots it's ~3px,
+    // color approx rgba(3,204,217,0.35)
     return Container(
-      padding: const EdgeInsets.only(left: 13),
-      decoration: BoxDecoration(
+      padding: const EdgeInsets.only(left: 14),
+      decoration: const BoxDecoration(
         border: Border(
-          left: BorderSide(color: colors.sky.withValues(alpha: 0.5)),
+          left: BorderSide(
+            color: Color(0x4DDAB875), // warm gold/amber ~30% alpha
+            width: 2,
+          ),
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // CSS `.kiMessage span` — topic title, gold, uppercase, letter-spacing
           if (topic.title.isNotEmpty)
             Text(
               topic.title.toUpperCase(),
-              style: text.eyebrow.copyWith(color: colors.gold),
+              style: const TextStyle(
+                fontFamily: 'Avenir',
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFFEAAA00), // gold
+                letterSpacing: 1.8,
+              ),
             ),
           if (topic.title.isNotEmpty) const SizedBox(height: 10),
-          Text(topic.body, style: text.bodyLarge.copyWith(color: colors.text)),
+
+          // CSS `.kiMessage p` — font: 400 13px/1.58 "IBM Plex Sans",Avenir
+          // NOT Goudy. This is the conversational body text.
+          Text(
+            topic.body,
+            style: const TextStyle(
+              fontFamily: 'Avenir', // IBM Plex Sans fallback to Avenir
+              fontSize: 19,
+              fontWeight: FontWeight.w400,
+              color: Color(0xFFC3BBB0), // #c3bbb0
+              height: 1.58,
+            ),
+          ),
+
+          // CSS `.kiMessage strong` — invitation/guidance text
           if (topic.invitation.isNotEmpty) ...[
             const SizedBox(height: 14),
             Text(
               topic.invitation,
-              style: text.caption.copyWith(color: colors.muted, height: 1.5),
+              style: const TextStyle(
+                fontFamily: 'Avenir',
+                fontSize: 12,
+                fontWeight: FontWeight.w400, // CSS strong is visual, weight stays 400
+                color: Color(0xFFCBBCAC), // muted
+                height: 1.5,
+              ),
             ),
           ],
         ],
@@ -343,35 +383,82 @@ class _TopicContent extends StatelessWidget {
   }
 }
 
+/// CSS `.kiChits` — horizontal inline pill chips. flex-wrap, gap 7px.
 class _KiChips extends ConsumerWidget {
   const _KiChips();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colors = context.kiduna;
     final controller = ref.read(fieldControllerProvider.notifier);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(19, 0, 19, 12),
+      padding: const EdgeInsets.only(bottom: 4),
       child: Wrap(
         spacing: 7,
         runSpacing: 7,
         children: [
           for (final chip in FieldFixtures.chips)
-            OutlinedButton(
+            _KiChipButton(
+              label: chip.label,
               onPressed: () => controller.askAbout(chip.topic),
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size(0, 35),
-                padding: const EdgeInsets.symmetric(horizontal: 11),
-                shape: const StadiumBorder(),
-                side: BorderSide(color: colors.camel.withValues(alpha: 0.22)),
-                backgroundColor: colors.raised.withValues(alpha: 0.38),
-              ),
-              child: Text(
-                chip.label,
-                style: context.kidunaText.label.copyWith(color: colors.cream),
-              ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// CSS `.kiChits button` — inline pill, border, transparent bg, cream text.
+class _KiChipButton extends StatefulWidget {
+  const _KiChipButton({required this.label, required this.onPressed});
+
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  State<_KiChipButton> createState() => _KiChipButtonState();
+}
+
+class _KiChipButtonState extends State<_KiChipButton> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    // CSS: border 1px solid rgba(242,234,223,.18), bg transparent,
+    // color #f2eadf (cream), border-radius pill, padding ~8px 14px
+    // Hover: border sky, color sky
+    final borderColor = _hovered
+        ? const Color(0x6103CCD9) // sky ~38%
+        : const Color(0x2EC19A6B); // camel/amber ~18%
+
+    final textColor = _hovered
+        ? const Color(0xFF03CCD9) // sky
+        : const Color(0xFFF2EADF); // cream
+
+    return GestureDetector(
+      onTap: widget.onPressed,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: _hovered
+                ? const Color(0x0D03CCD9) // sky ~5%
+                : Colors.transparent,
+            border: Border.all(color: borderColor),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            widget.label,
+            style: TextStyle(
+              fontFamily: 'Avenir',
+              fontSize: 11,
+              fontWeight: FontWeight.w400,
+              color: textColor,
+            ),
+          ),
+        ),
       ),
     );
   }
