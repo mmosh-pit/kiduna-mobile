@@ -219,7 +219,8 @@ class FieldController extends Notifier<FieldState> {
   /// Enters the selected realm: it becomes the new current realm, the
   /// constellation re-renders to show its children, and Ki updates.
   void enterAtlasRealm(AtlasRealm realm) {
-    final emblem = realm.type == AtlasRealmType.institution ||
+    final emblem =
+        realm.type == AtlasRealmType.institution ||
             realm.type == AtlasRealmType.ecosystem
         ? 'conceptual'
         : realm.type.emblemKey;

@@ -58,8 +58,7 @@ class _KiRegionState extends ConsumerState<KiRegion> {
           children: [
             _KiHeader(
               focus: state.fieldFocus,
-              onFocus:
-                  ref.read(fieldControllerProvider.notifier).setFieldFocus,
+              onFocus: ref.read(fieldControllerProvider.notifier).setFieldFocus,
             ),
             const SizedBox(height: 12),
             Expanded(
@@ -88,13 +87,9 @@ class _KiHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         // CSS `.ki header img` — 46×46, border-radius 50%, shadow
-        EnamelIcon(
-          kind: EnamelKind.ki,
-          size: context.metrics.kiEnamelIcon,
-        ),
+        EnamelIcon(kind: EnamelKind.ki, size: context.metrics.kiEnamelIcon),
         const SizedBox(width: 12), // CSS gap: 12px
         // CSS `.ki header strong` — Goudy 18px, weight 400
         Text(
@@ -371,7 +366,8 @@ class _TopicContent extends StatelessWidget {
               style: const TextStyle(
                 fontFamily: 'Avenir',
                 fontSize: 12,
-                fontWeight: FontWeight.w400, // CSS strong is visual, weight stays 400
+                fontWeight:
+                    FontWeight.w400, // CSS strong is visual, weight stays 400
                 color: Color(0xFFCBBCAC), // muted
                 height: 1.5,
               ),

@@ -104,10 +104,7 @@ class _PresenceCapacityPanelState extends State<PresenceCapacityPanel> {
                   _status = 'Reset to default';
                 }),
               ),
-              CapacityActionButton(
-                label: l10n.download,
-                onPressed: () {},
-              ),
+              CapacityActionButton(label: l10n.download, onPressed: () {}),
               CapacityActionButton(
                 label: l10n.openInGoogleDocs,
                 onPressed: () {},

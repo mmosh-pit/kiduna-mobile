@@ -61,10 +61,7 @@ class _WisdomPanelState extends State<WisdomPanel> {
                     () => _drops.removeWhere((d) => d.name == drop.name),
                   ),
                 ),
-                CapacityActionButton(
-                  label: l10n.download,
-                  onPressed: () {},
-                ),
+                CapacityActionButton(label: l10n.download, onPressed: () {}),
               ],
             ),
             const SizedBox(height: 7),

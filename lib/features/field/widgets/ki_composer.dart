@@ -72,10 +72,7 @@ class _KiComposerState extends State<KiComposer> {
           // Voice + Send in a row, each ~34px
           _VoiceButton(onPressed: () {}),
           const SizedBox(width: 5),
-          _SendButton(
-            controller: widget.controller,
-            onSend: widget.onSend,
-          ),
+          _SendButton(controller: widget.controller, onSend: widget.onSend),
         ],
       ),
     );
@@ -170,11 +167,7 @@ class _MicIcon extends StatelessWidget {
           Positioned(
             top: 18,
             left: (13 - 1.5) / 2,
-            child: Container(
-              width: 1.5,
-              height: 4,
-              color: color,
-            ),
+            child: Container(width: 1.5, height: 4, color: color),
           ),
         ],
       ),

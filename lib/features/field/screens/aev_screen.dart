@@ -157,9 +157,7 @@ class _AevField extends ConsumerWidget {
               ),
             if (state.selectedPlacement != null)
               FieldPanel(
-                key: ValueKey(
-                  'panel-advanced-${state.selectedRealmId}',
-                ),
+                key: ValueKey('panel-advanced-${state.selectedRealmId}'),
                 label: state.selectedPlacement!.realm.name,
                 bounds: bounds,
                 width: 520,
@@ -172,8 +170,7 @@ class _AevField extends ConsumerWidget {
                 onClose: controller.clearSelection,
                 child: AdvancedActionsPanel(
                   placement: state.selectedPlacement!,
-                  isCurrent:
-                      state.selectedRealmId == state.currentRealmId,
+                  isCurrent: state.selectedRealmId == state.currentRealmId,
                 ),
               ),
           ],
