@@ -70,16 +70,13 @@ class _AutomationsPanelState extends State<AutomationsPanel> {
                 }
               }),
             ),
-            const SizedBox(height: 7),
+            const SizedBox(height: 8),
           ],
-          const SizedBox(height: 7),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: FieldPrimaryButton(
+          const SizedBox(height: 6),
+          FieldPrimaryButton(
               label: l10n.prepareSelectedAutomations,
               onPressed: _selected.isNotEmpty ? () {} : null,
             ),
-          ),
         ],
       ),
     );
@@ -105,79 +102,100 @@ class _AutomationRow extends StatelessWidget {
     final colors = context.kiduna;
     final text = context.kidunaText;
     return Container(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(11),
       decoration: BoxDecoration(
         color: const Color.fromRGBO(6, 3, 4, 0.36),
         border: Border.all(color: colors.camel.withValues(alpha: 0.14)),
         borderRadius: BorderRadius.circular(7),
       ),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              SizedBox(
-                width: 20,
-                height: 20,
-                child: Checkbox(
-                  value: selected,
-                  onChanged: (v) => onToggle(v ?? false),
-                  activeColor: colors.sky,
-                  side: BorderSide(color: colors.sky.withValues(alpha: 0.5)),
+          Expanded(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: Checkbox(
+                    value: selected,
+                    onChanged: (v) => onToggle(v ?? false),
+                    activeColor: colors.sky,
+                    side: BorderSide(
+                      color: colors.sky.withValues(alpha: 0.5),
+                    ),
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    visualDensity: VisualDensity.compact,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: text.label.copyWith(
-                        color: colors.cream,
-                        fontWeight: FontWeight.w700,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        style: text.label.copyWith(
+                          color: colors.cream,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        l10n.stopWhenAuthorityExpires,
+                        style: text.micro.copyWith(color: colors.quiet),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.trigger,
+                  style: text.micro.copyWith(color: colors.muted),
+                ),
+                const SizedBox(height: 5),
+                TextField(
+                  controller: triggerController,
+                  style: text.caption.copyWith(
+                    color: colors.text,
+                    height: 1.4,
+                  ),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    filled: true,
+                    fillColor: const Color.fromRGBO(6, 3, 4, 0.66),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 7,
+                    ),
+                    constraints: const BoxConstraints(minHeight: 35),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(5),
+                      borderSide: BorderSide(
+                        color: colors.camel.withValues(alpha: 0.24),
                       ),
                     ),
-                    Text(
-                      l10n.stopWhenAuthorityExpires,
-                      style: text.micro.copyWith(color: colors.quiet),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(5),
+                      borderSide: BorderSide(
+                        color: colors.camel.withValues(alpha: 0.24),
+                      ),
                     ),
-                  ],
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(5),
+                      borderSide: BorderSide(color: colors.sky),
+                    ),
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(l10n.trigger, style: text.micro.copyWith(color: colors.cream)),
-          const SizedBox(height: 4),
-          TextField(
-            controller: triggerController,
-            style: text.caption.copyWith(color: colors.text, height: 1.4),
-            decoration: InputDecoration(
-              isDense: true,
-              filled: true,
-              fillColor: const Color.fromRGBO(6, 3, 4, 0.66),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 9,
-                vertical: 7,
-              ),
-              constraints: const BoxConstraints(minHeight: 35),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(5),
-                borderSide: BorderSide(
-                  color: colors.camel.withValues(alpha: 0.24),
-                ),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(5),
-                borderSide: BorderSide(
-                  color: colors.camel.withValues(alpha: 0.24),
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(5),
-                borderSide: BorderSide(color: colors.sky),
-              ),
+              ],
             ),
           ),
         ],

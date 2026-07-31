@@ -47,27 +47,54 @@ class _SkillsPanelState extends State<SkillsPanel> {
                   label: l10n.remove,
                   onPressed: () => setState(() => _skills.remove(skill)),
                 ),
+                CapacityActionButton(
+                  label: l10n.download,
+                  onPressed: () {},
+                ),
               ],
             ),
             const SizedBox(height: 7),
           ],
           const SizedBox(height: 7),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: CapacityActionButton(
-              label: l10n.uploadSkills,
-              onPressed: () {},
-            ),
-          ),
+          _UploadSkillsButton(onPressed: () {}),
           const SizedBox(height: 14),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: FieldPrimaryButton(
-              label: l10n.createNewSkillWithKi,
-              onPressed: () {},
-            ),
+          FieldPrimaryButton(
+            label: l10n.createNewSkillWithKi,
+            onPressed: () {},
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// CSS `.secondaryAction` — min-height 31, padding 0 11, sky text, sky@4% bg,
+/// sky@28% border, radius 5, font-size 9.
+class _UploadSkillsButton extends StatelessWidget {
+  const _UploadSkillsButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.kiduna;
+    final l10n = context.l10n;
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(0, 31),
+          padding: const EdgeInsets.symmetric(horizontal: 11),
+          foregroundColor: colors.sky,
+          backgroundColor: colors.sky.withValues(alpha: 0.04),
+          side: BorderSide(color: colors.sky.withValues(alpha: 0.28)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(5),
+          ),
+          textStyle: context.kidunaText.micro.copyWith(fontSize: 9),
+        ),
+        child: Text(l10n.uploadSkills),
       ),
     );
   }

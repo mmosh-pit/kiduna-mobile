@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../config/assets.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../controllers/field_controller.dart';
 import '../data/field_fixtures.dart';
@@ -104,21 +103,33 @@ class _PresentPanelState extends ConsumerState<PresentPanel> {
             ),
             child: Row(
               children: [
-                DecoratedBox(
+                Container(
+                  width: 74,
+                  height: 74,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
+                    border: Border.all(
+                      color: colors.gold.withValues(alpha: 0.4),
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: colors.gold.withValues(alpha: 0.1),
                         blurRadius: 24,
                       ),
                     ],
-                  ),
-                  child: ClipOval(
-                    child: Image.asset(
-                      AppAssets.realmEmblem(_type),
-                      width: 74,
-                      height: 74,
+                    image: DecorationImage(
+                      image: ResizeImage(
+                        AssetImage(
+                          ref
+                              .read(fieldControllerProvider)
+                              .currentRealm
+                              .emblemAsset,
+                        ),
+                        width: (74 * MediaQuery.devicePixelRatioOf(context))
+                            .round(),
+                        height: (74 * MediaQuery.devicePixelRatioOf(context))
+                            .round(),
+                      ),
                       fit: BoxFit.cover,
                     ),
                   ),

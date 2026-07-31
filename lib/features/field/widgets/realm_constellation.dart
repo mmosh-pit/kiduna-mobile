@@ -315,6 +315,14 @@ class _RealmNodeState extends State<_RealmNode> {
                             width: widget.crestSize,
                             height: widget.crestSize,
                             fit: BoxFit.contain,
+                            cacheWidth:
+                                (crestSize *
+                                        MediaQuery.devicePixelRatioOf(context))
+                                    .round(),
+                            cacheHeight:
+                                (crestSize *
+                                        MediaQuery.devicePixelRatioOf(context))
+                                    .round(),
                           ),
                         ),
                       ),
