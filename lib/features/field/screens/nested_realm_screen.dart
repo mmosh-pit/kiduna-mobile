@@ -245,8 +245,10 @@ class _NestedRealmField extends ConsumerWidget {
                 onClose: controller.clearSelection,
                 child: AdvancedActionsPanel(
                   placement: state.selectedPlacement!,
-                  onEnter: (enterRealm) =>
-                      context.go(Routes.realmPath(realmId: enterRealm.id)),
+                  onEnter: (enterRealm) {
+                    controller.clearSelection();
+                    context.go(Routes.realmPath(realmId: enterRealm.id));
+                  },
                 ),
               ),
           ],
