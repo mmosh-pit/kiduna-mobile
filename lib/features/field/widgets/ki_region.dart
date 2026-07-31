@@ -152,7 +152,10 @@ class _AlliesButton extends StatelessWidget {
         backgroundColor: colors.sky.withValues(alpha: 0.045),
         side: BorderSide(color: colors.sky.withValues(alpha: 0.25)),
         shape: const StadiumBorder(),
-        textStyle: text.micro.copyWith(fontWeight: FontWeight.w700),
+        textStyle: text.micro.copyWith(
+          fontSize: 9,
+          fontWeight: FontWeight.w700,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -219,16 +222,21 @@ class _FocusControl extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 6),
-          SliderTheme(
-            data: SliderThemeData(
-              trackHeight: 2,
-              activeTrackColor: colors.sky,
-              thumbColor: colors.sky,
-              overlayShape: SliderComponentShape.noOverlay,
-            ),
-            child: Semantics(
-              label: context.l10n.fieldFocus,
-              child: Slider(value: focus, max: 100, onChanged: onFocus),
+          SizedBox(
+            height: 14,
+            child: SliderTheme(
+              data: SliderThemeData(
+                trackHeight: 2,
+                activeTrackColor: colors.sky,
+                inactiveTrackColor: colors.sky.withValues(alpha: 0.18),
+                thumbColor: colors.sky,
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
+                overlayShape: SliderComponentShape.noOverlay,
+              ),
+              child: Semantics(
+                label: context.l10n.fieldFocus,
+                child: Slider(value: focus, max: 100, onChanged: onFocus),
+              ),
             ),
           ),
         ],

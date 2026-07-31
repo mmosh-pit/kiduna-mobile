@@ -106,7 +106,7 @@ class FieldWorkingPanels extends StatelessWidget {
   Widget _actionBody(String id) {
     switch (id) {
       case 'invite':
-        return const InvitePanel();
+        return InvitePanel(askAbout: controller.askAbout);
       case 'realm':
         return const RealmPanel();
       case 'shape':

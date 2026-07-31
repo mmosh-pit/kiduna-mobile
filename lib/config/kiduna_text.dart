@@ -262,7 +262,7 @@ class KidunaText extends ThemeExtension<KidunaText> {
     caption: TextStyle(
       fontFamily: _avenir,
       fontSize: 12,
-      height: 1.4,
+      height: 1.5,
       fontWeight: FontWeight.w400,
     ),
     callout: TextStyle(

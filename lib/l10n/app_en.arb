@@ -106,6 +106,7 @@
   "realmPortrait": "Realm Portrait",
   "defaultPortraitDescription": "The default Community Portrait is used until you deliberately create a custom one.",
   "askKi": "Ask Ki",
+  "chooseRoles": "Choose roles",
   "requiredField": "* Required",
   "change": "Change",
   "create": "Create",
