@@ -27,41 +27,32 @@ class CapacityHeader extends StatelessWidget {
           bottom: BorderSide(color: colors.camel.withValues(alpha: 0.14)),
         ),
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  eyebrow.toUpperCase(),
-                  style: text.micro.copyWith(
-                    color: colors.sky,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 8,
-                    letterSpacing: 0.16 * 8,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  heading,
-                  style: text.h4.copyWith(
-                    color: colors.cream,
-                    fontSize: 21,
-                    height: 1.15,
-                  ),
-                ),
-              ],
+          Text(
+            eyebrow.toUpperCase(),
+            style: text.micro.copyWith(
+              color: colors.sky,
+              fontWeight: FontWeight.w700,
+              fontSize: 8,
+              height: 1,
+              letterSpacing: 0.16 * 8,
             ),
           ),
-          const SizedBox(width: 18),
-          Flexible(
-            child: Text(
-              status,
-              textAlign: TextAlign.right,
-              style: text.micro.copyWith(color: colors.muted, fontSize: 9),
+          const SizedBox(height: 4),
+          Text(
+            heading,
+            style: text.h4.copyWith(
+              color: colors.cream,
+              fontSize: 21,
+              height: 1.15,
             ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            status,
+            style: text.micro.copyWith(color: colors.muted, fontSize: 9),
           ),
         ],
       ),

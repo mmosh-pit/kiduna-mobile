@@ -94,16 +94,17 @@ class _PresenceCapacityPanelState extends State<PresenceCapacityPanel> {
           ),
           const SizedBox(height: 12),
           Wrap(
-            spacing: 5,
-            runSpacing: 5,
+            spacing: 7,
+            runSpacing: 7,
             children: [
               CapacityActionButton(
                 label: l10n.resetToDefault,
                 onPressed: () => setState(() {
                   _instructions.text = _defaultPresence;
-                  _status = 'Reset to inherited default';
+                  _status = 'Reset to default';
                 }),
               ),
+              CapacityActionButton(label: l10n.download, onPressed: () {}),
               CapacityActionButton(
                 label: l10n.openInGoogleDocs,
                 onPressed: () {},
@@ -111,12 +112,9 @@ class _PresenceCapacityPanelState extends State<PresenceCapacityPanel> {
             ],
           ),
           const SizedBox(height: 14),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: FieldPrimaryButton(
-              label: l10n.developNewPresenceWithKi,
-              onPressed: () {},
-            ),
+          FieldPrimaryButton(
+            label: l10n.developNewPresenceWithKi,
+            onPressed: () {},
           ),
         ],
       ),

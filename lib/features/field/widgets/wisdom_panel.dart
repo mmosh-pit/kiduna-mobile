@@ -61,6 +61,7 @@ class _WisdomPanelState extends State<WisdomPanel> {
                     () => _drops.removeWhere((d) => d.name == drop.name),
                   ),
                 ),
+                CapacityActionButton(label: l10n.download, onPressed: () {}),
               ],
             ),
             const SizedBox(height: 7),
@@ -74,12 +75,9 @@ class _WisdomPanelState extends State<WisdomPanel> {
           const SizedBox(height: 14),
           _LinkImport(controller: _link, onCheck: () {}),
           const SizedBox(height: 14),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: FieldPrimaryButton(
-              label: l10n.createNewWisdomWithKi,
-              onPressed: () {},
-            ),
+          FieldPrimaryButton(
+            label: l10n.createNewWisdomWithKi,
+            onPressed: () {},
           ),
         ],
       ),
@@ -152,52 +150,54 @@ class _LinkImport extends StatelessWidget {
         border: Border.all(color: colors.camel.withValues(alpha: 0.14)),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.googleDocsOrDriveLink,
-                  style: text.micro.copyWith(color: colors.cream),
-                ),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: controller,
-                  style: text.caption.copyWith(color: colors.text),
-                  decoration: InputDecoration(
-                    isDense: true,
-                    filled: true,
-                    fillColor: const Color.fromRGBO(6, 3, 4, 0.66),
-                    hintText: 'Paste a Google Docs or Drive link',
-                    hintStyle: text.caption.copyWith(color: colors.quiet),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 9,
-                      vertical: 7,
-                    ),
-                    constraints: const BoxConstraints(minHeight: 35),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(5),
-                      borderSide: BorderSide(
-                        color: colors.camel.withValues(alpha: 0.24),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.googleDocsOrDriveLink,
+                    style: text.micro.copyWith(color: colors.cream),
+                  ),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: controller,
+                    style: text.caption.copyWith(color: colors.text),
+                    decoration: InputDecoration(
+                      isDense: true,
+                      filled: true,
+                      fillColor: const Color.fromRGBO(6, 3, 4, 0.66),
+                      hintText: 'Paste a Google Docs or Drive link',
+                      hintStyle: text.caption.copyWith(color: colors.quiet),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 9,
+                        vertical: 7,
                       ),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(5),
-                      borderSide: BorderSide(
-                        color: colors.camel.withValues(alpha: 0.24),
+                      constraints: const BoxConstraints(minHeight: 35),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(5),
+                        borderSide: BorderSide(
+                          color: colors.camel.withValues(alpha: 0.24),
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(5),
+                        borderSide: BorderSide(
+                          color: colors.camel.withValues(alpha: 0.24),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          CapacityActionButton(label: l10n.checkAccess, onPressed: onCheck),
-        ],
+            const SizedBox(width: 8),
+            CapacityActionButton(label: l10n.checkAccess, onPressed: onCheck),
+          ],
+        ),
       ),
     );
   }
