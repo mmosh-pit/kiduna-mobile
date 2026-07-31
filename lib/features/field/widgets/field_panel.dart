@@ -145,7 +145,8 @@ class _FieldPanelState extends State<FieldPanel> {
                     final message = context.l10n.panelClosed(widget.label);
                     final direction = Directionality.of(context);
                     widget.onClose!();
-                    await SemanticsService.sendAnnouncement(View.of(context), message, direction);
+                    // ignore: deprecated_member_use
+                    await SemanticsService.announce(message, direction);
                   }
                 : () => _setMode(FieldPanelMode.collapsed),
             firstIsClose: widget.onClose != null,
