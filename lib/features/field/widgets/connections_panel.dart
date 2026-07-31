@@ -51,7 +51,7 @@ class _ConnectionsPanelState extends State<ConnectionsPanel> {
                 }
               }),
             ),
-            const SizedBox(height: 7),
+            const SizedBox(height: 8),
           ],
         ],
       ),
@@ -109,9 +109,11 @@ class _ConnectionRow extends StatelessWidget {
                   style: OutlinedButton.styleFrom(
                     minimumSize: const Size(0, 28),
                     padding: const EdgeInsets.symmetric(horizontal: 8),
-                    foregroundColor: colors.sky,
+                    foregroundColor: colors.mint,
                     backgroundColor: colors.sky.withValues(alpha: 0.045),
-                    side: BorderSide(color: colors.sky.withValues(alpha: 0.22)),
+                    side: BorderSide(
+                      color: colors.mint.withValues(alpha: 0.28),
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(5),
                     ),
@@ -130,7 +132,7 @@ class _ConnectionRow extends StatelessWidget {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(5),
                     ),
-                    textStyle: text.micro.copyWith(fontWeight: FontWeight.w700),
+                    textStyle: text.label.copyWith(fontWeight: FontWeight.w700),
                   ),
                   child: Text(l10n.connect),
                 ),

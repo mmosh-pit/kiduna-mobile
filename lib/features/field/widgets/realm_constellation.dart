@@ -243,6 +243,14 @@ class _RealmNode extends StatelessWidget {
                             width: crestSize,
                             height: crestSize,
                             fit: BoxFit.contain,
+                            cacheWidth:
+                                (crestSize *
+                                        MediaQuery.devicePixelRatioOf(context))
+                                    .round(),
+                            cacheHeight:
+                                (crestSize *
+                                        MediaQuery.devicePixelRatioOf(context))
+                                    .round(),
                           ),
                         ),
                       ),

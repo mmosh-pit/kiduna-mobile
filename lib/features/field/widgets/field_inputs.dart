@@ -207,7 +207,8 @@ class FieldPrimaryButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14),
         backgroundColor: colors.sky,
         foregroundColor: colors.skyButtonInk,
-        disabledBackgroundColor: colors.sky.withValues(alpha: 0.09),
+        disabledBackgroundColor: const Color.fromRGBO(203, 188, 172, 0.12),
+        disabledForegroundColor: colors.quiet,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(context.metrics.radiusMd),

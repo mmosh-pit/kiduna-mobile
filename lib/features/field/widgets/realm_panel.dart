@@ -83,21 +83,28 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
             ),
             child: Row(
               children: [
-                DecoratedBox(
+                Container(
+                  width: 74,
+                  height: 74,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
+                    border: Border.all(
+                      color: colors.gold.withValues(alpha: 0.4),
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: colors.gold.withValues(alpha: 0.1),
                         blurRadius: 24,
                       ),
                     ],
-                  ),
-                  child: ClipOval(
-                    child: Image.asset(
-                      AppAssets.realmEmblem(_type),
-                      width: 74,
-                      height: 74,
+                    image: DecorationImage(
+                      image: ResizeImage(
+                        AssetImage(AppAssets.realmEmblem(_type)),
+                        width: (74 * MediaQuery.devicePixelRatioOf(context))
+                            .round(),
+                        height: (74 * MediaQuery.devicePixelRatioOf(context))
+                            .round(),
+                      ),
                       fit: BoxFit.cover,
                     ),
                   ),
