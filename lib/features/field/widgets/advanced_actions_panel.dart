@@ -49,10 +49,15 @@ class AdvancedActionsPanel extends ConsumerWidget {
     super.key,
     required this.placement,
     this.isCurrent = false,
+    this.onEnter,
   });
 
   final FieldPlacement placement;
   final bool isCurrent;
+
+  /// Called when the user taps "Enter [realm]". The host screen provides
+  /// navigation logic (GoRouter push).
+  final ValueChanged<AtlasRealm>? onEnter;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -79,12 +84,12 @@ class AdvancedActionsPanel extends ConsumerWidget {
           ),
           if (placement.reason.isNotEmpty)
             _WhyButton(realm: realm, placement: placement, gravity: gravity),
-          if (!isCurrent)
+          if (!isCurrent && onEnter != null)
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
               child: _EnterButton(
                 label: l10n.enterRealmName(realm.name),
-                onTap: () => controller.enterAtlasRealm(realm),
+                onTap: () => onEnter!(realm),
               ),
             ),
           const SizedBox(height: 4),

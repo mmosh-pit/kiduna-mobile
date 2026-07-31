@@ -41,7 +41,10 @@ class FieldChromePanels extends StatelessWidget {
           width: (bounds.width - 840).clamp(220.0, 620.0),
           opacity: opacity,
           initialOffset: Offset(_clampLeft(540), 22),
-          child: NavigationPanel(realmName: realm.name),
+          child: NavigationPanel(
+            realmPath: state.realmPath,
+            onBreadcrumbTap: controller.navigateToBreadcrumb,
+          ),
         ),
         FieldPanel(
           key: const ValueKey('panel-compute'),

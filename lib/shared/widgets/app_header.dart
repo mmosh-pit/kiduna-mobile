@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../app/routes.dart';
 import '../../config/assets.dart';
 import '../../core/extensions/context_extensions.dart';
 
@@ -15,6 +17,7 @@ const Color _headerBg = Color.fromRGBO(18, 12, 7, 0.97);
 const List<String> _personaIds = ['alice'];
 
 const String _defaultPersonaId = 'alice';
+const String _defaultViewId = 'ncev';
 
 /// View ids the header offers, mirroring the prototype's Studio View selector
 /// (`STUDIO_VIEWS`). UI-only for now — selecting one changes the shown value
@@ -27,7 +30,21 @@ const List<String> _viewIds = [
   'sceneRoughV3',
 ];
 
-const String _defaultViewId = 'ncev';
+/// Maps the current router location to the selected view id.
+String _viewIdForLocation(String location) =>
+    location.startsWith('/studio/aev') ? 'aev' : 'ncev';
+
+/// Maps a view id to its route, or `null` for views with no page yet.
+String? _routeForViewId(String id) {
+  switch (id) {
+    case 'ncev':
+      return Routes.field;
+    case 'aev':
+      return Routes.aev;
+    default:
+      return null;
+  }
+}
 
 /// Resolves the display label for a persona [id] from localized strings.
 String _personaLabel(BuildContext context, String id) {
@@ -81,12 +98,26 @@ class _AppHeaderState extends State<AppHeader> {
   }
 
   void _onViewChanged(String id) {
-    // Persona is deliberately preserved across a View change.
     setState(() => _view = id);
+    final route = _routeForViewId(id);
+    if (route != null) {
+      context.go(route);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    try {
+      final location = GoRouterState.of(context).uri.toString();
+      final activeView = _viewIdForLocation(location);
+      if (activeView != _view) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) setState(() => _view = activeView);
+        });
+      }
+    } on GoError catch (_) {
+      // No GoRouterState in test context — use local _view.
+    }
     return Container(
       height: 74,
       padding: const EdgeInsets.symmetric(horizontal: 24),

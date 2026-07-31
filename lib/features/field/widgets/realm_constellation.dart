@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
@@ -24,18 +25,24 @@ class RealmConstellation extends StatelessWidget {
     this.currentRealmId = 'kinship-duna',
     this.selectedRealmId,
     this.onSelect,
+    this.showHoverDetails = false,
   });
 
   final DesignPersona persona;
   final String currentRealmId;
   final String? selectedRealmId;
   final ValueChanged<FieldPlacement>? onSelect;
+  final bool showHoverDetails;
 
   @override
   Widget build(BuildContext context) {
     final realms = visibleChildren(currentRealmId, persona);
     final composition = fieldCompositionFor(currentRealmId, persona, realms);
     final colors = context.kiduna;
+
+    if (composition.placements.isEmpty) {
+      return Center(child: _EmptyRealmField(colors: colors));
+    }
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -44,6 +51,7 @@ class RealmConstellation extends StatelessWidget {
         double dy(double topPercent) => topPercent / 100 * size.height;
 
         return Stack(
+          clipBehavior: Clip.none,
           children: [
             Positioned.fill(
               child: CustomPaint(
@@ -96,7 +104,59 @@ class RealmConstellation extends StatelessWidget {
         placement: placement,
         crestSize: crest,
         selected: isSelected,
+        showHoverDetails: showHoverDetails,
         onTap: onSelect != null ? () => onSelect!(placement) : null,
+      ),
+    );
+  }
+}
+
+class _EmptyRealmField extends StatelessWidget {
+  const _EmptyRealmField({required this.colors});
+
+  final KidunaColors colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(9),
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 360),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: colors.deep.withValues(alpha: 0.72),
+            border: Border.all(color: colors.camel.withValues(alpha: 0.25)),
+            borderRadius: BorderRadius.circular(9),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                context.l10n.noNestedRealmsVisible,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: AppTheme.displayFontFamily,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w400,
+                  height: 1.2,
+                  color: colors.cream,
+                ),
+              ),
+              const SizedBox(height: 7),
+              Text(
+                context.l10n.useNavigationOrAskKi,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'Avenir',
+                  fontSize: 10,
+                  color: colors.muted,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -141,37 +201,47 @@ Color _clusterColor(FieldClusterId id, KidunaColors colors) {
   }
 }
 
-class _RealmNode extends StatelessWidget {
+class _RealmNode extends StatefulWidget {
   const _RealmNode({
     required this.placement,
     required this.crestSize,
     this.selected = false,
+    this.showHoverDetails = false,
     this.onTap,
   });
 
   final FieldPlacement placement;
   final double crestSize;
   final bool selected;
+  final bool showHoverDetails;
   final VoidCallback? onTap;
+
+  @override
+  State<_RealmNode> createState() => _RealmNodeState();
+}
+
+class _RealmNodeState extends State<_RealmNode> {
+  bool _hovered = false;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.kiduna;
-    final realm = placement.realm;
-    final band = placement.band;
-    final accent = _clusterColor(placement.cluster, colors);
-    final nameColor = selected
+    final realm = widget.placement.realm;
+    final band = widget.placement.band;
+    final accent = _clusterColor(widget.placement.cluster, colors);
+    final isActive = widget.selected || _hovered;
+    final nameColor = isActive
         ? Color.lerp(accent, colors.cream, 0.76)!
         : Color.lerp(accent, colors.cream, 0.42)!;
     final badgeSize = _motifBadgeSize(band);
     final isFar = band == FieldBand.far;
-    final showLabels = !isFar || selected;
+    final showLabels = !isFar || isActive;
     final nameFontSize = band == FieldBand.near ? 12.0 : 10.0;
-    final effectiveOpacity = isFar && !selected ? 0.62 : 1.0;
-    final scale = selected ? 1.09 : 1.0;
+    final effectiveOpacity = isFar && !isActive ? 0.62 : 1.0;
+    final scale = widget.selected ? 1.09 : (_hovered ? 1.04 : 1.0);
 
-    return GestureDetector(
-      onTap: onTap,
+    Widget node = GestureDetector(
+      onTap: widget.onTap,
       behavior: HitTestBehavior.opaque,
       child: Opacity(
         opacity: effectiveOpacity,
@@ -181,28 +251,30 @@ class _RealmNode extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               SizedBox(
-                width: crestSize * 1.2,
-                height: crestSize * 1.2,
+                width: widget.crestSize * 1.2,
+                height: widget.crestSize * 1.2,
                 child: Stack(
                   clipBehavior: Clip.none,
                   alignment: Alignment.center,
                   children: [
-                    if (selected) _SignalPulse(size: crestSize, accent: accent),
-                    _CrestOrbit(size: crestSize, accent: accent),
-                    if (selected) _CrestEdge(size: crestSize, accent: accent),
+                    if (widget.selected)
+                      _SignalPulse(size: widget.crestSize, accent: accent),
+                    _CrestOrbit(size: widget.crestSize, accent: accent),
+                    if (widget.selected || _hovered)
+                      _CrestEdge(size: widget.crestSize, accent: accent),
                     Container(
-                      width: crestSize,
-                      height: crestSize,
+                      width: widget.crestSize,
+                      height: widget.crestSize,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
                             color: accent.withValues(
-                              alpha: selected ? 0.7 : 0.42,
+                              alpha: isActive ? 0.7 : 0.42,
                             ),
-                            blurRadius: selected ? 34 : 9,
+                            blurRadius: isActive ? 34 : 9,
                           ),
-                          if (selected)
+                          if (isActive)
                             BoxShadow(
                               color: accent.withValues(alpha: 0.25),
                               blurRadius: 34,
@@ -211,7 +283,7 @@ class _RealmNode extends StatelessWidget {
                       ),
                       child: ClipOval(
                         child: ColorFiltered(
-                          colorFilter: selected
+                          colorFilter: widget.selected
                               ? const ColorFilter.matrix(<double>[
                                   1.08,
                                   0,
@@ -240,8 +312,8 @@ class _RealmNode extends StatelessWidget {
                                 ),
                           child: Image.asset(
                             'assets/images/realm-emblems/${realm.type.emblemKey}.jpg',
-                            width: crestSize,
-                            height: crestSize,
+                            width: widget.crestSize,
+                            height: widget.crestSize,
                             fit: BoxFit.contain,
                             cacheWidth:
                                 (crestSize *
@@ -255,13 +327,13 @@ class _RealmNode extends StatelessWidget {
                         ),
                       ),
                     ),
-                    _CrestReflection(size: crestSize),
+                    _CrestReflection(size: widget.crestSize),
                     if (realm.motif.isNotEmpty)
                       Positioned(
-                        right: (crestSize * 1.2 - crestSize) / 2,
+                        right: (widget.crestSize * 1.2 - widget.crestSize) / 2,
                         bottom:
-                            (crestSize * 1.2 - crestSize) / 2 +
-                            crestSize * 0.07,
+                            (widget.crestSize * 1.2 - widget.crestSize) / 2 +
+                            widget.crestSize * 0.07,
                         child: Container(
                           constraints: BoxConstraints(minWidth: badgeSize),
                           height: badgeSize,
@@ -309,7 +381,7 @@ class _RealmNode extends StatelessWidget {
                     shadows: [
                       Shadow(
                         offset: const Offset(0, 2),
-                        blurRadius: selected ? 12 : 8,
+                        blurRadius: isActive ? 12 : 8,
                       ),
                     ],
                   ),
@@ -322,14 +394,26 @@ class _RealmNode extends StatelessWidget {
                     fontFamily: 'Avenir',
                     fontSize: 7,
                     letterSpacing: 0.56,
-                    color: selected ? colors.muted : colors.quiet,
+                    color: isActive ? colors.muted : colors.quiet,
                   ),
                 ),
+              if (widget.showHoverDetails && (_hovered || widget.selected))
+                _HoverFacts(type: realm.type.label, colors: colors),
             ],
           ),
         ),
       ),
     );
+
+    if (widget.showHoverDetails) {
+      node = MouseRegion(
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: node,
+      );
+    }
+
+    return node;
   }
 
   double _motifBadgeSize(FieldBand band) {
@@ -341,6 +425,73 @@ class _RealmNode extends StatelessWidget {
       case FieldBand.far:
         return 12;
     }
+  }
+}
+
+class _HoverFacts extends StatelessWidget {
+  const _HoverFacts({required this.type, required this.colors});
+
+  final String type;
+  final KidunaColors colors;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Container(
+      margin: const EdgeInsets.only(top: 4),
+      constraints: const BoxConstraints(minWidth: 132, maxWidth: 190),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF130C08).withValues(alpha: 0.96),
+        border: Border.all(color: colors.sky.withValues(alpha: 0.28)),
+        borderRadius: BorderRadius.circular(7),
+        boxShadow: const [
+          BoxShadow(
+            color: Color.fromRGBO(0, 0, 0, 0.5),
+            blurRadius: 34,
+            offset: Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            type.toUpperCase(),
+            style: TextStyle(
+              fontFamily: 'Avenir',
+              fontSize: 8,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.32,
+              color: colors.sky,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            'Catalyst',
+            style: TextStyle(
+              fontFamily: 'Avenir',
+              fontSize: 8,
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0.32,
+              color: colors.muted,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            l10n.allyNoneStationed,
+            style: TextStyle(
+              fontFamily: 'Avenir',
+              fontSize: 8,
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0.32,
+              color: colors.muted,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -509,9 +660,6 @@ class _ConstellationPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     for (final cluster in composition.clusters) {
-      if (cluster.label.isEmpty) {
-        continue;
-      }
       final center = _at(cluster.left, cluster.top, size);
       final rect = Rect.fromCenter(
         center: center,
@@ -522,8 +670,8 @@ class _ConstellationPainter extends CustomPainter {
         rect,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 1
-          ..color = _clusterColor(cluster.id, colors).withValues(alpha: 0.12),
+          ..strokeWidth = 1.5
+          ..color = _clusterColor(cluster.id, colors).withValues(alpha: 0.28),
       );
     }
 

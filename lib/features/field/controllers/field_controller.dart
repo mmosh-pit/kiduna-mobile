@@ -11,6 +11,7 @@ import '../../../data/models/invitation_response.dart';
 import '../../../data/models/ki_topic.dart';
 import '../../../data/services/invitation_service.dart';
 import '../../../features/auth/controllers/auth_controller.dart';
+import '../data/design_persona.dart';
 import '../data/field_composition.dart';
 import '../data/field_fixtures.dart';
 import '../data/realm_atlas.dart';
@@ -236,6 +237,43 @@ class FieldController extends Notifier<FieldState> {
 
   void clearSelection() => state = state.copyWith(clearSelection: true);
 
+  void navigateToBreadcrumb(int index) {
+    if (index < 0 || index >= state.realmPath.length) {
+      return;
+    }
+    final targetId = state.realmPath[index];
+    final realm = realmAtlas[targetId];
+    if (realm == null) {
+      return;
+    }
+    final emblem =
+        realm.type == AtlasRealmType.institution ||
+            realm.type == AtlasRealmType.ecosystem
+        ? 'conceptual'
+        : realm.type.emblemKey;
+    state = state.copyWith(
+      currentRealm: FieldRealm(
+        name: realm.name,
+        type: realm.type.label,
+        emblemAsset: AppAssets.realmEmblem(emblem),
+      ),
+      currentRealmId: targetId,
+      clearSelection: true,
+      actionsVisible: true,
+      inspectOpen: false,
+      realmPath: state.realmPath.sublist(0, index + 1),
+      kiTopic: KiTopic(
+        title: 'Inside ${realm.name}',
+        body:
+            'Alice is now inside ${realm.name}, a ${realm.type.label}. '
+            '${realm.purpose}',
+        invitation:
+            'Possible Actions shows what can be done here. Inspect any '
+            'nested Realm or use the breadcrumb to go back.',
+      ),
+    );
+  }
+
   /// Sets the gravity level (1–5) for a realm.
   void setGravity(String realmId, int level) {
     final clamped = level.clamp(1, 5);
@@ -254,6 +292,15 @@ class FieldController extends Notifier<FieldState> {
             realm.type == AtlasRealmType.ecosystem
         ? 'conceptual'
         : realm.type.emblemKey;
+    final hasChildren = visibleChildren(
+      realm.id,
+      DesignPersona.alice,
+    ).isNotEmpty;
+    final invitation = hasChildren
+        ? 'Possible Actions shows what can be done here. Inspect any '
+              'nested Realm or use the breadcrumb to go back.'
+        : 'No nested Realms are visible here. Use Navigation to return, '
+              'or ask Ki what could be formed here.';
     state = state.copyWith(
       currentRealm: FieldRealm(
         name: realm.name,
@@ -270,9 +317,7 @@ class FieldController extends Notifier<FieldState> {
         body:
             'Alice is now inside ${realm.name}, a ${realm.type.label}. '
             '${realm.purpose}',
-        invitation:
-            'Possible Actions shows what can be done here. Inspect any '
-            'nested Realm or use the breadcrumb to go back.',
+        invitation: invitation,
       ),
     );
   }
@@ -409,3 +454,16 @@ class FieldController extends Notifier<FieldState> {
 final fieldControllerProvider = NotifierProvider<FieldController, FieldState>(
   FieldController.new,
 );
+
+/// Walks parent pointers from [realmId] up to the Ecosystem root to produce
+/// the breadcrumb path. Pure function on static atlas data — no provider
+/// needed.
+List<String> breadcrumbPathFor(String realmId) {
+  final path = <String>[];
+  String? current = realmId;
+  while (current != null && realmAtlas.containsKey(current)) {
+    path.insert(0, current);
+    current = realmAtlas[current]?.parent;
+  }
+  return path;
+}
