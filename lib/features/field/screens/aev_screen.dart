@@ -106,6 +106,7 @@ class _AevField extends ConsumerWidget {
                   currentRealmId: state.currentRealmId,
                   selectedRealmId: state.selectedRealmId,
                   onSelect: controller.selectAtlasRealm,
+                  showHoverDetails: true,
                 ),
               ),
             ),
