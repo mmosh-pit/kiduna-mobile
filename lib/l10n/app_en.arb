@@ -367,5 +367,23 @@
   "passwordLabel": "Password",
   "passwordHint": "Enter your password",
   "passwordRequired": "Please enter your password",
-  "logIn": "Log in"
+  "logIn": "Log in",
+  "loadingAlly": "Loading your ally…",
+  "allyLoadFailed": "Unable to load your ally. Please try again.",
+  "chatStreamError": "Unable to get a response. Please try again.",
+  "chatHistoryLoadFailed": "Unable to load conversation history.",
+  "kiIsTyping": "Ki is thinking…",
+  "retryMessage": "Retry",
+  "realmBreadcrumb": "Realm breadcrumb",
+  "navigateToRealm": "Navigate to {name}",
+  "@navigateToRealm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "noNestedRealmsVisible": "No nested Realms visible",
+  "useNavigationOrAskKi": "Use navigation or ask Ki",
+  "allyNoneStationed": "None stationed"
 }
