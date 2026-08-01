@@ -5,6 +5,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../../config/assets.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../data/models/saved_tool_model.dart';
+import '../../../shared/widgets/confirm_dialog.dart';
 import '../controllers/field_controller.dart';
 import 'capacity_header.dart';
 
@@ -410,7 +411,20 @@ class _AccountSubRowState extends State<_AccountSubRow> {
           ),
           const SizedBox(width: 8),
           GestureDetector(
-            onTap: widget.onDisconnect,
+            onTap: () async {
+              final handle = widget.account.externalHandle ?? 'this account';
+              final confirmed = await ConfirmDialog.show(
+                context: context,
+                title: 'Disconnect Account',
+                message: 'Disconnect $handle? Skills using this '
+                    'connection will stop working.',
+                confirmLabel: 'Disconnect',
+                isDestructive: true,
+              );
+              if (confirmed == true) {
+                widget.onDisconnect();
+              }
+            },
             child: MouseRegion(
               cursor: SystemMouseCursors.click,
               onEnter: (_) => setState(() => _hovered = true),

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/utils/file_download.dart';
 import '../../../core/utils/logger.dart';
+import '../../../shared/widgets/confirm_dialog.dart';
 import '../controllers/field_controller.dart';
 import 'capacity_header.dart';
 import 'field_inputs.dart';
@@ -62,11 +63,27 @@ class _SkillsPanelState extends ConsumerState<SkillsPanel> {
     }
   }
 
+  Future<void> _confirmRemove(BuildContext context, String skillId, String skillName) async {
+    final confirmed = await ConfirmDialog.show(
+      context: context,
+      title: 'Remove Skill',
+      message: 'This will permanently delete "$skillName". This action cannot be undone.',
+      confirmLabel: 'Remove',
+      isDestructive: true,
+    );
+    if (confirmed == true && context.mounted) {
+      ref.read(fieldControllerProvider.notifier).removeSkill(skillId);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final controller = ref.read(fieldControllerProvider.notifier);
-    final skills = ref.watch(fieldControllerProvider.select((s) => s.skills));
+    final state = ref.watch(fieldControllerProvider);
+    final skills = state.skills;
+    final loading = state.skillsLoading;
+
     return Padding(
       padding: const EdgeInsets.all(17),
       child: Column(
@@ -79,7 +96,21 @@ class _SkillsPanelState extends ConsumerState<SkillsPanel> {
             status: l10n.nSkillsAvailable(skills.length),
           ),
           const SizedBox(height: 14),
-          if (skills.isEmpty)
+          if (loading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 20),
+              child: Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Color(0xFF03CCD9),
+                  ),
+                ),
+              ),
+            )
+          else if (skills.isEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: 14),
               child: Text(
@@ -101,7 +132,11 @@ class _SkillsPanelState extends ConsumerState<SkillsPanel> {
                   ),
                   CapacityActionButton(
                     label: l10n.remove,
-                    onPressed: () => controller.removeSkill(skill.id),
+                    onPressed: () => _confirmRemove(
+                      context,
+                      skill.id,
+                      skill.name,
+                    ),
                   ),
                   CapacityActionButton(
                     label: l10n.download,

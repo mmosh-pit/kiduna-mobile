@@ -364,9 +364,9 @@ abstract class FieldFixtures {
       'No activity for 7 days',
     ],
     SkillTriggerType.command: [
-      'Alice says "generate report"',
-      'Alice says "summarize activity"',
-      'Alice says "prepare onboarding"',
+      'A member says "generate report"',
+      'A member says "summarize activity"',
+      'A member says "prepare onboarding"',
     ],
   };
 

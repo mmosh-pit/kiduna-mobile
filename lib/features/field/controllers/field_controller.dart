@@ -56,6 +56,7 @@ class FieldState {
     this.skillFormOpen = false,
     this.editingSkill,
     this.savedTools = const [],
+    this.skillsLoading = false,
     this.connectingTool,
     this.toolVerifyError,
     this.toolVerifying = false,
@@ -117,6 +118,9 @@ class FieldState {
   /// Tool accounts connected to the user's wallet.
   final List<SavedToolModel> savedTools;
 
+  /// Whether skills are being fetched from backend.
+  final bool skillsLoading;
+
   /// Tool name currently being connected (shows credential form).
   final String? connectingTool;
 
@@ -162,6 +166,7 @@ class FieldState {
     SkillModel? editingSkill,
     bool clearEditingSkill = false,
     List<SavedToolModel>? savedTools,
+    bool? skillsLoading,
     String? connectingTool,
     bool clearConnectingTool = false,
     String? toolVerifyError,
@@ -206,6 +211,7 @@ class FieldState {
           ? null
           : (editingSkill ?? this.editingSkill),
       savedTools: savedTools ?? this.savedTools,
+      skillsLoading: skillsLoading ?? this.skillsLoading,
       connectingTool: clearConnectingTool
           ? null
           : (connectingTool ?? this.connectingTool),
@@ -493,17 +499,21 @@ class FieldController extends Notifier<FieldState> {
 
   /// Fetch skills from the backend and replace local state.
   Future<void> fetchSkills() async {
+    state = state.copyWith(skillsLoading: true);
     try {
       final skills = await SkillService.instance.list();
       if (!ref.mounted) {
         return;
       }
-      state = state.copyWith(skills: skills);
+      state = state.copyWith(skills: skills, skillsLoading: false);
     } on AppException catch (e) {
       AppLogger.warning(
         'Failed to fetch skills: ${e.message}',
         tag: 'FieldController',
       );
+      if (ref.mounted) {
+        state = state.copyWith(skillsLoading: false);
+      }
     }
   }
 
