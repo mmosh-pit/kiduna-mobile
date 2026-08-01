@@ -6,6 +6,7 @@ import '../../../core/enums/capacity_target.dart';
 import '../../../core/enums/skill_trigger_type.dart';
 import '../../../core/errors/exceptions.dart';
 import '../../../core/utils/logger.dart';
+import '../../../data/models/available_tool_model.dart';
 import '../../../data/models/field_realm.dart';
 import '../../../data/models/invitation_request.dart';
 import '../../../data/models/invitation_response.dart';
@@ -14,6 +15,7 @@ import '../../../data/models/skill_model.dart';
 import '../../../data/services/invitation_service.dart';
 import '../../../data/services/skill_service.dart';
 import '../../auth/controllers/auth_controller.dart';
+import 'ally_controller.dart';
 import '../data/design_persona.dart';
 import '../data/field_composition.dart';
 import '../data/field_fixtures.dart';
@@ -45,6 +47,10 @@ class FieldState {
     this.invitationLoading = false,
     this.invitationError,
     this.skills = const [],
+    this.availableTools = const [],
+    this.toolsLoaded = false,
+    this.skillFormOpen = false,
+    this.editingSkill,
   }) : currentRealm = currentRealm ?? FieldFixtures.kinshipDuna;
 
   final KiTopic kiTopic;
@@ -88,6 +94,18 @@ class FieldState {
   /// Skills available in the current Realm.
   final List<SkillModel> skills;
 
+  /// Tools discovered from MCP servers via `GET /api/tools/available`.
+  final List<AvailableToolModel> availableTools;
+
+  /// Whether [availableTools] has been fetched at least once.
+  final bool toolsLoaded;
+
+  /// Whether the skill creation form panel is open.
+  final bool skillFormOpen;
+
+  /// Skill being edited — null means creating new.
+  final SkillModel? editingSkill;
+
   String? get selectedRealmId => selectedPlacement?.realm.id;
 
   FieldState copyWith({
@@ -118,6 +136,11 @@ class FieldState {
     bool clearInvitation = false,
     bool clearInvitationError = false,
     List<SkillModel>? skills,
+    List<AvailableToolModel>? availableTools,
+    bool? toolsLoaded,
+    bool? skillFormOpen,
+    SkillModel? editingSkill,
+    bool clearEditingSkill = false,
   }) {
     return FieldState(
       kiTopic: kiTopic ?? this.kiTopic,
@@ -150,6 +173,12 @@ class FieldState {
           ? null
           : (invitationError ?? this.invitationError),
       skills: skills ?? this.skills,
+      availableTools: availableTools ?? this.availableTools,
+      toolsLoaded: toolsLoaded ?? this.toolsLoaded,
+      skillFormOpen: skillFormOpen ?? this.skillFormOpen,
+      editingSkill: clearEditingSkill
+          ? null
+          : (editingSkill ?? this.editingSkill),
     );
   }
 }
@@ -380,6 +409,54 @@ class FieldController extends Notifier<FieldState> {
 
   // ── Skills ───────────────────────────────────────────────────────────
 
+  /// Open the skill creation form as a separate working panel.
+  void openSkillForm() {
+    state = state.copyWith(
+      skillFormOpen: true,
+      clearEditingSkill: true,
+    );
+    fetchAvailableTools();
+  }
+
+  /// Close the skill creation form panel.
+  void closeSkillForm() {
+    state = state.copyWith(
+      skillFormOpen: false,
+      clearEditingSkill: true,
+    );
+  }
+
+  /// Fetch available tools from MCP servers.
+  ///
+  /// Only fetches once — subsequent calls return immediately unless
+  /// [force] is true. Results are stored in [FieldState.availableTools].
+  Future<void> fetchAvailableTools({bool force = false}) async {
+    if (state.toolsLoaded && !force) {
+      return;
+    }
+    try {
+      final tools = await SkillService.instance.fetchTools();
+      if (!ref.mounted) {
+        return;
+      }
+      state = state.copyWith(availableTools: tools, toolsLoaded: true);
+      AppLogger.info(
+        'Available tools loaded: ${tools.length}',
+        tag: 'FieldController',
+      );
+    } on AppException catch (e) {
+      AppLogger.warning(
+        'Failed to fetch tools: ${e.message}',
+        tag: 'FieldController',
+      );
+      // Mark as loaded even on failure — prevents infinite retry loops.
+      // User can force-refresh via fetchAvailableTools(force: true).
+      if (ref.mounted) {
+        state = state.copyWith(toolsLoaded: true);
+      }
+    }
+  }
+
   /// Fetch skills from the backend and replace local state.
   Future<void> fetchSkills() async {
     try {
@@ -424,7 +501,10 @@ class FieldController extends Notifier<FieldState> {
       skillFilePath: '$slug.md',
     );
 
-    state = state.copyWith(skills: [...state.skills, skill]);
+    state = state.copyWith(
+      skills: [...state.skills, skill],
+      skillFormOpen: false,
+    );
     askAbout(
       KiTopic(
         title: '$name created',
@@ -459,6 +539,9 @@ class FieldController extends Notifier<FieldState> {
         ],
       );
       AppLogger.info('Skill synced: ${created.id}', tag: 'FieldController');
+
+      // Attach the skill to the Ki agent so the scheduler activates it.
+      await _attachSkillToAlly(created.id);
     } on AppException catch (e) {
       AppLogger.warning(
         'Skill sync failed: ${e.message}',
@@ -467,10 +550,217 @@ class FieldController extends Notifier<FieldState> {
     }
   }
 
+  /// Attach a skill to the Ki agent (Ally) via `PATCH /api/agents/{id}`.
+  ///
+  /// Reads the ally's current skill_ids — since [AllyAgentModel] doesn't
+  /// track skill_ids, we pass an empty list and let the backend append.
+  /// The backend's PATCH handler merges skill_ids correctly.
+  Future<void> _attachSkillToAlly(String skillId) async {
+    final ally = ref.read(allyControllerProvider).ally;
+    if (ally == null) {
+      AppLogger.warning(
+        'Cannot attach skill: ally not loaded',
+        tag: 'FieldController',
+      );
+      return;
+    }
+
+    try {
+      await SkillService.instance.attachSkillToAgent(
+        agentId: ally.id,
+        newSkillId: skillId,
+        currentSkillIds: const [],
+      );
+      AppLogger.info(
+        'Skill $skillId attached to ally ${ally.id}',
+        tag: 'FieldController',
+      );
+    } on AppException catch (e) {
+      AppLogger.warning(
+        'Failed to attach skill to ally: ${e.message}',
+        tag: 'FieldController',
+      );
+    }
+  }
+
+  /// Update an existing skill — replaces locally, then syncs to backend.
+  void updateSkill({
+    required String skillId,
+    required String name,
+    required SkillTriggerType triggerType,
+    required String whenText,
+    required String thenText,
+    List<String> tools = const [],
+    bool requiresApproval = false,
+  }) {
+    // Optimistic local update.
+    state = state.copyWith(
+      skills: [
+        for (final s in state.skills)
+          if (s.id == skillId)
+            SkillModel(
+              id: s.id,
+              name: name,
+              triggerType: triggerType,
+              whenText: whenText,
+              thenText: thenText,
+              tools: tools,
+              skillContent: s.skillContent,
+              skillFilePath: s.skillFilePath,
+              requiresApproval: requiresApproval,
+              status: s.status,
+              createdAt: s.createdAt,
+              updatedAt: DateTime.now(),
+            )
+          else
+            s,
+      ],
+      skillFormOpen: false,
+      clearEditingSkill: true,
+    );
+
+    askAbout(
+      KiTopic(
+        title: '$name updated',
+        body: 'Ki has updated the Skill "$name".',
+        invitation: 'The changes are saved. Continue editing or create '
+            'another Skill.',
+      ),
+    );
+
+    if (!skillId.startsWith('local-')) {
+      _syncSkillUpdate(skillId, name, whenText, thenText, tools,
+          requiresApproval);
+    }
+  }
+
+  Future<void> _syncSkillUpdate(
+    String skillId,
+    String name,
+    String whenText,
+    String thenText,
+    List<String> tools,
+    bool requiresApproval,
+  ) async {
+    final wallet = ref.read(authControllerProvider).user?.wallet;
+    try {
+      final updated = await SkillService.instance.update(
+        skillId,
+        name: name,
+        whenText: whenText,
+        thenText: thenText,
+        tools: tools,
+        requiresApproval: requiresApproval,
+        wallet: wallet,
+      );
+      if (!ref.mounted) {
+        return;
+      }
+      // Replace local with server version.
+      state = state.copyWith(
+        skills: [
+          for (final s in state.skills)
+            if (s.id == skillId) updated else s,
+        ],
+      );
+      AppLogger.info('Skill update synced: $skillId', tag: 'FieldController');
+    } on AppException catch (e) {
+      AppLogger.warning(
+        'Skill update sync failed: ${e.message}',
+        tag: 'FieldController',
+      );
+    }
+  }
+
+  /// Remove a skill locally and delete it from the backend.
   void removeSkill(String skillId) {
     state = state.copyWith(
       skills: state.skills.where((s) => s.id != skillId).toList(),
     );
+
+    // Skip backend call for local-only skills that never synced.
+    if (!skillId.startsWith('local-')) {
+      _deleteSkillFromBackend(skillId);
+    }
+  }
+
+  Future<void> _deleteSkillFromBackend(String skillId) async {
+    try {
+      await SkillService.instance.delete(skillId);
+      AppLogger.info('Skill deleted: $skillId', tag: 'FieldController');
+    } on AppException catch (e) {
+      AppLogger.warning(
+        'Skill delete failed: ${e.message}',
+        tag: 'FieldController',
+      );
+    }
+  }
+
+  /// Pause an active skill.
+  void pauseSkill(String skillId) {
+    _updateSkillStatus(skillId, 'paused');
+  }
+
+  /// Resume a paused skill.
+  void resumeSkill(String skillId) {
+    _updateSkillStatus(skillId, 'active');
+  }
+
+  void _updateSkillStatus(String skillId, String status) {
+    // Optimistic local update.
+    state = state.copyWith(
+      skills: [
+        for (final s in state.skills)
+          if (s.id == skillId)
+            SkillModel(
+              id: s.id,
+              name: s.name,
+              triggerType: s.triggerType,
+              whenText: s.whenText,
+              thenText: s.thenText,
+              tools: s.tools,
+              skillContent: s.skillContent,
+              skillFilePath: s.skillFilePath,
+              requiresApproval: s.requiresApproval,
+              status: status,
+              createdAt: s.createdAt,
+              updatedAt: s.updatedAt,
+            )
+          else
+            s,
+      ],
+    );
+
+    if (!skillId.startsWith('local-')) {
+      _syncSkillStatus(skillId, status);
+    }
+  }
+
+  Future<void> _syncSkillStatus(String skillId, String status) async {
+    try {
+      await SkillService.instance.updateStatus(
+        skillId: skillId,
+        status: status,
+      );
+    } on AppException catch (e) {
+      AppLogger.warning(
+        'Skill status update failed: ${e.message}',
+        tag: 'FieldController',
+      );
+    }
+  }
+
+  /// Open the skill form pre-filled for editing an existing skill.
+  void editSkill(String skillId) {
+    final skill = state.skills.where((s) => s.id == skillId).firstOrNull;
+    if (skill == null) {
+      return;
+    }
+    state = state.copyWith(
+      skillFormOpen: true,
+      editingSkill: skill,
+    );
+    fetchAvailableTools();
   }
 
   // ── Invitation API ───────────────────────────────────────────────────

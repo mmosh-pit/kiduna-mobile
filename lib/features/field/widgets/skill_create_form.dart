@@ -8,8 +8,7 @@ import '../data/field_fixtures.dart';
 import 'field_inputs.dart';
 import 'skill_form_sections.dart';
 
-/// Inline form for creating a new Skill — shown inside the skills panel
-/// when the user taps "Create a new Skill with Ki".
+/// Form for creating or editing a Skill — opens as a separate [FieldPanel].
 class SkillCreateForm extends ConsumerStatefulWidget {
   const SkillCreateForm({super.key, required this.onClose});
 
@@ -20,12 +19,28 @@ class SkillCreateForm extends ConsumerStatefulWidget {
 }
 
 class _SkillCreateFormState extends ConsumerState<SkillCreateForm> {
-  final _nameCtrl = TextEditingController();
-  final _whenCtrl = TextEditingController();
-  final _thenCtrl = TextEditingController();
-  SkillTriggerType _triggerType = SkillTriggerType.command;
-  final Set<String> _selectedTools = {};
-  bool _requiresApproval = false;
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _whenCtrl;
+  late final TextEditingController _thenCtrl;
+  late SkillTriggerType _triggerType;
+  late final Set<String> _selectedTools;
+  late bool _requiresApproval;
+  bool _initialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      final editing = ref.read(fieldControllerProvider).editingSkill;
+      _nameCtrl = TextEditingController(text: editing?.name ?? '');
+      _whenCtrl = TextEditingController(text: editing?.whenText ?? '');
+      _thenCtrl = TextEditingController(text: editing?.thenText ?? '');
+      _triggerType = editing?.triggerType ?? SkillTriggerType.command;
+      _selectedTools = {...?editing?.tools};
+      _requiresApproval = editing?.requiresApproval ?? false;
+      _initialized = true;
+    }
+  }
 
   @override
   void dispose() {
@@ -44,16 +59,29 @@ class _SkillCreateFormState extends ConsumerState<SkillCreateForm> {
     if (!_canCreate) {
       return;
     }
-    ref
-        .read(fieldControllerProvider.notifier)
-        .createSkill(
-          name: _nameCtrl.text.trim(),
-          triggerType: _triggerType,
-          whenText: _whenCtrl.text.trim(),
-          thenText: _thenCtrl.text.trim(),
-          tools: _selectedTools.toList(),
-          requiresApproval: _requiresApproval,
-        );
+    final controller = ref.read(fieldControllerProvider.notifier);
+    final editing = ref.read(fieldControllerProvider).editingSkill;
+
+    if (editing != null) {
+      controller.updateSkill(
+        skillId: editing.id,
+        name: _nameCtrl.text.trim(),
+        triggerType: _triggerType,
+        whenText: _whenCtrl.text.trim(),
+        thenText: _thenCtrl.text.trim(),
+        tools: _selectedTools.toList(),
+        requiresApproval: _requiresApproval,
+      );
+    } else {
+      controller.createSkill(
+        name: _nameCtrl.text.trim(),
+        triggerType: _triggerType,
+        whenText: _whenCtrl.text.trim(),
+        thenText: _thenCtrl.text.trim(),
+        tools: _selectedTools.toList(),
+        requiresApproval: _requiresApproval,
+      );
+    }
     widget.onClose();
   }
 
@@ -62,6 +90,7 @@ class _SkillCreateFormState extends ConsumerState<SkillCreateForm> {
     final colors = context.kiduna;
     final l10n = context.l10n;
     final text = context.kidunaText;
+    final isEditing = ref.read(fieldControllerProvider).editingSkill != null;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -77,7 +106,7 @@ class _SkillCreateFormState extends ConsumerState<SkillCreateForm> {
             children: [
               Expanded(
                 child: Text(
-                  l10n.createNewSkillWithKi,
+                  isEditing ? 'Edit Skill' : l10n.createNewSkillWithKi,
                   style: text.label.copyWith(
                     color: colors.cream,
                     fontWeight: FontWeight.w700,
@@ -138,16 +167,27 @@ class _SkillCreateFormState extends ConsumerState<SkillCreateForm> {
             onSelected: (v) => _thenCtrl.text = v,
           ),
           const SizedBox(height: 8),
-          ToolChips(
-            tools: FieldFixtures.skillTools,
-            selected: _selectedTools,
-            onToggle: (tool) => setState(() {
-              if (_selectedTools.contains(tool)) {
-                _selectedTools.remove(tool);
-              } else {
-                _selectedTools.add(tool);
+          Builder(
+            builder: (context) {
+              final tools = ref.watch(
+                fieldControllerProvider.select((s) => s.availableTools),
+              );
+              final toolNames = tools.map((t) => t.uid).toList();
+              if (toolNames.isEmpty) {
+                return const SizedBox.shrink();
               }
-            }),
+              return ToolChips(
+                tools: toolNames,
+                selected: _selectedTools,
+                onToggle: (tool) => setState(() {
+                  if (_selectedTools.contains(tool)) {
+                    _selectedTools.remove(tool);
+                  } else {
+                    _selectedTools.add(tool);
+                  }
+                }),
+              );
+            },
           ),
           const SizedBox(height: 10),
           Row(
@@ -162,7 +202,7 @@ class _SkillCreateFormState extends ConsumerState<SkillCreateForm> {
               ListenableBuilder(
                 listenable: Listenable.merge([_nameCtrl, _whenCtrl, _thenCtrl]),
                 builder: (context, _) => FieldPrimaryButton(
-                  label: l10n.createSkill,
+                  label: isEditing ? 'Save changes' : l10n.createSkill,
                   onPressed: _canCreate ? _submit : null,
                 ),
               ),

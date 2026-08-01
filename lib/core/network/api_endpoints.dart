@@ -36,4 +36,23 @@ abstract class ApiEndpoints {
 
   /// `POST /api/skills` — create a new skill.
   static const String skills = '/api/skills';
+
+  /// `DELETE /api/skills/{id}` — delete a skill.
+  static String skillDelete(String skillId) => '/api/skills/$skillId';
+
+  /// `PATCH /api/skills/{id}` — update a skill's configuration.
+  static String skillUpdate(String skillId) => '/api/skills/$skillId';
+
+  /// `PATCH /api/skills/{id}/status` — pause or resume a skill.
+  static String skillStatus(String skillId) => '/api/skills/$skillId/status';
+
+  // ── Tools (kinship-agent) ─────────────────────────────────────────────
+
+  /// `GET /api/tools/available` — discover tools from MCP servers.
+  static const String toolsAvailable = '/api/tools/available';
+
+  // ── Agent updates (kinship-agent) ─────────────────────────────────────
+
+  /// `PATCH /api/agents/{id}` — update agent fields (e.g. `skill_ids`).
+  static String agentUpdate(String agentId) => '/api/agents/$agentId';
 }

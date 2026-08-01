@@ -13,6 +13,7 @@ import 'portrait_designer.dart';
 import 'presence_panel_cap.dart';
 import 'present_panel.dart';
 import 'realm_panel.dart';
+import 'skill_create_form.dart';
 import 'skills_panel.dart';
 import 'wisdom_panel.dart';
 
@@ -96,6 +97,24 @@ class FieldWorkingPanels extends StatelessWidget {
           initialOffset: _staggeredOffset(380, stagger++),
           onClose: () => controller.setAllyPortraitOpen(false),
           child: const PortraitDesigner(kind: PortraitKind.ally),
+        ),
+      );
+    }
+
+    if (state.skillFormOpen) {
+      final isEditing = state.editingSkill != null;
+      children.add(
+        FieldPanel(
+          key: ValueKey('skill-${isEditing ? 'edit' : 'create'}'),
+          label: isEditing
+              ? 'Edit ${state.editingSkill!.name}'
+              : l10n.createNewSkillWithKi,
+          bounds: bounds,
+          width: 620,
+          opacity: opacity,
+          initialOffset: _staggeredOffset(620, stagger++),
+          onClose: controller.closeSkillForm,
+          child: SkillCreateForm(onClose: controller.closeSkillForm),
         ),
       );
     }
