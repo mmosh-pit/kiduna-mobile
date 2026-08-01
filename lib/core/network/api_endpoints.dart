@@ -17,4 +17,18 @@ abstract class ApiEndpoints {
 
   /// `POST /api/v1/codes` — create an invitation code.
   static const String codes = '/api/v1/codes';
+
+  // ── Agents (kinship-agent) ────────────────────────────────────────────
+
+  /// `GET /api/agents/ally` — fetch the system ally agent.
+  static const String allyAgent = '/api/agents/ally';
+
+  // ── Chat (kinship-agent) ──────────────────────────────────────────────
+
+  /// `POST /api/chatmessages/stream` — SSE streaming chat.
+  static const String chatStream = '/api/chatmessages/stream';
+
+  /// `GET /api/conversations/{presenceId}/{userWallet}` — conversation history.
+  static String conversationHistory(String presenceId, String userWallet) =>
+      '/api/conversations/$presenceId/$userWallet';
 }

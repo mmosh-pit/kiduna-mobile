@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../config/kiduna_motion.dart';
 import '../../../core/extensions/context_extensions.dart';
+import '../../../data/models/chat_message_model.dart';
 import '../../../data/models/ki_topic.dart';
+import '../controllers/ally_controller.dart';
 import '../controllers/field_controller.dart';
+import '../controllers/ki_chat_controller.dart';
 import '../data/field_fixtures.dart';
 import 'enamel_icon.dart';
 import 'ki_composer.dart';
@@ -19,6 +22,7 @@ class KiRegion extends ConsumerStatefulWidget {
 
 class _KiRegionState extends ConsumerState<KiRegion> {
   final TextEditingController _composer = TextEditingController();
+  bool _historyRequested = false;
 
   @override
   void dispose() {
@@ -27,27 +31,35 @@ class _KiRegionState extends ConsumerState<KiRegion> {
   }
 
   void _send() {
-    ref.read(fieldControllerProvider.notifier).preserveMessage(_composer.text);
+    final text = _composer.text.trim();
+    if (text.isEmpty) return;
+    ref.read(kiChatControllerProvider.notifier).sendMessage(text);
     _composer.clear();
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(fieldControllerProvider);
+    final fieldState = ref.watch(fieldControllerProvider);
+    final allyState = ref.watch(allyControllerProvider);
+    final chatState = ref.watch(kiChatControllerProvider);
 
-    // CSS .ki: background #0d0f10, border-left 1px solid rgba(242,234,223,.1),
-    // box-shadow -18px 0 50px rgba(0,0,0,.22), padding 28px 24px 22px
+    // Load history once when ally is available.
+    if (allyState.ally != null && !_historyRequested) {
+      _historyRequested = true;
+      Future.microtask(
+        () => ref.read(kiChatControllerProvider.notifier).loadHistory(),
+      );
+    }
+
     return DecoratedBox(
       decoration: const BoxDecoration(
         color: Color(0xFF0D0F10),
-        border: Border(
-          left: BorderSide(color: Color(0x1AF2EADF)), // rgba(242,234,223,.1)
-        ),
+        border: Border(left: BorderSide(color: Color(0x1AF2EADF))),
         boxShadow: [
           BoxShadow(
             offset: Offset(-18, 0),
             blurRadius: 50,
-            color: Color(0x38000000), // rgba(0,0,0,.22)
+            color: Color(0x38000000),
           ),
         ],
       ),
@@ -57,19 +69,29 @@ class _KiRegionState extends ConsumerState<KiRegion> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _KiHeader(
-              focus: state.fieldFocus,
+              focus: fieldState.fieldFocus,
               onFocus: ref.read(fieldControllerProvider.notifier).setFieldFocus,
             ),
             const SizedBox(height: 12),
             Expanded(
-              child: _KiThread(
-                topic: state.kiTopic,
-                preserved: state.preservedMessage,
+              child: _KiChatThread(
+                messages: chatState.messages,
+                streamingBuffer: chatState.streamingBuffer,
+                isStreaming: chatState.isStreaming,
+                isLoading: chatState.isLoading || allyState.isLoading,
+                error: chatState.error ?? allyState.error,
+                onRetry: allyState.error != null
+                    ? () => ref.read(allyControllerProvider.notifier).retry()
+                    : null,
               ),
             ),
             const _KiChips(),
             const SizedBox(height: 8),
-            KiComposer(controller: _composer, onSend: _send),
+            KiComposer(
+              controller: _composer,
+              onSend: _send,
+              isStreaming: chatState.isStreaming,
+            ),
           ],
         ),
       ),
@@ -138,9 +160,9 @@ class _AlliesButton extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                'Your Allies',
-                style: TextStyle(
+              Text(
+                context.l10n.yourAllies,
+                style: const TextStyle(
                   fontFamily: 'Avenir',
                   fontSize: 9,
                   fontWeight: FontWeight.w700,
@@ -244,64 +266,251 @@ class _FocusControl extends StatelessWidget {
   }
 }
 
-/// CSS `.kiThread` — scrollable message area with left border accent.
-class _KiThread extends StatelessWidget {
-  const _KiThread({required this.topic, required this.preserved});
+/// The chat message thread — scrollable list of user/assistant messages.
+class _KiChatThread extends StatelessWidget {
+  const _KiChatThread({
+    required this.messages,
+    required this.streamingBuffer,
+    required this.isStreaming,
+    required this.isLoading,
+    this.error,
+    this.onRetry,
+  });
 
-  final KiTopic topic;
-  final String? preserved;
+  final List<ChatMessageModel> messages;
+  final String streamingBuffer;
+  final bool isStreaming;
+  final bool isLoading;
+  final String? error;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
-    final reducedMotion = MediaQuery.disableAnimationsOf(context);
-    // CSS: .kiMessage margin 12px 0 18px
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(0, 24, 0, 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (preserved != null) _PreservedBubble(text: preserved!),
-          AnimatedSwitcher(
-            duration: reducedMotion
-                ? Duration.zero
-                : KidunaMotion.panelTransition,
-            child: _TopicContent(key: ValueKey(topic), topic: topic),
+    if (messages.isEmpty && !isLoading && !isStreaming && error == null) {
+      const welcome = FieldFixtures.defaultKi;
+      return const SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(0, 24, 0, 12),
+        child: _TopicContent(topic: welcome),
+      );
+    }
+
+    if (isLoading && messages.isEmpty) {
+      return const Center(
+        child: SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: Color(0xFF03CCD9),
           ),
+        ),
+      );
+    }
+
+    // Build a flat list then feed to a reversed ListView so newest is at bottom.
+    final items = <Widget>[];
+
+    for (var i = 0; i < messages.length; i++) {
+      final msg = messages[i];
+      items.add(
+        msg.role == ChatRole.user
+            ? _UserBubble(text: msg.content)
+            : _AssistantBubble(text: msg.content),
+      );
+    }
+
+    if (isStreaming) {
+      if (streamingBuffer.isNotEmpty) {
+        items.add(_AssistantBubble(text: streamingBuffer, isStreaming: true));
+      } else {
+        items.add(const _TypingIndicator());
+      }
+    }
+
+    if (error != null && !isStreaming) {
+      items.add(_ErrorBanner(error: error!, onRetry: onRetry));
+    }
+
+    return ListView.builder(
+      reverse: true,
+      padding: const EdgeInsets.fromLTRB(0, 12, 0, 8),
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: items[items.length - 1 - index],
+        );
+      },
+    );
+  }
+}
+
+/// Three animated dots shown while waiting for the first token.
+class _TypingIndicator extends StatelessWidget {
+  const _TypingIndicator();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.only(left: 14),
+      decoration: const BoxDecoration(
+        border: Border(left: BorderSide(color: Color(0x4DDAB875), width: 2)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < 3; i++) ...[
+              if (i > 0) const SizedBox(width: 4),
+              _Dot(delay: i * 200),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Dot extends StatefulWidget {
+  const _Dot({required this.delay});
+
+  final int delay;
+
+  @override
+  State<_Dot> createState() => _DotState();
+}
+
+class _DotState extends State<_Dot> with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _opacity;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _opacity = Tween<double>(
+      begin: 0.3,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+    Future.delayed(Duration(milliseconds: widget.delay), () {
+      if (mounted) {
+        _ctrl.repeat(reverse: true);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _opacity,
+      child: Container(
+        width: 6,
+        height: 6,
+        decoration: const BoxDecoration(
+          color: Color(0xFF03CCD9),
+          shape: BoxShape.circle,
+        ),
+      ),
+    );
+  }
+}
+
+/// Error banner shown at the bottom of the chat thread.
+class _ErrorBanner extends StatelessWidget {
+  const _ErrorBanner({required this.error, this.onRetry});
+
+  final String error;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0x14FF6B6B),
+        border: Border.all(color: const Color(0x33FF6B6B)),
+        borderRadius: BorderRadius.circular(7),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              error,
+              style: const TextStyle(
+                fontFamily: 'Avenir',
+                fontSize: 12,
+                fontWeight: FontWeight.w400,
+                color: Color(0xFFFF6B6B),
+                height: 1.4,
+              ),
+            ),
+          ),
+          if (onRetry != null) ...[
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: onRetry,
+              child: MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: Text(
+                  context.l10n.retryMessage,
+                  style: const TextStyle(
+                    fontFamily: 'Avenir',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF03CCD9),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 }
 
-/// CSS `blockquote` in .kiThread — user's preserved message.
-class _PreservedBubble extends StatelessWidget {
-  const _PreservedBubble({required this.text});
+/// User message bubble — right-aligned with subtle border.
+class _UserBubble extends StatelessWidget {
+  const _UserBubble({required this.text});
 
   final String text;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0x09F2EADF), // cream ~3.5%
-        border: Border.all(color: const Color(0x29C19A6B)), // camel 16%
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(7),
-          topRight: Radius.circular(7),
-          bottomRight: Radius.circular(2),
-          bottomLeft: Radius.circular(7),
+    return Align(
+      alignment: Alignment.centerRight,
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 420),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0x12F2EADF),
+          border: Border.all(color: const Color(0x29C19A6B)),
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(12),
+            topRight: Radius.circular(12),
+            bottomRight: Radius.circular(3),
+            bottomLeft: Radius.circular(12),
+          ),
         ),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontFamily: 'Avenir',
-          fontSize: 13,
-          fontWeight: FontWeight.w400,
-          color: Color(0xFFCBBCAC), // muted
-          height: 1.45,
+        child: Text(
+          text,
+          style: const TextStyle(
+            fontFamily: 'Avenir',
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
+            color: Color(0xFFE2D9CC),
+            height: 1.45,
+          ),
         ),
       ),
     );
@@ -310,7 +519,7 @@ class _PreservedBubble extends StatelessWidget {
 
 /// CSS `.kiMessage` — left border accent + topic content.
 class _TopicContent extends StatelessWidget {
-  const _TopicContent({super.key, required this.topic});
+  const _TopicContent({required this.topic});
 
   final KiTopic topic;
 
@@ -379,13 +588,89 @@ class _TopicContent extends StatelessWidget {
   }
 }
 
+/// Assistant message bubble — left-border accent, left-aligned.
+/// Renders Markdown (bold, lists, links, etc.) via [MarkdownBody].
+class _AssistantBubble extends StatelessWidget {
+  const _AssistantBubble({required this.text, this.isStreaming = false});
+
+  final String text;
+  final bool isStreaming;
+
+  @override
+  Widget build(BuildContext context) {
+    final textColor = isStreaming
+        ? const Color(0xFFD1C9BE)
+        : const Color(0xFFC3BBB0);
+    return Container(
+      padding: const EdgeInsets.only(left: 14),
+      decoration: const BoxDecoration(
+        border: Border(left: BorderSide(color: Color(0x4DDAB875), width: 2)),
+      ),
+      child: MarkdownBody(
+        data: text,
+        selectable: true,
+        styleSheet: MarkdownStyleSheet(
+          p: TextStyle(
+            fontFamily: 'Avenir',
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
+            color: textColor,
+            height: 1.55,
+          ),
+          strong: TextStyle(
+            fontFamily: 'Avenir',
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: textColor,
+            height: 1.55,
+          ),
+          em: TextStyle(
+            fontFamily: 'Avenir',
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
+            fontStyle: FontStyle.italic,
+            color: textColor,
+            height: 1.55,
+          ),
+          listBullet: TextStyle(
+            fontFamily: 'Avenir',
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
+            color: textColor,
+            height: 1.55,
+          ),
+          code: const TextStyle(
+            fontFamily: 'monospace',
+            fontSize: 13,
+            color: Color(0xFF03CCD9),
+            backgroundColor: Color(0x1403CCD9),
+          ),
+          codeblockDecoration: BoxDecoration(
+            color: const Color(0x0FFFFFFF),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          blockSpacing: 12,
+          listIndent: 20,
+          a: const TextStyle(
+            fontFamily: 'Avenir',
+            fontSize: 14,
+            color: Color(0xFF03CCD9),
+            decoration: TextDecoration.underline,
+            decorationColor: Color(0x8003CCD9),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// CSS `.kiChits` — horizontal inline pill chips. flex-wrap, gap 7px.
 class _KiChips extends ConsumerWidget {
   const _KiChips();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final controller = ref.read(fieldControllerProvider.notifier);
+    final chatController = ref.read(kiChatControllerProvider.notifier);
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Wrap(
@@ -395,7 +680,7 @@ class _KiChips extends ConsumerWidget {
           for (final chip in FieldFixtures.chips)
             _KiChipButton(
               label: chip.label,
-              onPressed: () => controller.askAbout(chip.topic),
+              onPressed: () => chatController.sendMessage(chip.label),
             ),
         ],
       ),

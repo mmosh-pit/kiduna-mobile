@@ -6,10 +6,16 @@ import '../../../core/extensions/context_extensions.dart';
 /// grid-template-columns: minmax(0,1fr) 34px; gap 5px; padding 6px;
 /// border: 1px solid var(--line); border-radius: 9px; background: #090b0c
 class KiComposer extends StatefulWidget {
-  const KiComposer({super.key, required this.controller, required this.onSend});
+  const KiComposer({
+    super.key,
+    required this.controller,
+    required this.onSend,
+    this.isStreaming = false,
+  });
 
   final TextEditingController controller;
   final VoidCallback onSend;
+  final bool isStreaming;
 
   @override
   State<KiComposer> createState() => _KiComposerState();
@@ -41,7 +47,7 @@ class _KiComposerState extends State<KiComposer> {
               onFocusChange: (v) => setState(() => _focused = v),
               child: TextField(
                 controller: widget.controller,
-                onSubmitted: (_) => widget.onSend(),
+                onSubmitted: widget.isStreaming ? null : (_) => widget.onSend(),
                 // CSS .ki input: font-size 8px, color var(--cream)
                 style: const TextStyle(
                   fontFamily: 'Avenir',
@@ -72,7 +78,11 @@ class _KiComposerState extends State<KiComposer> {
           // Voice + Send in a row, each ~34px
           _VoiceButton(onPressed: () {}),
           const SizedBox(width: 5),
-          _SendButton(controller: widget.controller, onSend: widget.onSend),
+          _SendButton(
+            controller: widget.controller,
+            onSend: widget.onSend,
+            isStreaming: widget.isStreaming,
+          ),
         ],
       ),
     );
@@ -178,17 +188,22 @@ class _MicIcon extends StatelessWidget {
 /// CSS `.sendButton` — 34×34, sky fill when enabled, dimmed when disabled.
 /// border-radius 6, color dark when enabled.
 class _SendButton extends StatelessWidget {
-  const _SendButton({required this.controller, required this.onSend});
+  const _SendButton({
+    required this.controller,
+    required this.onSend,
+    this.isStreaming = false,
+  });
 
   final TextEditingController controller;
   final VoidCallback onSend;
+  final bool isStreaming;
 
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<TextEditingValue>(
       valueListenable: controller,
       builder: (context, value, _) {
-        final enabled = value.text.trim().isNotEmpty;
+        final enabled = value.text.trim().isNotEmpty && !isStreaming;
         return GestureDetector(
           onTap: enabled ? onSend : null,
           child: Container(
