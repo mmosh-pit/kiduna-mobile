@@ -241,6 +241,18 @@
       }
     }
   },
+  "navigateToRealm": "Navigate to {name}",
+  "@navigateToRealm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "realmBreadcrumb": "Realm breadcrumb",
+  "noNestedRealmsVisible": "No nested Realms are visible here.",
+  "useNavigationOrAskKi": "Use Navigation to return, or ask Ki what could be formed here.",
+  "allyNoneStationed": "Ally · None stationed",
   "wisdom": "Wisdom",
   "whatRealmMayKnow": "What {name} may know",
   "@whatRealmMayKnow": {
@@ -328,5 +340,17 @@
   "chatStreamError": "Unable to get a response. Please try again.",
   "chatHistoryLoadFailed": "Unable to load conversation history.",
   "kiIsTyping": "Ki is thinking…",
-  "retryMessage": "Retry"
+  "retryMessage": "Retry",
+  "realmBreadcrumb": "Realm breadcrumb",
+  "navigateToRealm": "Navigate to {name}",
+  "@navigateToRealm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "noNestedRealmsVisible": "No nested Realms visible",
+  "useNavigationOrAskKi": "Use navigation or ask Ki",
+  "allyNoneStationed": "None stationed"
 }

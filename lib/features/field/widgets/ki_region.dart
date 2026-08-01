@@ -123,10 +123,16 @@ class _KiHeader extends StatelessWidget {
             color: Color(0xFFF2EADF), // --cream
           ),
         ),
-        const SizedBox(width: 12),
-        const _AlliesButton(count: 2),
-        const Spacer(),
-        _FocusControl(focus: focus, onFocus: onFocus),
+        Expanded(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              const Flexible(child: _AlliesButton(count: 2)),
+              const SizedBox(width: 12),
+              _FocusControl(focus: focus, onFocus: onFocus),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -150,6 +156,7 @@ class _AlliesButton extends StatelessWidget {
         child: Container(
           height: 30,
           padding: const EdgeInsets.symmetric(horizontal: 10),
+          clipBehavior: Clip.hardEdge,
           decoration: BoxDecoration(
             color: Colors.transparent, // NOT filled
             border: Border.all(
@@ -160,14 +167,17 @@ class _AlliesButton extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                context.l10n.yourAllies,
-                style: const TextStyle(
-                  fontFamily: 'Avenir',
-                  fontSize: 9,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF84BAC7),
-                  letterSpacing: 0.3,
+              Flexible(
+                child: Text(
+                  context.l10n.yourAllies,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontFamily: 'Avenir',
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF84BAC7),
+                    letterSpacing: 0.3,
+                  ),
                 ),
               ),
               const SizedBox(width: 5),

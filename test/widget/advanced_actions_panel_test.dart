@@ -20,7 +20,11 @@ final _placement = FieldPlacement(
   rolePull: true,
 );
 
-Future<void> _pump(WidgetTester tester, {bool isCurrent = false}) async {
+Future<void> _pump(
+  WidgetTester tester, {
+  bool isCurrent = false,
+  ValueChanged<AtlasRealm>? onEnter,
+}) async {
   tester.view.physicalSize = const Size(600, 900);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
@@ -34,6 +38,7 @@ Future<void> _pump(WidgetTester tester, {bool isCurrent = false}) async {
           body: AdvancedActionsPanel(
             placement: _placement,
             isCurrent: isCurrent,
+            onEnter: onEnter,
           ),
         ),
       ),
@@ -77,7 +82,7 @@ void main() {
   });
 
   testWidgets('shows the Enter button for a non-current realm', (tester) async {
-    await _pump(tester);
+    await _pump(tester, onEnter: (_) {});
 
     expect(find.textContaining('Enter Dunaversity'), findsOneWidget);
     expect(tester.takeException(), isNull);

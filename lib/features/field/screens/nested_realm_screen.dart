@@ -1,11 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../app/routes.dart';
+import '../../../config/assets.dart';
+import '../../../config/kiduna_colors.dart';
+import '../../../config/kiduna_text.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/utils/responsive.dart';
+import '../../../data/models/field_realm.dart';
+import '../../../data/models/ki_topic.dart';
 import '../../../shared/widgets/app_header.dart';
 import '../controllers/field_controller.dart';
+import '../data/design_persona.dart';
+import '../data/realm_atlas.dart';
 import '../widgets/advanced_actions_panel.dart';
 import '../widgets/compute_card.dart';
 import '../widgets/enamel_icon.dart';
@@ -17,25 +25,65 @@ import '../widgets/possible_actions.dart';
 import '../widgets/realm_constellation.dart';
 import '../widgets/realm_context_pill.dart';
 
-// One-off Ki-rail ground values from the prototype `.kiRegion`.
 const Color _kiGround = Color(0xFF100B08);
 
-/// The Advanced Ecosystem View (AEV) — recreation of the prototype's
-/// `T1 · S1 · 1.1`.
-///
-/// Desktop-first, mirroring the prototype: the full view needs at least
-/// [Breakpoints.desktop] px of width; below that a "reopen wider" notice is
-/// shown. On desktop the Field (constellation + overlaid panels) and Ki sit
-/// side by side.
-///
-/// First pass: the constellation, overlaid panels, and Ki rail render with the
-/// prototype's fixture content. Panel dragging works; pan/zoom, node selection,
-/// and the gravity slider are wired in a following pass.
-class AevScreen extends StatelessWidget {
-  const AevScreen({super.key});
+/// Nested Realm view — shows the children of a specific realm on its own page.
+/// Navigated to via `/studio/aev/realm/:realmId`.
+class NestedRealmScreen extends ConsumerStatefulWidget {
+  const NestedRealmScreen({super.key, required this.realmId});
+
+  final String realmId;
+
+  @override
+  ConsumerState<NestedRealmScreen> createState() => _NestedRealmScreenState();
+}
+
+class _NestedRealmScreenState extends ConsumerState<NestedRealmScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final realm = realmAtlas[widget.realmId];
+      if (realm == null) return;
+      final hasChildren = visibleChildren(
+        realm.id,
+        DesignPersona.alice,
+      ).isNotEmpty;
+      final invitation = hasChildren
+          ? 'Possible Actions shows what can be done here. Inspect any '
+                'nested Realm or use the breadcrumb to go back.'
+          : 'No nested Realms are visible here. Use Navigation to return, '
+                'or ask Ki what could be formed here.';
+      ref.read(fieldControllerProvider.notifier)
+        ..clearSelection()
+        ..askAbout(
+          KiTopic(
+            title: 'Inside ${realm.name}',
+            body:
+                'Alice is now inside ${realm.name}, a ${realm.type.label}. '
+                '${realm.purpose}',
+            invitation: invitation,
+          ),
+        );
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final realm = realmAtlas[widget.realmId];
+    if (realm == null) {
+      return Scaffold(
+        backgroundColor: context.kiduna.field,
+        body: const Column(
+          children: [
+            AppHeader(),
+            Expanded(child: _NarrowWarning()),
+          ],
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: context.kiduna.field,
       body: Column(
@@ -47,7 +95,7 @@ class AevScreen extends StatelessWidget {
                 if (constraints.maxWidth < Breakpoints.desktop) {
                   return const _NarrowWarning();
                 }
-                return const _AevWorkspace();
+                return _NestedRealmWorkspace(realm: realm);
               },
             ),
           ),
@@ -57,35 +105,45 @@ class AevScreen extends StatelessWidget {
   }
 }
 
-/// The Field / boundary / Ki split.
-class _AevWorkspace extends StatelessWidget {
-  const _AevWorkspace();
+class _NestedRealmWorkspace extends StatelessWidget {
+  const _NestedRealmWorkspace({required this.realm});
+
+  final AtlasRealm realm;
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
+    return Row(
       children: [
-        Expanded(flex: 70, child: _AevField()),
-        _Boundary(),
-        Expanded(flex: 30, child: _AevKi()),
+        Expanded(flex: 70, child: _NestedRealmField(realm: realm)),
+        const _Boundary(),
+        Expanded(flex: 30, child: _NestedRealmKi(realm: realm)),
       ],
     );
   }
 }
 
-/// The pannable Field: deep-field ground, the realm constellation, and the
-/// overlaid panels. The background stays static so star density is consistent;
-/// only the constellation zooms inside an [InteractiveViewer]. Panels sit
-/// outside the viewer at fixed position and width.
-class _AevField extends ConsumerWidget {
-  const _AevField();
+class _NestedRealmField extends ConsumerWidget {
+  const _NestedRealmField({required this.realm});
+
+  final AtlasRealm realm;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(fieldControllerProvider);
     final controller = ref.read(fieldControllerProvider.notifier);
-    final realm = state.currentRealm;
     final l10n = context.l10n;
+
+    final emblem =
+        realm.type == AtlasRealmType.institution ||
+            realm.type == AtlasRealmType.ecosystem
+        ? 'conceptual'
+        : realm.type.emblemKey;
+    final fieldRealm = FieldRealm(
+      name: realm.name,
+      type: realm.type.label,
+      emblemAsset: AppAssets.realmEmblem(emblem),
+    );
+    final breadcrumb = breadcrumbPathFor(realm.id);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -95,18 +153,22 @@ class _AevField extends ConsumerWidget {
           children: [
             const Positioned.fill(child: FieldBackground()),
             Positioned.fill(
-              child: Padding(
-                padding: const EdgeInsets.only(
-                  top: 96,
-                  left: 26,
-                  right: 26,
-                  bottom: 28,
-                ),
-                child: RealmConstellation(
-                  currentRealmId: state.currentRealmId,
-                  selectedRealmId: state.selectedRealmId,
-                  onSelect: controller.selectAtlasRealm,
-                  showHoverDetails: true,
+              child: InteractiveViewer(
+                scaleEnabled: false,
+                boundaryMargin: const EdgeInsets.all(200),
+                child: Padding(
+                  padding: const EdgeInsets.only(
+                    top: 96,
+                    left: 26,
+                    right: 26,
+                    bottom: 28,
+                  ),
+                  child: RealmConstellation(
+                    currentRealmId: realm.id,
+                    selectedRealmId: state.selectedRealmId,
+                    onSelect: controller.selectAtlasRealm,
+                    showHoverDetails: true,
+                  ),
                 ),
               ),
             ),
@@ -114,11 +176,10 @@ class _AevField extends ConsumerWidget {
               top: 22,
               left: 22,
               child: RealmContextPill(
-                realm: realm,
+                realm: fieldRealm,
                 inspectOpen: state.inspectOpen,
                 onInspect: controller.toggleInspect,
                 width: 620,
-                viewToggle: const _AtlasSceneToggle(),
               ),
             ),
             FieldPanel(
@@ -132,8 +193,14 @@ class _AevField extends ConsumerWidget {
                 16,
               ),
               child: NavigationPanel(
-                realmPath: state.realmPath,
-                onBreadcrumbTap: controller.navigateToBreadcrumb,
+                realmPath: breadcrumb,
+                onBreadcrumbTap: (index) {
+                  if (index == 0) {
+                    context.go(Routes.aev);
+                  } else {
+                    context.go(Routes.realmPath(realmId: breadcrumb[index]));
+                  }
+                },
               ),
             ),
             FieldPanel(
@@ -156,12 +223,12 @@ class _AevField extends ConsumerWidget {
             if (state.inspectOpen)
               FieldPanel(
                 key: const ValueKey('panel-inspect'),
-                label: '${l10n.inspect} ${realm.name}',
+                label: '${l10n.inspect} ${fieldRealm.name}',
                 bounds: bounds,
                 width: 430,
                 initialOffset: const Offset(22, 96),
                 onClose: controller.toggleInspect,
-                child: InspectPanel(realm: realm),
+                child: InspectPanel(realm: fieldRealm),
               ),
             if (state.selectedPlacement != null)
               FieldPanel(
@@ -178,9 +245,10 @@ class _AevField extends ConsumerWidget {
                 onClose: controller.clearSelection,
                 child: AdvancedActionsPanel(
                   placement: state.selectedPlacement!,
-                  isCurrent: state.selectedRealmId == state.currentRealmId,
-                  onEnter: (realm) =>
-                      context.go(Routes.realmPath(realmId: realm.id)),
+                  onEnter: (enterRealm) {
+                    controller.clearSelection();
+                    context.go(Routes.realmPath(realmId: enterRealm.id));
+                  },
                 ),
               ),
           ],
@@ -190,50 +258,6 @@ class _AevField extends ConsumerWidget {
   }
 }
 
-/// The Atlas / Scene segmented toggle. Atlas is selected; Scene is present but
-/// disabled at this View (matching the prototype).
-class _AtlasSceneToggle extends StatelessWidget {
-  const _AtlasSceneToggle();
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.kiduna;
-    final text = context.kidunaText;
-    return Container(
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: colors.deep.withValues(alpha: 0.56),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: colors.camel.withValues(alpha: 0.28)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-            decoration: BoxDecoration(
-              color: colors.sky,
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Text(
-              context.l10n.atlas,
-              style: text.labelStrong.copyWith(color: colors.skyButtonInk),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: Text(
-              context.l10n.scene,
-              style: text.labelStrong.copyWith(color: colors.quiet),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// The resizable boundary between Field and Ki (static in this pass).
 class _Boundary extends StatelessWidget {
   const _Boundary();
 
@@ -255,14 +279,17 @@ class _Boundary extends StatelessWidget {
   }
 }
 
-/// The Ki rail — static content matching the AEV prototype.
-class _AevKi extends StatelessWidget {
-  const _AevKi();
+class _NestedRealmKi extends ConsumerWidget {
+  const _NestedRealmKi({required this.realm});
+
+  final AtlasRealm realm;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.kiduna;
     final text = context.kidunaText;
+    final kiTopic = ref.watch(fieldControllerProvider.select((s) => s.kiTopic));
+
     return DecoratedBox(
       decoration: BoxDecoration(
         color: _kiGround,
@@ -275,7 +302,7 @@ class _AevKi extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const _KiHeader(),
+            _KiHeader(realmName: realm.name),
             const SizedBox(height: 20),
             Expanded(
               child: SingleChildScrollView(
@@ -283,28 +310,20 @@ class _AevKi extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      context.l10n.aevKiWelcome,
+                      kiTopic.body,
                       style: text.bodyLarge.copyWith(color: colors.text),
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      context.l10n.aevKiWelcomeDetail,
+                      kiTopic.invitation,
                       style: text.body.copyWith(color: colors.muted),
                     ),
                   ],
                 ),
               ),
             ),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                _KiChip(label: context.l10n.whatShouldIDoFirst),
-                _KiChip(label: context.l10n.tellMeMoreAboutKinshipDuna),
-              ],
-            ),
             const SizedBox(height: 14),
-            const _KiComposer(),
+            _KiComposer(colors: colors, text: text),
           ],
         ),
       ),
@@ -313,7 +332,9 @@ class _AevKi extends StatelessWidget {
 }
 
 class _KiHeader extends StatelessWidget {
-  const _KiHeader();
+  const _KiHeader({required this.realmName});
+
+  final String realmName;
 
   @override
   Widget build(BuildContext context) {
@@ -368,35 +389,14 @@ class _KiHeader extends StatelessWidget {
   }
 }
 
-class _KiChip extends StatelessWidget {
-  const _KiChip({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.kiduna;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-      decoration: BoxDecoration(
-        color: colors.raised.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: colors.line),
-      ),
-      child: Text(
-        label,
-        style: context.kidunaText.bodySmall.copyWith(color: colors.cream),
-      ),
-    );
-  }
-}
-
 class _KiComposer extends StatelessWidget {
-  const _KiComposer();
+  const _KiComposer({required this.colors, required this.text});
+
+  final KidunaColors colors;
+  final KidunaText text;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.kiduna;
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 6, 6, 6),
       decoration: BoxDecoration(
@@ -409,7 +409,7 @@ class _KiComposer extends StatelessWidget {
           Expanded(
             child: Text(
               context.l10n.messageKi,
-              style: context.kidunaText.body.copyWith(color: colors.quiet),
+              style: text.body.copyWith(color: colors.quiet),
             ),
           ),
           Icon(Icons.mic_none, size: 20, color: colors.quiet),
@@ -433,8 +433,6 @@ class _KiComposer extends StatelessWidget {
   }
 }
 
-/// Shown below the desktop breakpoint — the prototype's "needs more room"
-/// message over the deep-field ground.
 class _NarrowWarning extends StatelessWidget {
   const _NarrowWarning();
 
