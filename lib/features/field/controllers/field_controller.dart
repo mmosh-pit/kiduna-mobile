@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../config/assets.dart';
+import '../../../config/env.dart';
 import '../../../core/enums/capacity_target.dart';
 import '../../../core/enums/skill_trigger_type.dart';
 import '../../../core/errors/exceptions.dart';
@@ -11,9 +13,11 @@ import '../../../data/models/field_realm.dart';
 import '../../../data/models/invitation_request.dart';
 import '../../../data/models/invitation_response.dart';
 import '../../../data/models/ki_topic.dart';
+import '../../../data/models/saved_tool_model.dart';
 import '../../../data/models/skill_model.dart';
 import '../../../data/services/invitation_service.dart';
 import '../../../data/services/skill_service.dart';
+import '../../../data/services/tool_connection_service.dart';
 import '../../auth/controllers/auth_controller.dart';
 import 'ally_controller.dart';
 import '../data/design_persona.dart';
@@ -51,6 +55,10 @@ class FieldState {
     this.toolsLoaded = false,
     this.skillFormOpen = false,
     this.editingSkill,
+    this.savedTools = const [],
+    this.connectingTool,
+    this.toolVerifyError,
+    this.toolVerifying = false,
   }) : currentRealm = currentRealm ?? FieldFixtures.kinshipDuna;
 
   final KiTopic kiTopic;
@@ -106,6 +114,18 @@ class FieldState {
   /// Skill being edited — null means creating new.
   final SkillModel? editingSkill;
 
+  /// Tool accounts connected to the user's wallet.
+  final List<SavedToolModel> savedTools;
+
+  /// Tool name currently being connected (shows credential form).
+  final String? connectingTool;
+
+  /// Error from last tool verification attempt.
+  final String? toolVerifyError;
+
+  /// Whether a tool verification is in progress.
+  final bool toolVerifying;
+
   String? get selectedRealmId => selectedPlacement?.realm.id;
 
   FieldState copyWith({
@@ -141,6 +161,12 @@ class FieldState {
     bool? skillFormOpen,
     SkillModel? editingSkill,
     bool clearEditingSkill = false,
+    List<SavedToolModel>? savedTools,
+    String? connectingTool,
+    bool clearConnectingTool = false,
+    String? toolVerifyError,
+    bool clearToolVerifyError = false,
+    bool? toolVerifying,
   }) {
     return FieldState(
       kiTopic: kiTopic ?? this.kiTopic,
@@ -179,6 +205,14 @@ class FieldState {
       editingSkill: clearEditingSkill
           ? null
           : (editingSkill ?? this.editingSkill),
+      savedTools: savedTools ?? this.savedTools,
+      connectingTool: clearConnectingTool
+          ? null
+          : (connectingTool ?? this.connectingTool),
+      toolVerifyError: clearToolVerifyError
+          ? null
+          : (toolVerifyError ?? this.toolVerifyError),
+      toolVerifying: toolVerifying ?? this.toolVerifying,
     );
   }
 }
@@ -569,7 +603,6 @@ class FieldController extends Notifier<FieldState> {
       await SkillService.instance.attachSkillToAgent(
         agentId: ally.id,
         newSkillId: skillId,
-        currentSkillIds: const [],
       );
       AppLogger.info(
         'Skill $skillId attached to ally ${ally.id}',
@@ -761,6 +794,221 @@ class FieldController extends Notifier<FieldState> {
       editingSkill: skill,
     );
     fetchAvailableTools();
+  }
+
+  // ── Tool connections ────────────────────────────────────────────────
+
+  /// Fetch saved tool accounts for the current wallet.
+  Future<void> fetchSavedTools() async {
+    final wallet = ref.read(authControllerProvider).user?.wallet;
+    if (wallet == null || wallet.isEmpty) {
+      return;
+    }
+    try {
+      final tools = await ToolConnectionService.instance.listSaved(wallet);
+      if (!ref.mounted) {
+        return;
+      }
+      state = state.copyWith(savedTools: tools);
+    } on AppException catch (e) {
+      AppLogger.warning(
+        'Failed to fetch saved tools: ${e.message}',
+        tag: 'FieldController',
+      );
+    }
+  }
+
+  /// Open Google OAuth in a popup window. No credential form needed —
+  /// backend handles the entire flow via `/api/oauth/google/init`.
+  ///
+  /// After the popup completes, [fetchSavedTools] refreshes the list.
+  Future<void> connectGoogleOAuth() async {
+    final wallet = ref.read(authControllerProvider).user?.wallet;
+    if (wallet == null || wallet.isEmpty) {
+      AppLogger.warning(
+        'Cannot start Google OAuth: wallet not available',
+        tag: 'FieldController',
+      );
+      return;
+    }
+
+    final baseUrl = Env.apiBaseUrl;
+    final oauthUrl = Uri.parse(
+      '$baseUrl/api/oauth/google/init?wallet=$wallet&popup=true',
+    );
+
+    try {
+      final launched = await launchUrl(
+        oauthUrl,
+        mode: LaunchMode.platformDefault,
+        webOnlyWindowName: '_blank',
+      );
+      if (!launched) {
+        AppLogger.warning(
+          'Could not open Google OAuth URL',
+          tag: 'FieldController',
+        );
+        return;
+      }
+
+      AppLogger.info(
+        'Google OAuth popup opened',
+        tag: 'FieldController',
+      );
+
+      // No delay — ConnectionsPanel detects tab focus return via
+      // WidgetsBindingObserver and calls fetchSavedTools automatically.
+    } catch (e) {
+      AppLogger.warning(
+        'Google OAuth launch failed: $e',
+        tag: 'FieldController',
+      );
+    }
+  }
+
+  /// Open the credential form for a specific tool.
+  void startConnectingTool(String toolName) {
+    state = state.copyWith(
+      connectingTool: toolName,
+      clearToolVerifyError: true,
+      toolVerifying: false,
+    );
+  }
+
+  /// Cancel the credential form.
+  void cancelConnectingTool() {
+    state = state.copyWith(
+      clearConnectingTool: true,
+      clearToolVerifyError: true,
+      toolVerifying: false,
+    );
+  }
+
+  /// Verify and save tool credentials — two-step: verify then save.
+  Future<void> connectTool({
+    required String toolName,
+    required Map<String, String> credentials,
+  }) async {
+    final wallet = ref.read(authControllerProvider).user?.wallet;
+    if (wallet == null || wallet.isEmpty) {
+      state = state.copyWith(toolVerifyError: 'Wallet not available');
+      return;
+    }
+
+    state = state.copyWith(toolVerifying: true, clearToolVerifyError: true);
+
+    try {
+      // Step 1: Verify credentials with backend.
+      final result = await ToolConnectionService.instance.verify(
+        toolName: toolName,
+        credentials: credentials,
+      );
+
+      if (!ref.mounted) {
+        return;
+      }
+
+      if (!result.success) {
+        state = state.copyWith(
+          toolVerifying: false,
+          toolVerifyError: result.error ?? 'Verification failed',
+        );
+        return;
+      }
+
+      // Step 2: Save to the wallet's global pool.
+      final saved = await ToolConnectionService.instance.save(
+        wallet: wallet,
+        toolName: toolName,
+        credentials: credentials,
+      );
+
+      if (!ref.mounted) {
+        return;
+      }
+
+      if (!saved) {
+        state = state.copyWith(
+          toolVerifying: false,
+          toolVerifyError: 'Failed to save connection',
+        );
+        return;
+      }
+
+      // Refresh the saved tools list.
+      final tools = await ToolConnectionService.instance.listSaved(wallet);
+
+      if (!ref.mounted) {
+        return;
+      }
+
+      state = state.copyWith(
+        savedTools: tools,
+        toolVerifying: false,
+        clearConnectingTool: true,
+        clearToolVerifyError: true,
+      );
+
+      final handle = result.externalHandle ?? toolName;
+      askAbout(
+        KiTopic(
+          title: '$toolName connected',
+          body: 'Connected as $handle. This tool is now available for '
+              'skills and agents in this Ecosystem.',
+          invitation: 'You can disconnect at any time from this panel.',
+        ),
+      );
+
+      AppLogger.info(
+        'Tool $toolName connected: $handle',
+        tag: 'FieldController',
+      );
+    } on AppException catch (e) {
+      if (ref.mounted) {
+        state = state.copyWith(
+          toolVerifying: false,
+          toolVerifyError: e.message,
+        );
+      }
+    }
+  }
+
+  /// Disconnect a tool account.
+  Future<void> disconnectTool(String toolId) async {
+    final wallet = ref.read(authControllerProvider).user?.wallet;
+    if (wallet == null || wallet.isEmpty) {
+      return;
+    }
+
+    // Optimistic removal.
+    final removed = state.savedTools.where((t) => t.id == toolId).firstOrNull;
+    state = state.copyWith(
+      savedTools: state.savedTools.where((t) => t.id != toolId).toList(),
+    );
+
+    try {
+      final success = await ToolConnectionService.instance.remove(
+        wallet: wallet,
+        id: toolId,
+      );
+      if (!success && ref.mounted && removed != null) {
+        // Rollback on failure.
+        state = state.copyWith(
+          savedTools: [...state.savedTools, removed],
+        );
+      }
+    } on AppException catch (e) {
+      AppLogger.warning(
+        'Disconnect failed: ${e.message}',
+        tag: 'FieldController',
+      );
+      // Rollback.
+      if (ref.mounted && removed != null) {
+        state = state.copyWith(
+          savedTools: [...state.savedTools, removed],
+        );
+      }
+    }
   }
 
   // ── Invitation API ───────────────────────────────────────────────────

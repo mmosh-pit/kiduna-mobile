@@ -159,21 +159,37 @@ class SkillService {
   Future<void> attachSkillToAgent({
     required String agentId,
     required String newSkillId,
-    required List<String> currentSkillIds,
   }) async {
-    final updatedIds = [...currentSkillIds];
-    if (!updatedIds.contains(newSkillId)) {
-      updatedIds.add(newSkillId);
-    }
-
     try {
+      // Fetch the agent's current skill_ids so we append, not overwrite.
+      final agentResponse = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.agentUpdate(agentId),
+      );
+      final agentData = agentResponse.data;
+      final existing = <String>[];
+      if (agentData != null) {
+        final raw = agentData['skill_ids'] as List<dynamic>? ?? [];
+        existing.addAll(raw.cast<String>());
+      }
+
+      if (existing.contains(newSkillId)) {
+        AppLogger.info(
+          'Skill $newSkillId already attached to agent $agentId',
+          tag: 'SkillService',
+        );
+        return;
+      }
+
+      final updatedIds = [...existing, newSkillId];
+
       await _dio.patch<Map<String, dynamic>>(
         ApiEndpoints.agentUpdate(agentId),
         data: {'skill_ids': updatedIds},
       );
 
       AppLogger.info(
-        'Skill $newSkillId attached to agent $agentId',
+        'Skill $newSkillId attached to agent $agentId '
+        '(${updatedIds.length} total)',
         tag: 'SkillService',
       );
     } on DioException catch (e) {

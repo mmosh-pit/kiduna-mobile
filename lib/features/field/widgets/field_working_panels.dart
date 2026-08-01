@@ -14,6 +14,7 @@ import 'presence_panel_cap.dart';
 import 'present_panel.dart';
 import 'realm_panel.dart';
 import 'skill_create_form.dart';
+import 'tool_credential_form.dart';
 import 'skills_panel.dart';
 import 'wisdom_panel.dart';
 
@@ -115,6 +116,37 @@ class FieldWorkingPanels extends StatelessWidget {
           initialOffset: _staggeredOffset(620, stagger++),
           onClose: controller.closeSkillForm,
           child: SkillCreateForm(onClose: controller.closeSkillForm),
+        ),
+      );
+    }
+
+    if (state.connectingTool != null) {
+      final toolName = state.connectingTool!;
+      final displayName = {
+        'bluesky': 'Bluesky',
+        'google': 'Google',
+        'telegram': 'Telegram',
+        'solana': 'Solana Wallet',
+      }[toolName] ?? toolName;
+      children.add(
+        FieldPanel(
+          key: ValueKey('connect-$toolName'),
+          label: 'Connect $displayName',
+          bounds: bounds,
+          width: 480,
+          opacity: opacity,
+          initialOffset: _staggeredOffset(480, stagger++),
+          onClose: controller.cancelConnectingTool,
+          child: ToolCredentialForm(
+            toolName: toolName,
+            isVerifying: state.toolVerifying,
+            error: state.toolVerifyError,
+            onSubmit: (credentials) => controller.connectTool(
+              toolName: toolName,
+              credentials: credentials,
+            ),
+            onCancel: controller.cancelConnectingTool,
+          ),
         ),
       );
     }

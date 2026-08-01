@@ -55,4 +55,20 @@ abstract class ApiEndpoints {
 
   /// `PATCH /api/agents/{id}` — update agent fields (e.g. `skill_ids`).
   static String agentUpdate(String agentId) => '/api/agents/$agentId';
+
+  // ── Tool connections (kinship-agent) ──────────────────────────────────
+
+  /// `POST /api/tools/verify` — test credentials without saving.
+  static const String toolsVerify = '/api/tools/verify';
+
+  /// `POST /api/tools/save` — save verified tool to the wallet's global pool.
+  static const String toolsSave = '/api/tools/save';
+
+  /// `GET /api/tools/saved?wallet={wallet}` — list connected tool accounts.
+  static String toolsSaved(String wallet) =>
+      '/api/tools/saved?wallet=${Uri.encodeComponent(wallet)}';
+
+  /// `DELETE /api/tools/saved/{id}?wallet={wallet}` — disconnect a tool.
+  static String toolsRemove(String id, String wallet) =>
+      '/api/tools/saved/$id?wallet=${Uri.encodeComponent(wallet)}';
 }
