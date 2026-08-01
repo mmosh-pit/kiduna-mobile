@@ -17,4 +17,9 @@ abstract class ApiEndpoints {
 
   /// `POST /api/v1/codes` — create an invitation code.
   static const String codes = '/api/v1/codes';
+
+  // ── Skills (kinship-agent) ────────────────────────────────────────────
+
+  /// `POST /api/skills` — create a new skill.
+  static const String skills = '/api/skills';
 }

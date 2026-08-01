@@ -74,9 +74,9 @@ class _AutomationsPanelState extends State<AutomationsPanel> {
           ],
           const SizedBox(height: 6),
           FieldPrimaryButton(
-              label: l10n.prepareSelectedAutomations,
-              onPressed: _selected.isNotEmpty ? () {} : null,
-            ),
+            label: l10n.prepareSelectedAutomations,
+            onPressed: _selected.isNotEmpty ? () {} : null,
+          ),
         ],
       ),
     );
@@ -122,9 +122,7 @@ class _AutomationRow extends StatelessWidget {
                     value: selected,
                     onChanged: (v) => onToggle(v ?? false),
                     activeColor: colors.sky,
-                    side: BorderSide(
-                      color: colors.sky.withValues(alpha: 0.5),
-                    ),
+                    side: BorderSide(color: colors.sky.withValues(alpha: 0.5)),
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     visualDensity: VisualDensity.compact,
                   ),
@@ -164,10 +162,7 @@ class _AutomationRow extends StatelessWidget {
                 const SizedBox(height: 5),
                 TextField(
                   controller: triggerController,
-                  style: text.caption.copyWith(
-                    color: colors.text,
-                    height: 1.4,
-                  ),
+                  style: text.caption.copyWith(color: colors.text, height: 1.4),
                   decoration: InputDecoration(
                     isDense: true,
                     filled: true,

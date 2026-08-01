@@ -1,4 +1,5 @@
 import '../../../config/assets.dart';
+import '../../../core/enums/skill_trigger_type.dart';
 import '../../../data/models/field_realm.dart';
 import '../../../data/models/ki_topic.dart';
 
@@ -328,4 +329,51 @@ abstract class FieldFixtures {
   static const String computeRateValue = '0.25 USDC';
   static const String computeTotalLabel = 'Total value';
   static const String computeTotalValue = '4,600 USDC';
+
+  // ── Skills ──────────────────────────────────────────────────────────
+
+  /// Available tools for skill creation.
+  static const List<String> skillTools = [
+    'send_email',
+    'send_slack',
+    'send_sms',
+    'read_database',
+    'write_database',
+    'query_api',
+    'read_file',
+    'write_file',
+    'run_script',
+    'webhook',
+  ];
+
+  /// Quick-pick "when" suggestions per trigger type.
+  static const Map<SkillTriggerType, List<String>> whenSuggestions = {
+    SkillTriggerType.event: [
+      'A new member joins the Realm',
+      'A file is uploaded to Wisdom',
+      'An invitation is accepted',
+    ],
+    SkillTriggerType.time: [
+      'Every weekday at 9:00 AM',
+      'Every Monday at 8:00 AM',
+      'First day of each month',
+    ],
+    SkillTriggerType.condition: [
+      'Treasury balance drops below threshold',
+      'Member count exceeds limit',
+      'No activity for 7 days',
+    ],
+    SkillTriggerType.command: [
+      'Alice says "generate report"',
+      'Alice says "summarize activity"',
+      'Alice says "prepare onboarding"',
+    ],
+  };
+
+  /// Quick-pick "then" suggestions.
+  static const List<String> thenSuggestions = [
+    'Send a welcome message with Realm guidelines',
+    'Generate a weekly activity summary',
+    'Notify the Catalyst with a status report',
+  ];
 }

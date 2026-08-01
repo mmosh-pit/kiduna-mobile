@@ -3,14 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../config/assets.dart';
 import '../../../core/enums/capacity_target.dart';
+import '../../../core/enums/skill_trigger_type.dart';
 import '../../../core/errors/exceptions.dart';
 import '../../../core/utils/logger.dart';
 import '../../../data/models/field_realm.dart';
 import '../../../data/models/invitation_request.dart';
 import '../../../data/models/invitation_response.dart';
 import '../../../data/models/ki_topic.dart';
+import '../../../data/models/skill_model.dart';
 import '../../../data/services/invitation_service.dart';
-import '../../../features/auth/controllers/auth_controller.dart';
+import '../../../data/services/skill_service.dart';
+import '../../auth/controllers/auth_controller.dart';
 import '../data/design_persona.dart';
 import '../data/field_composition.dart';
 import '../data/field_fixtures.dart';
@@ -41,6 +44,7 @@ class FieldState {
     this.invitationResponse,
     this.invitationLoading = false,
     this.invitationError,
+    this.skills = const [],
   }) : currentRealm = currentRealm ?? FieldFixtures.kinshipDuna;
 
   final KiTopic kiTopic;
@@ -81,6 +85,9 @@ class FieldState {
   /// Error message from the last failed invitation attempt.
   final String? invitationError;
 
+  /// Skills available in the current Realm.
+  final List<SkillModel> skills;
+
   String? get selectedRealmId => selectedPlacement?.realm.id;
 
   FieldState copyWith({
@@ -110,6 +117,7 @@ class FieldState {
     String? invitationError,
     bool clearInvitation = false,
     bool clearInvitationError = false,
+    List<SkillModel>? skills,
   }) {
     return FieldState(
       kiTopic: kiTopic ?? this.kiTopic,
@@ -141,6 +149,7 @@ class FieldState {
       invitationError: clearInvitationError
           ? null
           : (invitationError ?? this.invitationError),
+      skills: skills ?? this.skills,
     );
   }
 }
@@ -366,6 +375,101 @@ class FieldController extends Notifier<FieldState> {
             'Ki can help refine the purpose or prepare a different Portrait '
             'without publishing anything.',
       ),
+    );
+  }
+
+  // ── Skills ───────────────────────────────────────────────────────────
+
+  /// Fetch skills from the backend and replace local state.
+  Future<void> fetchSkills() async {
+    try {
+      final skills = await SkillService.instance.list();
+      if (!ref.mounted) {
+        return;
+      }
+      state = state.copyWith(skills: skills);
+    } on AppException catch (e) {
+      AppLogger.warning(
+        'Failed to fetch skills: ${e.message}',
+        tag: 'FieldController',
+      );
+    }
+  }
+
+  /// Create a skill — adds it locally first, then syncs via `POST /api/skills`.
+  ///
+  /// The skill appears in the list immediately. If the backend responds, the
+  /// local entry is replaced with the server version (real id, file path, etc.).
+  void createSkill({
+    required String name,
+    required SkillTriggerType triggerType,
+    required String whenText,
+    required String thenText,
+    List<String> tools = const [],
+    bool requiresApproval = false,
+  }) {
+    final slug = name
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+        .replaceAll(RegExp(r'^-|-$'), '');
+    final localId = 'local-$slug-${state.skills.length}';
+    final skill = SkillModel(
+      id: localId,
+      name: name,
+      triggerType: triggerType,
+      whenText: whenText,
+      thenText: thenText,
+      tools: tools,
+      requiresApproval: requiresApproval,
+      skillFilePath: '$slug.md',
+    );
+
+    state = state.copyWith(skills: [...state.skills, skill]);
+    askAbout(
+      KiTopic(
+        title: '$name created',
+        body:
+            'Ki has created the Skill "$name". It activates on '
+            '${triggerType.name} and is now available in the Realm.',
+        invitation:
+            'The Skill is ready. Edit it to refine its behavior, or '
+            'create another one.',
+      ),
+    );
+
+    _syncSkillToBackend(skill, localId);
+  }
+
+  Future<void> _syncSkillToBackend(SkillModel skill, String localId) async {
+    final auth = ref.read(authControllerProvider);
+    final wallet = auth.user?.wallet;
+    if (wallet == null || wallet.isEmpty) {
+      return;
+    }
+
+    try {
+      final created = await SkillService.instance.create(skill, wallet: wallet);
+      if (!ref.mounted) {
+        return;
+      }
+      state = state.copyWith(
+        skills: [
+          for (final s in state.skills)
+            if (s.id == localId) created else s,
+        ],
+      );
+      AppLogger.info('Skill synced: ${created.id}', tag: 'FieldController');
+    } on AppException catch (e) {
+      AppLogger.warning(
+        'Skill sync failed: ${e.message}',
+        tag: 'FieldController',
+      );
+    }
+  }
+
+  void removeSkill(String skillId) {
+    state = state.copyWith(
+      skills: state.skills.where((s) => s.id != skillId).toList(),
     );
   }
 
