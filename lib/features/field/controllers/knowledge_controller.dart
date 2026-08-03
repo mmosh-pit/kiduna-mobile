@@ -315,10 +315,7 @@ class KnowledgeController extends Notifier<KnowledgeState> {
 
   /// Open KB detail panel for an existing KB.
   void openKbDetail(String kbId) {
-    state = state.copyWith(
-      kbDetailOpen: true,
-      isCreateMode: false,
-    );
+    state = state.copyWith(kbDetailOpen: true, isCreateMode: false);
     selectKnowledgeBase(kbId);
   }
 
@@ -333,10 +330,7 @@ class KnowledgeController extends Notifier<KnowledgeState> {
 
   /// Close the KB detail panel.
   void closeKbDetail() {
-    state = state.copyWith(
-      kbDetailOpen: false,
-      isCreateMode: false,
-    );
+    state = state.copyWith(kbDetailOpen: false, isCreateMode: false);
   }
 
   /// Set the selected privacy for the next KB creation.
@@ -389,11 +383,7 @@ class KnowledgeController extends Notifier<KnowledgeState> {
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
-      await _service.updateKnowledgeBase(
-        kbId,
-        name: name,
-        privacy: privacy,
-      );
+      await _service.updateKnowledgeBase(kbId, name: name, privacy: privacy);
       if (!ref.mounted) return;
 
       // Re-fetch the full KB (with items + stats) so nothing is lost.
@@ -405,10 +395,7 @@ class KnowledgeController extends Notifier<KnowledgeState> {
         final updatedList = state.knowledgeBases.map((kb) {
           return kb.id == kbId ? refreshedKb : kb;
         }).toList();
-        state = state.copyWith(
-          isLoading: false,
-          knowledgeBases: updatedList,
-        );
+        state = state.copyWith(isLoading: false, knowledgeBases: updatedList);
       } else {
         state = state.copyWith(isLoading: false);
       }
@@ -638,10 +625,7 @@ class KnowledgeController extends Notifier<KnowledgeState> {
 
       if (!ref.mounted) return;
 
-      state = state.copyWith(
-        isImportingDrive: false,
-        driveImportDone: 1,
-      );
+      state = state.copyWith(isImportingDrive: false, driveImportDone: 1);
 
       AppLogger.info(
         'Drive ${isFolder ? 'folder' : 'file'} imported to KB ${kb.id}',

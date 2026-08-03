@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -115,13 +117,14 @@ class _WisdomPanelState extends ConsumerState<WisdomPanel> {
     final confirmed = await ConfirmDialog.show(
       context: context,
       title: 'Delete Knowledge Base',
-      message: 'Delete "${kb.name}" and all its sources? '
+      message:
+          'Delete "${kb.name}" and all its sources? '
           'This action cannot be undone.',
       confirmLabel: 'Delete',
       isDestructive: true,
     );
     if (confirmed == true) {
-      ctrl.unlinkAndDeleteKb(kb.id);
+      unawaited(ctrl.unlinkAndDeleteKb(kb.id));
     }
   }
 }
@@ -219,7 +222,10 @@ class _ErrorRow extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Text(message, style: text.caption.copyWith(color: colors.cream)),
+            child: Text(
+              message,
+              style: text.caption.copyWith(color: colors.cream),
+            ),
           ),
           const SizedBox(width: 8),
           CapacityActionButton(label: context.l10n.retry, onPressed: onRetry),
@@ -228,4 +234,3 @@ class _ErrorRow extends StatelessWidget {
     );
   }
 }
-

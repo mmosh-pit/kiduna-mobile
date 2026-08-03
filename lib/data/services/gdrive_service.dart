@@ -1,3 +1,40 @@
+import 'package:flutter/foundation.dart';
+
+/// MIME types the backend can ingest into a Knowledge Base.
+const List<String> kIngestibleMimeTypes = [
+  'application/pdf',
+  'text/plain',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.google-apps.document',
+];
+
+/// Maximum file size (5 MB) accepted for ingestion.
+const int kMaxDriveFileSize = 5 * 1024 * 1024;
+
+/// A file entry returned from Google Drive.
+@immutable
+class DriveFile {
+  const DriveFile({
+    required this.id,
+    required this.name,
+    required this.mimeType,
+    this.sizeBytes,
+  });
+
+  final String id;
+  final String name;
+  final String mimeType;
+  final int? sizeBytes;
+
+  bool get isIngestible => kIngestibleMimeTypes.contains(mimeType);
+
+  bool get isWorkspaceFile =>
+      mimeType.startsWith('application/vnd.google-apps.');
+
+  bool get isOversized =>
+      !isWorkspaceFile && sizeBytes != null && sizeBytes! > kMaxDriveFileSize;
+}
+
 /// Google Drive URL parsing utilities for Wisdom Drive import.
 ///
 /// No API calls — backend handles all Drive operations internally

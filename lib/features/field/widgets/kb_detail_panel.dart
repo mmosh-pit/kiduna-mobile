@@ -71,13 +71,15 @@ class _KbDetailPanelState extends ConsumerState<KbDetailPanel> {
 
             // Error.
             if (kbState.error != null) ...[
-              _ErrorRow(message: kbState.error!, onRetry: ctrl.loadKnowledgeBases),
+              _ErrorRow(
+                message: kbState.error!,
+                onRetry: ctrl.loadKnowledgeBases,
+              ),
               const SizedBox(height: 7),
             ],
 
             // Loading.
-            if (kbState.isLoading && items.isEmpty)
-              const _LoadingRow(),
+            if (kbState.isLoading && items.isEmpty) const _LoadingRow(),
 
             // Name — label above, field below.
             Text(
@@ -159,8 +161,8 @@ class _KbDetailPanelState extends ConsumerState<KbDetailPanel> {
               // Items list — collapsible. Default collapsed, tap to expand.
               if (items.isNotEmpty) ...[
                 GestureDetector(
-                  onTap: () => setState(() =>
-                      _sourcesExpanded = !_sourcesExpanded),
+                  onTap: () =>
+                      setState(() => _sourcesExpanded = !_sourcesExpanded),
                   child: MouseRegion(
                     cursor: SystemMouseCursors.click,
                     child: Container(
@@ -206,8 +208,7 @@ class _KbDetailPanelState extends ConsumerState<KbDetailPanel> {
                     child: ListView.separated(
                       shrinkWrap: true,
                       itemCount: items.length,
-                      separatorBuilder: (_, __) =>
-                          const SizedBox(height: 5),
+                      separatorBuilder: (_, __) => const SizedBox(height: 5),
                       itemBuilder: (_, index) {
                         final item = items[index];
                         return _ItemRow(
@@ -215,8 +216,7 @@ class _KbDetailPanelState extends ConsumerState<KbDetailPanel> {
                           kbId: activeKb!.id,
                           onRemove: () =>
                               _confirmRemoveItem(context, ctrl, item),
-                          onDownload: () =>
-                              _downloadItem(context, item),
+                          onDownload: () => _downloadItem(context, item),
                         );
                       },
                     ),
@@ -274,7 +274,8 @@ class _KbDetailPanelState extends ConsumerState<KbDetailPanel> {
     final confirmed = await ConfirmDialog.show(
       context: context,
       title: 'Remove Source',
-      message: 'Remove "${item.name}"? This will delete it from the '
+      message:
+          'Remove "${item.name}"? This will delete it from the '
           'knowledge base and cannot be undone.',
       confirmLabel: 'Remove',
       isDestructive: true,
@@ -305,7 +306,8 @@ class _KbDetailPanelState extends ConsumerState<KbDetailPanel> {
       // Show item name as info.
       final message = await FileDownload.downloadMarkdown(
         fileName: item.name,
-        content: '# ${item.name}\n\nIngested into knowledge base.\n'
+        content:
+            '# ${item.name}\n\nIngested into knowledge base.\n'
             'Chunks: ${item.chunkCount}\n'
             'Status: ${item.status.name}\n',
       );
@@ -366,10 +368,7 @@ class _ItemRow extends StatelessWidget {
       detail: '$statusLabel · ${item.chunkCount} chunks',
       actions: [
         if (isIngested)
-          CapacityActionButton(
-            label: l10n.download,
-            onPressed: onDownload,
-          ),
+          CapacityActionButton(label: l10n.download, onPressed: onDownload),
         CapacityActionButton(label: l10n.remove, onPressed: onRemove),
       ],
     );
@@ -502,13 +501,13 @@ class _ErrorRow extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Text(message, style: text.caption.copyWith(color: colors.cream)),
+            child: Text(
+              message,
+              style: text.caption.copyWith(color: colors.cream),
+            ),
           ),
           const SizedBox(width: 8),
-          CapacityActionButton(
-            label: context.l10n.retry,
-            onPressed: onRetry,
-          ),
+          CapacityActionButton(label: context.l10n.retry, onPressed: onRetry),
         ],
       ),
     );

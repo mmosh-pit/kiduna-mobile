@@ -66,7 +66,9 @@ class _DriveImportPanelState extends ConsumerState<DriveImportPanel> {
 
     final urlType = GdriveService.classifyUrl(url);
     if (urlType == DriveUrlType.unknown) {
-      setState(() => _error = 'Invalid Google Drive URL. Paste a file or folder link.');
+      setState(
+        () => _error = 'Invalid Google Drive URL. Paste a file or folder link.',
+      );
       return;
     }
 
@@ -139,8 +141,8 @@ class _DriveImportPanelState extends ConsumerState<DriveImportPanel> {
               Container(
                 width: 6,
                 height: 6,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF34D399),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF34D399),
                   shape: BoxShape.circle,
                 ),
               ),
@@ -152,9 +154,8 @@ class _DriveImportPanelState extends ConsumerState<DriveImportPanel> {
         if (!status.connected) ...[
           // Not connected — show Connect button.
           _ConnectButton(
-            onPressed: () => ref
-                .read(fieldControllerProvider.notifier)
-                .connectGoogleOAuth(),
+            onPressed: () =>
+                ref.read(fieldControllerProvider.notifier).connectGoogleOAuth(),
           ),
           const SizedBox(height: 4),
           Text(
@@ -286,10 +287,7 @@ class _DriveImportPanelState extends ConsumerState<DriveImportPanel> {
           // Error.
           if (_error != null) ...[
             const SizedBox(height: 6),
-            Text(
-              _error!,
-              style: text.micro.copyWith(color: colors.gold),
-            ),
+            Text(_error!, style: text.micro.copyWith(color: colors.gold)),
           ],
 
           // Success.

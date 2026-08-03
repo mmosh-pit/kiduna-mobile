@@ -39,6 +39,9 @@ abstract class Env {
   /// Google OAuth client ID for browser-based sign-in (Drive import).
   static String get googleClientId => _raw('GOOGLE_CLIENT_ID');
 
+  /// Base URL for kinship-studio API (Next.js), from `STUDIO_BASE_URL`.
+  static String get studioBaseUrl => _raw('STUDIO_BASE_URL');
+
   /// Whether the app is running against the production environment.
   static bool get isProduction => current == Environment.prod;
 
