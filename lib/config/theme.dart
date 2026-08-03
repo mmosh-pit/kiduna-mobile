@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'theme_extensions.dart';
+
 /// Central app theme — the single source of styling truth.
 ///
 /// Widgets read styling through `Theme.of(context)`; never hardcode colors,
@@ -30,6 +32,12 @@ abstract class AppTheme {
       scaffoldBackgroundColor: colorScheme.surface,
       fontFamily: bodyFontFamily,
       appBarTheme: const AppBarTheme(centerTitle: true),
+      extensions: const <ThemeExtension<dynamic>>[
+        KidunaColors.standard,
+        KidunaText.standard,
+        KidunaMetrics.standard,
+        KidunaShadows.standard,
+      ],
     );
     return base.copyWith(textTheme: _applyDisplayFont(base.textTheme));
   }

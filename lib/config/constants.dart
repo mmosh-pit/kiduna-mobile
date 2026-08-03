@@ -13,17 +13,29 @@ abstract class AppConstants {
   static const Duration defaultAnimation = Duration(milliseconds: 300);
   static const Duration longAnimation = Duration(milliseconds: 500);
 
-  // Spacing scale.
-  static const double spacingXs = 4;
-  static const double spacingSm = 8;
-  static const double spacingMd = 16;
-  static const double spacingLg = 24;
-  static const double spacingXl = 32;
+  // Spacing scale — matches the design kit (4 → 64).
+  static const double spacing1 = 4;
+  static const double spacing2 = 8;
+  static const double spacing3 = 12;
+  static const double spacing4 = 16;
+  static const double spacing5 = 20;
+  static const double spacing6 = 24;
+  static const double spacing8 = 32;
+  static const double spacing10 = 40;
+  static const double spacing12 = 48;
+  static const double spacing16 = 64;
 
-  // Corner radii.
-  static const double radiusSm = 8;
-  static const double radiusMd = 12;
-  static const double radiusLg = 20;
+  // Legacy aliases — prefer the numbered scale above.
+  static const double spacingXs = spacing1;
+  static const double spacingSm = spacing2;
+  static const double spacingMd = spacing4;
+  static const double spacingLg = spacing6;
+  static const double spacingXl = spacing8;
+
+  // Corner radii — match KidunaMetrics (the source of truth).
+  static const double radiusSm = 5;
+  static const double radiusMd = 6;
+  static const double radiusLg = 14;
 
   // Pagination.
   static const int defaultPageSize = 20;

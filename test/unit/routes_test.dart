@@ -2,8 +2,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kiduna_mobile/app/routes.dart';
 
 void main() {
-  test('home is the root path', () {
-    expect(Routes.home, '/');
+  test('the Field is the root path', () {
+    expect(Routes.field, '/');
+  });
+
+  test('the AEV has its own studio path', () {
+    expect(Routes.aev, '/studio/aev');
+  });
+
+  test('the login screen has the /login path', () {
+    expect(Routes.login, '/login');
   });
 
   test('builds a concrete user-profile path from an id', () {

@@ -33,10 +33,20 @@ abstract class Env {
   /// Base URL for all API calls, from `API_BASE_URL`.
   static String get apiBaseUrl => _raw('API_BASE_URL');
 
+  /// Base URL for authentication calls (kinship-backend), from `AUTH_API_URL`.
+  static String get authApiUrl => _raw('AUTH_API_URL');
+
+  /// Google OAuth client ID for browser-based sign-in (Drive import).
+  static String get googleClientId => _raw('GOOGLE_CLIENT_ID');
+
+  /// Base URL for kinship-studio API (Next.js), from `STUDIO_BASE_URL`.
+  static String get studioBaseUrl => _raw('STUDIO_BASE_URL');
+
   /// Whether the app is running against the production environment.
   static bool get isProduction => current == Environment.prod;
 
   /// Whether the required configuration was loaded. Asserted at app startup so
   /// a missing or empty `.env` fails loudly.
-  static bool get isConfigured => apiBaseUrl.isNotEmpty;
+  static bool get isConfigured =>
+      apiBaseUrl.isNotEmpty && authApiUrl.isNotEmpty;
 }
