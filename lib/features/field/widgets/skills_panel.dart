@@ -47,10 +47,7 @@ class _SkillsPanelState extends State<SkillsPanel> {
                   label: l10n.remove,
                   onPressed: () => setState(() => _skills.remove(skill)),
                 ),
-                CapacityActionButton(
-                  label: l10n.download,
-                  onPressed: () {},
-                ),
+                CapacityActionButton(label: l10n.download, onPressed: () {}),
               ],
             ),
             const SizedBox(height: 7),
@@ -89,9 +86,7 @@ class _UploadSkillsButton extends StatelessWidget {
           foregroundColor: colors.sky,
           backgroundColor: colors.sky.withValues(alpha: 0.04),
           side: BorderSide(color: colors.sky.withValues(alpha: 0.28)),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(5),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
           textStyle: context.kidunaText.micro.copyWith(fontSize: 9),
         ),
         child: Text(l10n.uploadSkills),

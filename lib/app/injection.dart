@@ -12,3 +12,5 @@ export '../features/field/controllers/field_controller.dart'
     show fieldControllerProvider;
 export '../features/field/controllers/ki_chat_controller.dart'
     show kiChatControllerProvider;
+export '../features/field/controllers/knowledge_controller.dart'
+    show knowledgeControllerProvider;

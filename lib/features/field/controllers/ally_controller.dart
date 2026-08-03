@@ -9,14 +9,21 @@ import '../../../data/services/ally_service.dart';
 /// State for the system ally agent.
 @immutable
 class AllyState {
-  const AllyState({this.isLoading = false, this.error, this.ally});
+  const AllyState({
+    this.isLoading = false,
+    this.isSavingPresence = false,
+    this.error,
+    this.ally,
+  });
 
   final bool isLoading;
+  final bool isSavingPresence;
   final String? error;
   final AllyAgentModel? ally;
 
   AllyState copyWith({
     bool? isLoading,
+    bool? isSavingPresence,
     String? error,
     AllyAgentModel? ally,
     bool clearError = false,
@@ -24,6 +31,7 @@ class AllyState {
   }) {
     return AllyState(
       isLoading: isLoading ?? this.isLoading,
+      isSavingPresence: isSavingPresence ?? this.isSavingPresence,
       error: clearError ? null : (error ?? this.error),
       ally: clearAlly ? null : (ally ?? this.ally),
     );
@@ -87,6 +95,63 @@ class AllyController extends Notifier<AllyState> {
   /// Retry fetching the ally after a failure.
   Future<void> retry() async {
     await _fetchAlly();
+  }
+
+  /// Update the local ally's knowledgeBaseIds after a link/unlink.
+  void updateKnowledgeBaseIds(List<String> kbIds) {
+    final ally = state.ally;
+    if (ally == null) return;
+    state = state.copyWith(ally: ally.copyWith(knowledgeBaseIds: kbIds));
+  }
+
+  /// Save system prompt and attach it to the agent.
+  ///
+  /// Two-step flow: creates/updates a Prompt record, then attaches it
+  /// to the ally agent via `promptId` — same pattern as knowledge bases.
+  Future<void> updateSystemPrompt(String systemPrompt) async {
+    final ally = state.ally;
+    if (ally == null) return;
+
+    state = state.copyWith(isSavingPresence: true, clearError: true);
+
+    try {
+      final promptId = await AllyService.instance.saveAndAttachPrompt(
+        agentId: ally.id,
+        agentName: ally.name,
+        wallet: ally.wallet,
+        systemPrompt: systemPrompt,
+        existingPromptId: ally.promptId.isNotEmpty ? ally.promptId : null,
+      );
+      if (!ref.mounted) return;
+      state = state.copyWith(
+        isSavingPresence: false,
+        ally: ally.copyWith(systemPrompt: systemPrompt, promptId: promptId),
+      );
+      AppLogger.info('System prompt saved and attached', tag: 'AllyController');
+    } on UnauthorizedException {
+      if (!ref.mounted) return;
+      state = state.copyWith(
+        isSavingPresence: false,
+        error: 'Session expired. Please log in again.',
+      );
+    } on NetworkException {
+      if (!ref.mounted) return;
+      state = state.copyWith(
+        isSavingPresence: false,
+        error: 'No internet connection.',
+      );
+    } on AppException catch (e) {
+      AppLogger.error(
+        'Failed to save system prompt',
+        tag: 'AllyController',
+        error: e,
+      );
+      if (!ref.mounted) return;
+      state = state.copyWith(
+        isSavingPresence: false,
+        error: 'Unable to save presence. Please try again.',
+      );
+    }
   }
 }
 
