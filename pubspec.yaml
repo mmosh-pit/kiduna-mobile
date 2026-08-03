@@ -1,5 +1,5 @@
-name: kiduna_mobile
-description: "Kiduna mobile application."
+name: aev_flutter
+description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -19,7 +19,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.9.2
+  sdk: ^3.12.1
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -31,17 +31,11 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Localization — all user-facing strings live in lib/l10n/app_en.arb.
-  flutter_localizations:
-    sdk: flutter
-  intl: any
-
-  # Runtime environment config loaded from .env (see CLAUDE.md Section 23).
-  flutter_dotenv: ^5.1.0
-
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+  flame: ^1.38.0
+  flutter_svg: ^2.3.0
 
 dev_dependencies:
   flutter_test:
@@ -52,7 +46,8 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^5.0.0
+  flutter_lints: ^6.0.0
+  json_schema: ^5.2.2
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -60,29 +55,38 @@ dev_dependencies:
 # The following section is specific to Flutter packages.
 flutter:
 
-  # Generate localization lookups from lib/l10n/*.arb (see l10n.yaml).
-  generate: true
-
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
 
+  # ── Kiduna Studio Design Kit v1.7 assets ────────────────────────────────
   assets:
-    - .env
-    - assets/images/
+    - assets/fixtures/
+    - assets/realm-emblems/
     - assets/icons/
-    - assets/animations/
+    - assets/brand/
+    - assets/talismans/
+    - assets/organization-crests/
+    - assets/allies/
 
+  # Goudy Heavyface — identity, Realm headings, thresholds, significant figures.
+  # Avenir — body copy, controls, operational information.
   fonts:
-    - family: Avenir
-      fonts:
-        - asset: assets/fonts/Avenir-Book.ttf
-          weight: 300
-        - asset: assets/fonts/Avenir-Regular.ttf
-          weight: 400
-        - asset: assets/fonts/Avenir-Heavy.ttf
-          weight: 800
     - family: GoudyHeavyface
       fonts:
-        - asset: assets/fonts/GoudyHeavyface.ttf
+        - asset: fonts/goudy_heavyface_bt.ttf
+    - family: Avenir
+      fonts:
+        - asset: fonts/avenir-book.ttf
+          weight: 400
+        - asset: fonts/avenir-regular.ttf
+          weight: 400
+        - asset: fonts/avenir-heavy.ttf
+          weight: 800
+    # Realm motif glyphs — ⌑ ✦ ◌ ≋ ⌘ — which neither Goudy nor Avenir covers.
+    # Flutter web renders text itself and cannot reach system fonts, so the
+    # coverage has to be bundled. Subset of DejaVu Sans, 29 codepoints.
+    - family: Motif
+      fonts:
+        - asset: fonts/MotifSymbols.ttf

@@ -1,0 +1,868 @@
+{
+  "schemaVersion": "1.0",
+  "viewer": {
+    "id": "alice",
+    "displayName": "Alice",
+    "allyId": "luna",
+    "relationship": "Catalyst · Ecosystem-wide authority",
+    "roles": {
+      "dunaversity": "Catalyst",
+      "agency": "Catalyst",
+      "hyphal": "Catalyst",
+      "mapshifting": "Catalyst",
+      "freehold-finance": "Catalyst",
+      "tangential": "Catalyst",
+      "true-democracy": "Catalyst",
+      "kinship-commons": "Catalyst",
+      "ravensong-labs": "Catalyst",
+      "kinship-underground": "Catalyst",
+      "service-alliance": "Catalyst",
+      "bihome": "Catalyst",
+      "soul-kitchen": "Catalyst",
+      "safeword": "Catalyst",
+      "homeworld": "Catalyst",
+      "black-love": "Catalyst",
+      "non-toxic-masculinity": "Catalyst",
+      "the-long-drum": "Catalyst",
+      "confluence-collective": "Catalyst",
+      "mountain-river-trail": "Catalyst",
+      "celebrity-solar": "Catalyst",
+      "mycelial-aid": "Catalyst",
+      "ansanm-ayiti": "Catalyst",
+      "indigenous-revival": "Catalyst",
+      "ceremony-machine": "Catalyst",
+      "fellowship-of-play": "Catalyst",
+      "fanduna": "Catalyst",
+      "party-line": "Catalyst",
+      "cosmic-humanity": "Catalyst",
+      "vibe-coast": "Catalyst",
+      "wokelord": "Catalyst",
+      "global-peace": "Catalyst",
+      "jews-against-homelands": "Catalyst",
+      "contraction": "Catalyst"
+    },
+    "gravity": {
+      "dunaversity": 5,
+      "agency": 4,
+      "hyphal": 4,
+      "mapshifting": 4,
+      "freehold-finance": 4,
+      "tangential": 4,
+      "true-democracy": 4,
+      "kinship-commons": 4,
+      "ravensong-labs": 4,
+      "kinship-underground": 1,
+      "service-alliance": 4,
+      "bihome": 3,
+      "soul-kitchen": 3,
+      "safeword": 3,
+      "homeworld": 3,
+      "black-love": 3,
+      "non-toxic-masculinity": 3,
+      "the-long-drum": 4,
+      "confluence-collective": 3,
+      "mountain-river-trail": 3,
+      "celebrity-solar": 3,
+      "mycelial-aid": 3,
+      "ansanm-ayiti": 3,
+      "indigenous-revival": 3,
+      "ceremony-machine": 3,
+      "fellowship-of-play": 3,
+      "fanduna": 3,
+      "party-line": 3,
+      "cosmic-humanity": 3,
+      "vibe-coast": 3,
+      "wokelord": 3,
+      "global-peace": 3,
+      "jews-against-homelands": 1,
+      "contraction": 3
+    }
+  },
+  "ecosystem": {
+    "id": "kinship-duna",
+    "name": "Kinship Duna",
+    "type": "Ecosystem"
+  },
+  "realms": [
+    {
+      "id": "dunaversity",
+      "name": "Dunaversity",
+      "type": "Organization",
+      "parentId": "kinship-duna",
+      "purpose": "Learning, formation, courses, and practice for the agentic economy.",
+      "motif": "⌑",
+      "childIds": [
+        "nature-of-work",
+        "agentic-engineer",
+        "agentic-entrepreneur",
+        "economic-empowerment",
+        "positive-psychology",
+        "voodoo-economics",
+        "dunathon",
+        "hosting-without-surveillance",
+        "practice-led-facilitation"
+      ],
+      "clusterId": "formation",
+      "seed": {
+        "left": 24.059,
+        "top": 33.431
+      },
+      "mass": 3,
+      "fixture": false,
+      "stationedAllyId": null,
+      "reason": "Dunaversity contains the Program Alice is shaping and sits at the center of her current Catalyst work."
+    },
+    {
+      "id": "agency",
+      "name": "Agency",
+      "type": "Organization",
+      "parentId": "kinship-duna",
+      "purpose": "News distribution, representation, talent, public relations, and freelance coordination.",
+      "motif": "✦",
+      "childIds": [],
+      "clusterId": "formation",
+      "seed": {
+        "left": 30.178,
+        "top": 27.107
+      },
+      "mass": 2,
+      "fixture": false,
+      "stationedAllyId": null,
+      "reason": "Agency is close because this Persona has direct work, responsibility, or a strong granted role here."
+    },
+    {
+      "id": "hyphal",
+      "name": "Hyphal",
+      "type": "Organization",
+      "parentId": "kinship-duna",
+      "purpose": "Work and team formation without extractive marketplace logic.",
+      "motif": "⌘",
+      "childIds": [
+        "writers-workstop"
+      ],
+      "clusterId": "formation",
+      "seed": {
+        "left": 39.876,
+        "top": 24.387
+      },
+      "mass": 2,
+      "fixture": false,
+      "stationedAllyId": null,
+      "reason": "Hyphal is close because this Persona has direct work, responsibility, or a strong granted role here."
+    },
+    {
+      "id": "mapshifting",
+      "name": "Mapshifting",
+      "type": "Organization",
+      "parentId": "kinship-duna",
+      "purpose": "People-first organizational development and professional growth.",
+      "motif": "≋",
+      "childIds": [],
+      "clusterId": "formation",
+      "seed": {
+        "left": 49.946,
+        "top": 26.168
+      },
+      "mass": 1,
+      "fixture": false,
+      "stationedAllyId": null,
+      "reason": "Mapshifting is close because this Persona has direct work, responsibility, or a strong granted role here."
+    },
+    {
+      "id": "freehold-finance",
+      "name": "Freehold Finance",
+      "type": "Organization",
+      "parentId": "kinship-duna",
+      "purpose": "Member-facing cooperative finance and capital formation.",
+      "motif": "⌂",
+      "childIds": [
+        "local-property-cooperative",
+        "freehold-mortgage"
+      ],
+      "clusterId": "formation",
+      "seed": {
+        "left": 57.057,
+        "top": 31.863
+      },
+      "mass": 2,
+      "fixture": false,
+      "stationedAllyId": null,
+      "reason": "Freehold Finance is close because this Persona has direct work, responsibility, or a strong granted role here."
+    },
+    {
+      "id": "tangential",
+      "name": "Tangential",
+      "type": "Alliance",
+      "parentId": "kinship-duna",
+      "purpose": "Coordination among founders, investment clubs, regulated offerings, and funders.",
+      "motif": "◌",
+      "childIds": [],
+      "clusterId": "formation",
+      "seed": {
+        "left": 58.858,
+        "top": 39.588
+      },
+      "mass": 1,
+      "fixture": false,
+      "stationedAllyId": null,
+      "reason": "Tangential is close because this Persona has direct work, responsibility, or a strong granted role here."
+    },
+    {
+      "id": "true-democracy",
+      "name": "True Democracy",
+      "type": "Alliance",
+      "parentId": "kinship-duna",
+      "purpose": "Participatory governance, civic learning, and accountable public power.",
+      "motif": "◯",
+      "childIds": [],
+      "clusterId": "formation",
+      "seed": {
+        "left": 54.752,
+        "top": 46.787
+      },
+      "mass": 2,
+      "fixture": false,
+      "stationedAllyId": null,
+      "reason": "True Democracy is close because this Persona has direct work, responsibility, or a strong granted role here."
+    },
+    {
+      "id": "kinship-commons",
+      "name": "Kinship Commons Cooperative, Inc.",
+      "type": "Institution",
+      "parentId": "kinship-duna",
+      "purpose": "Proposed cooperative steward for shared infrastructure and services.",
+      "motif": "◆",
+      "childIds": [],
+      "clusterId": "formation",
+      "seed": {
+        "left": 46.098,
+        "top": 51.08
+      },
+      "mass": 3,
+      "fixture": true,
+      "stationedAllyId": null,
+      "reason": "Kinship Commons Cooperative, Inc. is close because this Persona has direct work, responsibility, or a strong granted role here."
+    },
+    {
+      "id": "ravensong-labs",
+      "name": "Ravensong Labs, PBC",
+      "type": "Institution",
+      "parentId": "kinship-duna",
+      "purpose": "Proposed public-benefit technology company and employer.",
+      "motif": "♢",
+      "childIds": [
+        "software-as-world"
+      ],
+      "clusterId": "formation",
+      "seed": {
+        "left": 35.758,
+        "top": 51.047
+      },
+      "mass": 3,
+      "fixture": true,
+      "stationedAllyId": null,
+      "reason": "Ravensong Labs, PBC is close because this Persona has direct work, responsibility, or a strong granted role here."
+    },
+    {
+      "id": "kinship-underground",
+      "name": "Kinship Underground",
+      "type": "Community",
+      "parentId": "kinship-duna",
+      "purpose": "Member culture and experimental practice without hidden authority.",
+      "motif": "⌇",
+      "childIds": [
+        "offline-first-builders"
+      ],
+      "clusterId": "formation",
+      "seed": {
+        "left": 72.413,
+        "top": 33.787
+      },
+      "mass": 1,
+      "fixture": false,
+      "stationedAllyId": null,
+      "reason": "Kinship Underground is legitimate Ecosystem context, but it is not part of this Persona's current Focus."
+    },
+    {
+      "id": "service-alliance",
+      "name": "Service Alliance",
+      "type": "Alliance",
+      "parentId": "kinship-duna",
+      "purpose": "Veterans, first responders, families, and support providers coordinating with care.",
+      "motif": "✥",
+      "childIds": [
+        "we-care-a-lot",
+        "service-alliance-foundation"
+      ],
+      "clusterId": "care",
+      "seed": {
+        "left": 27.274,
+        "top": 68.164
+      },
+      "mass": 3,
+      "fixture": false,
+      "stationedAllyId": null,
+      "reason": "Service Alliance is close because this Persona has direct work, responsibility, or a strong granted role here."
+    },
+    {
+      "id": "bihome",
+      "name": "Bihome",
+      "type": "Organization",
+      "parentId": "kinship-duna",
+      "purpose": "Personalized health navigation and home transition.",
+      "motif": "⌂",
+      "childIds": [
+        "inner-clinic",
+        "bihome-health"
+      ],
+      "clusterId": "care",
+      "seed": {
+        "left": 10.232,
+        "top": 56.193
+      },
+      "mass": 1,
+      "fixture": false,
+      "stationedAllyId": null,
+      "reason": "Bihome is visible through a joined Realm, explicit responsibility, or a legitimate cross-Realm bridge."
+    },
+    {
+      "id": "soul-kitchen",
+      "name": "Soul Kitchen",
+      "type": "Organization",
+      "parentId": "kinship-duna",
+      "purpose": "Community-building-centered recovery and authentic connection.",
+      "motif": "♨",
+      "childIds": [
+        "soul-kitchen-recovery",
+        "kitchen-shift"
+      ],
+      "clusterId": "care",
+      "seed": {
+        "left": 19.043,
+        "top": 53.21
+      },
+      "mass": 2,
+      "fixture": false,
+      "stationedAllyId": null,
+      "reason": "Soul Kitchen is visible through a joined Realm, explicit responsibility, or a legitimate cross-Realm bridge."
+    },
+    {
+      "id": "safeword",
+      "name": "Safeword",
+      "type": "Organization",
+      "parentId": "kinship-duna",
+      "purpose": "Consent-centered relationship, dating, friendship, and group matchmaking.",
+      "motif": "∞",
+      "childIds": [],
+      "clusterId": "care",
+      "seed": {
+        "left": 27.353,
+        "top": 57.823
+      },
+      "mass": 1,
+      "fixture": false,
+      "stationedAllyId": null,
+      "reason": "Safeword is visible through a joined Realm, explicit responsibility, or a legitimate cross-Realm bridge."
+    },
+    {
+      "id": "homeworld",
+      "name": "Homeworld",
+      "type": "Community",
+      "parentId": "kinship-duna",
+      "purpose": "Families, closest relationships, repair, and extended communities of care.",
+      "motif": "⊕",
+      "childIds": [
+        "welcome-table",
+        "lineage-as-care",
+        "storykeepers-room",
+        "homeworld-field-notes"
+      ],
+      "clusterId": "care",
+      "seed": {
+        "left": 31.163,
+        "top": 67.813
+      },
+      "mass": 2,
+      "fixture": false,
+      "stationedAllyId": null,
+      "reason": "Homeworld is visible through a joined Realm, explicit responsibility, or a legitimate cross-Realm bridge."
+    },
+    {
+      "id": "black-love",
+      "name": "Black Love",
+      "type": "Community",
+      "parentId": "kinship-duna",
+      "purpose": "African American love, atonement, family, and diaspora connection.",
+      "motif": "♥",
+      "childIds": [],
+      "clusterId": "care",
+      "seed": {
+        "left": 28.64,
+        "top": 78.375
+      },
+      "mass": 1,
+      "fixture": false,
+      "stationedAllyId": null,
+      "reason": "Black Love is visible through a joined Realm, explicit responsibility, or a legitimate cross-Realm bridge."
+    },
+    {
+      "id": "non-toxic-masculinity",
+      "name": "Non-Toxic Masculinity",
+      "type": "Community",
+      "parentId": "kinship-duna",
+      "purpose": "Inclusive peer inquiry without therapeutic claims.",
+      "motif": "⚘",
+      "childIds": [],
+      "clusterId": "care",
+      "seed": {
+        "left": 20.998,
+        "top": 84.426
+      },
+      "mass": 1,
+      "fixture": false,
+      "stationedAllyId": null,
+      "reason": "Non-Toxic Masculinity is visible through a joined Realm, explicit responsibility, or a legitimate cross-Realm bridge."
+    },
+    {
+      "id": "the-long-drum",
+      "name": "The Long Drum",
+      "type": "Alliance",
+      "parentId": "kinship-duna",
+      "purpose": "Non-extractive support for entrepreneurs in the Global South.",
+      "motif": "▰",
+      "childIds": [
+        "long-drum-foundation"
+      ],
+      "clusterId": "place",
+      "seed": {
+        "left": 61.399,
+        "top": 72.494
+      },
+      "mass": 2,
+      "fixture": false,
+      "stationedAllyId": null,
+      "reason": "The Long Drum is close because this Persona has direct work, responsibility, or a strong granted role here."
+    },
+    {
+      "id": "confluence-collective",
+      "name": "Confluence Collective",
+      "type": "Organization",
+      "parentId": "kinship-duna",
+      "purpose": "Local resilience, agriculture, watersheds, foodsheds, and preparedness.",
+      "motif": "≋",
+      "childIds": [
+        "ep-rising",
+        "ecophiles",
+        "winter-advisory",
+        "confluence-land-trust",
+        "watershed-repair",
+        "appalachian-field-systems",
+        "watershed-repair-log"
+      ],
+      "clusterId": "place",
+      "seed": {
+        "left": 27.772,
+        "top": 72.711
+      },
+      "mass": 3,
+      "fixture": false,
+      "stationedAllyId": null,
+      "reason": "Confluence Collective is visible through a joined Realm, explicit responsibility, or a legitimate cross-Realm bridge."
+    },
+    {
+      "id": "mountain-river-trail",
+      "name": "Mountain River Trail",
+      "type": "Alliance",
+      "parentId": "kinship-duna",
+      "purpose": "Statewide hospitality, tourism, culture, and local commerce.",
+      "motif": "⌇",
+      "childIds": [
+        "flag-tag",
+        "hellbenders",
+        "mountain-river-association"
+      ],
+      "clusterId": "place",
+      "seed": {
+        "left": 38.262,
+        "top": 65.849
+      },
+      "mass": 2,
+      "fixture": false,
+      "stationedAllyId": null,
+      "reason": "Mountain River Trail is visible through a joined Realm, explicit responsibility, or a legitimate cross-Realm bridge."
+    },
+    {
+      "id": "celebrity-solar",
+      "name": "Celebrity Solar",
+      "type": "Alliance",
+      "parentId": "kinship-duna",
+      "purpose": "Households, installers, equipment, finance, monitoring, and shared ownership.",
+      "motif": "☀",
+      "childIds": [],
+      "clusterId": "place",
+      "seed": {
+        "left": 54.66,
+        "top": 65.144
+      },
+      "mass": 1,
+      "fixture": false,
+      "stationedAllyId": null,
+      "reason": "Celebrity Solar is visible through a joined Realm, explicit responsibility, or a legitimate cross-Realm bridge."
+    },
+    {
+      "id": "mycelial-aid",
+      "name": "Mycelial Aid",
+      "type": "Alliance",
+      "parentId": "kinship-duna",
+      "purpose": "Global mutual aid and climate action under explicit authority.",
+      "motif": "⌘",
+      "childIds": [
+        "end-genocide-gaza",
+        "slava-ukraini"
+      ],
+      "clusterId": "place",
+      "seed": {
+        "left": 67.017,
+        "top": 71.024
+      },
+      "mass": 2,
+      "fixture": false,
+      "stationedAllyId": null,
+      "reason": "Mycelial Aid is visible through a joined Realm, explicit responsibility, or a legitimate cross-Realm bridge."
+    },
+    {
+      "id": "ansanm-ayiti",
+      "name": "Ansanm Ayiti",
+      "type": "Alliance",
+      "parentId": "kinship-duna",
+      "purpose": "Direct, locally led support for Haitian schools, children, and food.",
+      "motif": "⌂",
+      "childIds": [
+        "ansanm-relief"
+      ],
+      "clusterId": "place",
+      "seed": {
+        "left": 67.84,
+        "top": 79.923
+      },
+      "mass": 1,
+      "fixture": false,
+      "stationedAllyId": null,
+      "reason": "Ansanm Ayiti is visible through a joined Realm, explicit responsibility, or a legitimate cross-Realm bridge."
+    },
+    {
+      "id": "indigenous-revival",
+      "name": "Indigenous Revival",
+      "type": "Community",
+      "parentId": "kinship-duna",
+      "purpose": "Indigenous governance over knowledge, provenance, access, and sacred boundaries.",
+      "motif": "✣",
+      "childIds": [
+        "field-records"
+      ],
+      "clusterId": "place",
+      "seed": {
+        "left": 56.627,
+        "top": 86.442
+      },
+      "mass": 1,
+      "fixture": false,
+      "stationedAllyId": null,
+      "reason": "Indigenous Revival is visible through a joined Realm, explicit responsibility, or a legitimate cross-Realm bridge."
+    },
+    {
+      "id": "ceremony-machine",
+      "name": "The Ceremony Machine",
+      "type": "Organization",
+      "parentId": "kinship-duna",
+      "purpose": "Immersive culture, global festivals, projection, games, performance, and sound.",
+      "motif": "✺",
+      "childIds": [
+        "cutting-edge-culture",
+        "neo-post-retro",
+        "global-ceremony",
+        "lightbrush-studio",
+        "ceremony-foundation"
+      ],
+      "clusterId": "culture",
+      "seed": {
+        "left": 69.724,
+        "top": 48.6
+      },
+      "mass": 3,
+      "fixture": false,
+      "stationedAllyId": null,
+      "reason": "The Ceremony Machine is visible through a joined Realm, explicit responsibility, or a legitimate cross-Realm bridge."
+    },
+    {
+      "id": "fellowship-of-play",
+      "name": "The Fellowship of Play",
+      "type": "Community",
+      "parentId": "kinship-duna",
+      "purpose": "Game designers, publishers, players, funding, ownership, and play.",
+      "motif": "◆",
+      "childIds": [
+        "game-1986",
+        "games-1986-llc",
+        "fellowship-association",
+        "cricket-fan"
+      ],
+      "clusterId": "culture",
+      "seed": {
+        "left": 76.081,
+        "top": 43.261
+      },
+      "mass": 2,
+      "fixture": false,
+      "stationedAllyId": null,
+      "reason": "The Fellowship of Play is visible through a joined Realm, explicit responsibility, or a legitimate cross-Realm bridge."
+    },
+    {
+      "id": "fanduna",
+      "name": "Fanduna",
+      "type": "Community",
+      "parentId": "kinship-duna",
+      "purpose": "Fans, entertainers, athletes, authors, ownership, events, and openings.",
+      "motif": "★",
+      "childIds": [],
+      "clusterId": "culture",
+      "seed": {
+        "left": 83.319,
+        "top": 43.874
+      },
+      "mass": 1,
+      "fixture": false,
+      "stationedAllyId": null,
+      "reason": "Fanduna is visible through a joined Realm, explicit responsibility, or a legitimate cross-Realm bridge."
+    },
+    {
+      "id": "party-line",
+      "name": "Party Line",
+      "type": "Organization",
+      "parentId": "kinship-duna",
+      "purpose": "Parties, weddings, clubs, performers, venues, and event production.",
+      "motif": "☎",
+      "childIds": [
+        "party-line-coop"
+      ],
+      "clusterId": "culture",
+      "seed": {
+        "left": 89.254,
+        "top": 50.254
+      },
+      "mass": 2,
+      "fixture": false,
+      "stationedAllyId": null,
+      "reason": "Party Line is visible through a joined Realm, explicit responsibility, or a legitimate cross-Realm bridge."
+    },
+    {
+      "id": "cosmic-humanity",
+      "name": "Cosmic Humanity",
+      "type": "Community",
+      "parentId": "kinship-duna",
+      "purpose": "Cosmology, relationship repair, archetypal depth, and non-binary inquiry.",
+      "motif": "☯",
+      "childIds": [
+        "psychonauts",
+        "crypto-consciousness",
+        "disclosure-codes"
+      ],
+      "clusterId": "culture",
+      "seed": {
+        "left": 92.097,
+        "top": 60.477
+      },
+      "mass": 2,
+      "fixture": false,
+      "stationedAllyId": null,
+      "reason": "Cosmic Humanity is visible through a joined Realm, explicit responsibility, or a legitimate cross-Realm bridge."
+    },
+    {
+      "id": "vibe-coast",
+      "name": "Vibe Coast",
+      "type": "Community",
+      "parentId": "kinship-duna",
+      "purpose": "Southern California culture, arts, hospitality, health, fashion, and events.",
+      "motif": "≋",
+      "childIds": [],
+      "clusterId": "culture",
+      "seed": {
+        "left": 90.991,
+        "top": 71.46
+      },
+      "mass": 1,
+      "fixture": false,
+      "stationedAllyId": null,
+      "reason": "Vibe Coast is visible through a joined Realm, explicit responsibility, or a legitimate cross-Realm bridge."
+    },
+    {
+      "id": "wokelord",
+      "name": "Wokelord",
+      "type": "Community",
+      "parentId": "kinship-duna",
+      "purpose": "Healthy participation in social Media and misinformation resistance.",
+      "motif": "♛",
+      "childIds": [
+        "purge-palantir",
+        "fire-with-fire",
+        "stop-slop"
+      ],
+      "clusterId": "culture",
+      "seed": {
+        "left": 86.27,
+        "top": 79.893
+      },
+      "mass": 2,
+      "fixture": false,
+      "stationedAllyId": null,
+      "reason": "Wokelord is visible through a joined Realm, explicit responsibility, or a legitimate cross-Realm bridge."
+    },
+    {
+      "id": "global-peace",
+      "name": "Global Peace",
+      "type": "Alliance",
+      "parentId": "kinship-duna",
+      "purpose": "A cross-Realm peacebuilding and exchange coalition.",
+      "motif": "❧",
+      "childIds": [],
+      "clusterId": "culture",
+      "seed": {
+        "left": 79.357,
+        "top": 83.233
+      },
+      "mass": 1,
+      "fixture": false,
+      "stationedAllyId": null,
+      "reason": "Global Peace is visible through a joined Realm, explicit responsibility, or a legitimate cross-Realm bridge."
+    },
+    {
+      "id": "jews-against-homelands",
+      "name": "Jews Against Homelands",
+      "type": "Alliance",
+      "parentId": "kinship-duna",
+      "purpose": "A provisional coalition whose final name and safety boundaries require review.",
+      "motif": "⌂",
+      "childIds": [],
+      "clusterId": "culture",
+      "seed": {
+        "left": 95,
+        "top": 59.846
+      },
+      "mass": 1,
+      "fixture": false,
+      "stationedAllyId": null,
+      "reason": "Jews Against Homelands is legitimate Ecosystem context, but it is not part of this Persona's current Focus."
+    },
+    {
+      "id": "contraction",
+      "name": "Contraction",
+      "type": "Organization",
+      "parentId": "kinship-duna",
+      "purpose": "Member-facing legal knowledge and coordination.",
+      "motif": "][",
+      "childIds": [
+        "legal-limits",
+        "its-the-law"
+      ],
+      "clusterId": "law",
+      "seed": {
+        "left": 80.292,
+        "top": 23.319
+      },
+      "mass": 2,
+      "fixture": false,
+      "stationedAllyId": null,
+      "reason": "Contraction is visible through a joined Realm, explicit responsibility, or a legitimate cross-Realm bridge."
+    }
+  ],
+  "clusters": [
+    {
+      "id": "formation",
+      "label": "Formation · work · economy",
+      "accent": "#03CCD9",
+      "left": 41,
+      "top": 38,
+      "radiusX": 29,
+      "radiusY": 22,
+      "startAngle": -2.8,
+      "arc": 5.25
+    },
+    {
+      "id": "care",
+      "label": "Care · family · relationship",
+      "accent": "#CF6F58",
+      "left": 18,
+      "top": 69,
+      "radiusX": 15,
+      "radiusY": 18,
+      "startAngle": -2.2,
+      "arc": 4.25
+    },
+    {
+      "id": "place",
+      "label": "Place · ecology · mutual aid",
+      "accent": "#8FE6C6",
+      "left": 48,
+      "top": 76,
+      "radiusX": 24,
+      "radiusY": 13,
+      "startAngle": -2.85,
+      "arc": 4.8
+    },
+    {
+      "id": "culture",
+      "label": "Culture · play · public imagination",
+      "accent": "#9A7DE8",
+      "left": 79,
+      "top": 63,
+      "radiusX": 15,
+      "radiusY": 23,
+      "startAngle": -2.35,
+      "arc": 4.45
+    },
+    {
+      "id": "law",
+      "label": "Law · accountable institutions",
+      "accent": "#EAAA00",
+      "left": 76,
+      "top": 29,
+      "radiusX": 7,
+      "radiusY": 9,
+      "startAngle": -1.4,
+      "arc": 1.2
+    }
+  ],
+  "allies": [
+    {
+      "id": "luna",
+      "name": "Luna",
+      "state": "open",
+      "portrait": "assets/allies/ally-open-sample.png"
+    }
+  ],
+  "bridges": [
+    {
+      "fromRealmId": "dunaversity",
+      "toRealmId": "the-long-drum"
+    },
+    {
+      "fromRealmId": "homeworld",
+      "toRealmId": "party-line"
+    },
+    {
+      "fromRealmId": "mountain-river-trail",
+      "toRealmId": "party-line"
+    },
+    {
+      "fromRealmId": "wokelord",
+      "toRealmId": "contraction"
+    },
+    {
+      "fromRealmId": "kinship-commons",
+      "toRealmId": "ravensong-labs"
+    }
+  ],
+  "currentPath": {
+    "targetRealmId": "dunaversity"
+  }
+}
