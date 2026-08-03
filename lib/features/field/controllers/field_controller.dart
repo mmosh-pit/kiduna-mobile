@@ -19,11 +19,11 @@ import '../../../data/services/invitation_service.dart';
 import '../../../data/services/skill_service.dart';
 import '../../../data/services/tool_connection_service.dart';
 import '../../auth/controllers/auth_controller.dart';
-import 'ally_controller.dart';
 import '../data/design_persona.dart';
 import '../data/field_composition.dart';
 import '../data/field_fixtures.dart';
 import '../data/realm_atlas.dart';
+import 'ally_controller.dart';
 
 /// UI state for the Field.
 @immutable
@@ -451,19 +451,13 @@ class FieldController extends Notifier<FieldState> {
 
   /// Open the skill creation form as a separate working panel.
   void openSkillForm() {
-    state = state.copyWith(
-      skillFormOpen: true,
-      clearEditingSkill: true,
-    );
+    state = state.copyWith(skillFormOpen: true, clearEditingSkill: true);
     fetchAvailableTools();
   }
 
   /// Close the skill creation form panel.
   void closeSkillForm() {
-    state = state.copyWith(
-      skillFormOpen: false,
-      clearEditingSkill: true,
-    );
+    state = state.copyWith(skillFormOpen: false, clearEditingSkill: true);
   }
 
   /// Fetch available tools from MCP servers.
@@ -666,14 +660,21 @@ class FieldController extends Notifier<FieldState> {
       KiTopic(
         title: '$name updated',
         body: 'Ki has updated the Skill "$name".',
-        invitation: 'The changes are saved. Continue editing or create '
+        invitation:
+            'The changes are saved. Continue editing or create '
             'another Skill.',
       ),
     );
 
     if (!skillId.startsWith('local-')) {
-      _syncSkillUpdate(skillId, name, whenText, thenText, tools,
-          requiresApproval);
+      _syncSkillUpdate(
+        skillId,
+        name,
+        whenText,
+        thenText,
+        tools,
+        requiresApproval,
+      );
     }
   }
 
@@ -799,10 +800,7 @@ class FieldController extends Notifier<FieldState> {
     if (skill == null) {
       return;
     }
-    state = state.copyWith(
-      skillFormOpen: true,
-      editingSkill: skill,
-    );
+    state = state.copyWith(skillFormOpen: true, editingSkill: skill);
     fetchAvailableTools();
   }
 
@@ -848,11 +846,7 @@ class FieldController extends Notifier<FieldState> {
     );
 
     try {
-      final launched = await launchUrl(
-        oauthUrl,
-        mode: LaunchMode.platformDefault,
-        webOnlyWindowName: '_blank',
-      );
+      final launched = await launchUrl(oauthUrl, webOnlyWindowName: '_blank');
       if (!launched) {
         AppLogger.warning(
           'Could not open Google OAuth URL',
@@ -861,10 +855,7 @@ class FieldController extends Notifier<FieldState> {
         return;
       }
 
-      AppLogger.info(
-        'Google OAuth popup opened',
-        tag: 'FieldController',
-      );
+      AppLogger.info('Google OAuth popup opened', tag: 'FieldController');
 
       // No delay — ConnectionsPanel detects tab focus return via
       // WidgetsBindingObserver and calls fetchSavedTools automatically.
@@ -990,7 +981,8 @@ class FieldController extends Notifier<FieldState> {
       askAbout(
         KiTopic(
           title: '$toolName connected',
-          body: 'Connected as $handle. This tool is now available for '
+          body:
+              'Connected as $handle. This tool is now available for '
               'skills and agents in this Ecosystem.',
           invitation: 'You can disconnect at any time from this panel.',
         ),
@@ -1030,9 +1022,7 @@ class FieldController extends Notifier<FieldState> {
       );
       if (!success && ref.mounted && removed != null) {
         // Rollback on failure.
-        state = state.copyWith(
-          savedTools: [...state.savedTools, removed],
-        );
+        state = state.copyWith(savedTools: [...state.savedTools, removed]);
       }
     } on AppException catch (e) {
       AppLogger.warning(
@@ -1041,9 +1031,7 @@ class FieldController extends Notifier<FieldState> {
       );
       // Rollback.
       if (ref.mounted && removed != null) {
-        state = state.copyWith(
-          savedTools: [...state.savedTools, removed],
-        );
+        state = state.copyWith(savedTools: [...state.savedTools, removed]);
       }
     }
   }

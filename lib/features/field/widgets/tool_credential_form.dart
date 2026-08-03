@@ -74,17 +74,13 @@ class _ToolCredentialFormState extends State<ToolCredentialForm> {
           'app_password': _ctrl2.text.trim(),
         });
       case 'telegram':
-        final creds = <String, String>{
-          'bot_token': _ctrl1.text.trim(),
-        };
+        final creds = <String, String>{'bot_token': _ctrl1.text.trim()};
         if (_ctrl3.text.trim().isNotEmpty) {
           creds['owner_chat_id'] = _ctrl3.text.trim();
         }
         widget.onSubmit(creds);
       case 'solana':
-        widget.onSubmit({
-          'rpc_url': 'https://api.mainnet-beta.solana.com',
-        });
+        widget.onSubmit({'rpc_url': 'https://api.mainnet-beta.solana.com'});
       case 'google':
         _openGoogleOAuth();
       default:
@@ -96,7 +92,10 @@ class _ToolCredentialFormState extends State<ToolCredentialForm> {
     // Google OAuth requires browser redirect — open the studio OAuth
     // initiation URL. After user completes sign-in, the callback saves
     // the token to the backend. User then returns and taps refresh.
-    AppLogger.info('Google OAuth redirect requested', tag: 'ToolCredentialForm');
+    AppLogger.info(
+      'Google OAuth redirect requested',
+      tag: 'ToolCredentialForm',
+    );
     // TODO: open OAuth URL via url_launcher when added to pubspec.
     // For now show guidance in the form.
     setState(() {});
@@ -149,10 +148,7 @@ class _ToolCredentialFormState extends State<ToolCredentialForm> {
                 onTap: widget.onCancel,
                 child: Text(
                   '×',
-                  style: text.body.copyWith(
-                    color: colors.quiet,
-                    fontSize: 18,
-                  ),
+                  style: text.body.copyWith(color: colors.quiet, fontSize: 18),
                 ),
               ),
             ],
@@ -170,10 +166,7 @@ class _ToolCredentialFormState extends State<ToolCredentialForm> {
               ),
               child: Text(
                 widget.error!,
-                style: text.caption.copyWith(
-                  color: colors.gold,
-                  height: 1.4,
-                ),
+                style: text.caption.copyWith(color: colors.gold, height: 1.4),
               ),
             ),
           ],
@@ -184,8 +177,8 @@ class _ToolCredentialFormState extends State<ToolCredentialForm> {
               label: widget.isVerifying
                   ? 'Verifying…'
                   : widget.toolName == 'google'
-                      ? 'Open Google Sign-in'
-                      : 'Connect',
+                  ? 'Open Google Sign-in'
+                  : 'Connect',
               onPressed: _canSubmit ? _submit : null,
             ),
           ),
@@ -197,10 +190,7 @@ class _ToolCredentialFormState extends State<ToolCredentialForm> {
   List<Widget> _buildFieldsForTool() {
     final colors = context.kiduna;
     final text = context.kidunaText;
-    final hintStyle = text.caption.copyWith(
-      color: colors.muted,
-      height: 1.5,
-    );
+    final hintStyle = text.caption.copyWith(color: colors.muted, height: 1.5);
 
     switch (widget.toolName) {
       case 'bluesky':
@@ -281,8 +271,7 @@ class _ToolCredentialFormState extends State<ToolCredentialForm> {
             ),
             child: Row(
               children: [
-                Icon(Icons.check_circle_outline,
-                    size: 16, color: colors.sky),
+                Icon(Icons.check_circle_outline, size: 16, color: colors.sky),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(

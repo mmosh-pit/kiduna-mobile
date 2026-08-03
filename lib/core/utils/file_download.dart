@@ -1,8 +1,9 @@
 import 'package:flutter/services.dart';
 
-import 'logger.dart';
 import 'file_download_stub.dart'
-    if (dart.library.html) 'file_download_web.dart' as platform;
+    if (dart.library.html) 'file_download_web.dart'
+    as platform;
+import 'logger.dart';
 
 /// Download a text file to the user's device.
 ///

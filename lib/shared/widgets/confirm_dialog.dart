@@ -59,9 +59,7 @@ class ConfirmDialog extends StatelessWidget {
     final colors = context.kiduna;
     final text = context.kidunaText;
 
-    final confirmColor = isDestructive
-        ? const Color(0xFFE25C5C)
-        : colors.sky;
+    final confirmColor = isDestructive ? const Color(0xFFE25C5C) : colors.sky;
     final confirmTextColor = isDestructive
         ? const Color(0xFFFFF5F5)
         : colors.skyButtonInk;
@@ -91,10 +89,7 @@ class ConfirmDialog extends StatelessWidget {
               const SizedBox(height: 10),
               Text(
                 message,
-                style: text.caption.copyWith(
-                  color: colors.muted,
-                  height: 1.5,
-                ),
+                style: text.caption.copyWith(color: colors.muted, height: 1.5),
               ),
               const SizedBox(height: 20),
               Row(

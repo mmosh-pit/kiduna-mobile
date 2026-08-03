@@ -1,5 +1,6 @@
 import 'dart:convert';
-// ignore: avoid_web_libraries_in_flutter
+// dart:html is needed for browser file downloads until package:web migration
+// ignore: avoid_web_libraries_in_flutter, deprecated_member_use
 import 'dart:html' as html;
 
 /// Web-only: triggers a real browser file download.

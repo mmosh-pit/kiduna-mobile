@@ -51,18 +51,12 @@ class ToolConnectionService {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
         ApiEndpoints.toolsVerify,
-        data: {
-          'tool_name': toolName,
-          'credentials': credentials,
-        },
+        data: {'tool_name': toolName, 'credentials': credentials},
       );
 
       final body = response.data;
       if (body == null) {
-        return const VerifyToolResult(
-          success: false,
-          error: 'Empty response',
-        );
+        return const VerifyToolResult(success: false, error: 'Empty response');
       }
       return VerifyToolResult.fromJson(body);
     } on DioException catch (e) {
@@ -155,10 +149,7 @@ class ToolConnectionService {
   /// Disconnect a tool account.
   ///
   /// `DELETE /api/tools/saved/{id}?wallet={wallet}`.
-  Future<bool> remove({
-    required String wallet,
-    required String id,
-  }) async {
+  Future<bool> remove({required String wallet, required String id}) async {
     try {
       final response = await _dio.delete<Map<String, dynamic>>(
         ApiEndpoints.toolsRemove(id, wallet),
@@ -167,10 +158,7 @@ class ToolConnectionService {
       final body = response.data;
       final success = (body?['success'] ?? true) as bool;
       if (success) {
-        AppLogger.info(
-          'Tool $id disconnected',
-          tag: 'ToolConnectionService',
-        );
+        AppLogger.info('Tool $id disconnected', tag: 'ToolConnectionService');
       }
       return success;
     } on DioException catch (e) {

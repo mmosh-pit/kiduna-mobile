@@ -385,5 +385,78 @@
   },
   "noNestedRealmsVisible": "No nested Realms visible",
   "useNavigationOrAskKi": "Use navigation or ask Ki",
-  "allyNoneStationed": "None stationed"
+  "allyNoneStationed": "None stationed",
+
+  "kbLoading": "Loading knowledge base…",
+  "kbLoadFailed": "Unable to load knowledge base.",
+  "noWisdomItems": "No sources added yet.",
+  "kbItemPending": "Pending",
+  "kbItemIngested": "Ready",
+  "kbItemFailed": "Failed",
+  "nSourcesAvailable": "{count} sources",
+  "@nSourcesAvailable": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "uploadingFiles": "Uploading…",
+  "importingFromDrive": "Importing from Drive…",
+  "driveImportProgress": "Importing {done} of {total}…",
+  "@driveImportProgress": {
+    "placeholders": {
+      "done": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "kbCreateFailed": "Unable to create knowledge base.",
+  "kbDeleteConfirm": "Delete this source?",
+  "retry": "Retry",
+  "createKnowledgeBase": "Create Knowledge Base",
+  "kbNameHint": "Knowledge base name",
+  "kbNameRequired": "Please enter a name.",
+  "deleteKnowledgeBase": "Delete Knowledge Base",
+  "deleteKbConfirm": "This will permanently delete this knowledge base and all its sources.",
+  "cancel": "Cancel",
+  "kbSelectedName": "Knowledge Base: {name}",
+  "@kbSelectedName": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "kbVisibility": "Visibility",
+  "kbVisibilityPublic": "Public",
+  "kbVisibilityPrivate": "Private",
+  "kbVisibilitySecret": "Secret",
+  "kbVisibilityPersonal": "Personal",
+  "googleDrive": "Google Drive",
+  "connectGoogleDrive": "Connect Google Drive",
+  "driveConnecting": "Connecting…",
+  "driveSignInFailed": "Google sign-in failed. Please try again.",
+  "driveSignInRequired": "Please connect Google Drive first.",
+  "driveImportAction": "Import",
+  "drivePasteLinkHint": "https://drive.google.com/drive/folders/…",
+  "driveInvalidUrl": "Invalid Google Drive URL. Paste a file or folder link.",
+  "driveFileNotFound": "File not found or not accessible.",
+  "driveUnsupportedType": "Unsupported file type. Only PDF, TXT, DOCX, and Google Docs are supported.",
+  "driveFileTooLarge": "File exceeds the 5 MB size limit.",
+  "driveFilesTooLarge": "{count} files exceed the 5 MB size limit.",
+  "@driveFilesTooLarge": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "driveNoSupportedFiles": "No supported files found. Only PDF, TXT, DOCX, and Google Docs are supported.",
+  "presenceStatusInherited": "Inherited foundation · locally editable",
+  "presenceStatusDraft": "Local draft · not published",
+  "presenceStatusSaved": "Published",
+  "presenceStatusSaving": "Saving…",
+  "presenceStatusReset": "Reset to default",
+  "presenceDefaultPrompt": "Act in service of {name}’s purpose. Preserve human direction, explain consequential choices, and never infer private intent.",
+  "@presenceDefaultPrompt": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "presenceSave": "Save Presence",
+  "presenceSaveFailed": "Unable to save presence. Please try again."
 }

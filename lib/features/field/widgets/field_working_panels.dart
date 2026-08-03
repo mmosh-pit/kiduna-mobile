@@ -14,8 +14,8 @@ import 'presence_panel_cap.dart';
 import 'present_panel.dart';
 import 'realm_panel.dart';
 import 'skill_create_form.dart';
-import 'tool_credential_form.dart';
 import 'skills_panel.dart';
+import 'tool_credential_form.dart';
 import 'wisdom_panel.dart';
 
 /// The dynamically opened working panels: open actions, capacity panels,
@@ -122,12 +122,14 @@ class FieldWorkingPanels extends StatelessWidget {
 
     if (state.connectingTool != null) {
       final toolName = state.connectingTool!;
-      final displayName = {
-        'bluesky': 'Bluesky',
-        'google': 'Google',
-        'telegram': 'Telegram',
-        'solana': 'Solana Wallet',
-      }[toolName] ?? toolName;
+      final displayName =
+          {
+            'bluesky': 'Bluesky',
+            'google': 'Google',
+            'telegram': 'Telegram',
+            'solana': 'Solana Wallet',
+          }[toolName] ??
+          toolName;
       children.add(
         FieldPanel(
           key: ValueKey('connect-$toolName'),

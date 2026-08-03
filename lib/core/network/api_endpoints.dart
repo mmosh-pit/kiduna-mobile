@@ -32,6 +32,49 @@ abstract class ApiEndpoints {
   static String conversationHistory(String presenceId, String userWallet) =>
       '/api/conversations/$presenceId/$userWallet';
 
+  // ── Agent updates (kinship-agent) ─────────────────────────────────────
+
+  /// `PATCH /api/agents/{id}` — update agent fields.
+  static String agentUpdate(String agentId) => '/api/agents/$agentId';
+
+  // ── Prompts (kinship-agent) ────────────────────────────────────────
+
+  /// `POST /api/prompts` — create a prompt record.
+  static const String prompts = '/api/prompts';
+
+  /// `PATCH /api/prompts/{promptId}` — update an existing prompt.
+  static String promptUpdate(String promptId) => '/api/prompts/$promptId';
+
+  // ── Knowledge (kinship-agent) ────────────────────────────────────────
+
+  /// `GET/POST /api/knowledge` — list or create knowledge bases.
+  static const String knowledge = '/api/knowledge';
+
+  /// `GET/PATCH/DELETE /api/knowledge/{kbId}` — single KB operations.
+  static String knowledgeById(String kbId) => '/api/knowledge/$kbId';
+
+  /// `POST /api/knowledge/{kbId}/upload` — upload files to a KB.
+  static String knowledgeUpload(String kbId) => '/api/knowledge/$kbId/upload';
+
+  /// `POST /api/knowledge/{kbId}/ingest-text` — ingest raw text.
+  static String knowledgeIngestText(String kbId) =>
+      '/api/knowledge/$kbId/ingest-text';
+
+  /// `DELETE /api/knowledge/{kbId}/items/{itemId}` — delete a KB item.
+  static String knowledgeItem(String kbId, String itemId) =>
+      '/api/knowledge/$kbId/items/$itemId';
+
+  /// `POST /api/knowledge/{kbId}/ingest-pending` — ingest all pending items.
+  static String knowledgeIngestPending(String kbId) =>
+      '/api/knowledge/$kbId/ingest-pending';
+
+  /// `POST /api/knowledge/search` — semantic search across KBs.
+  static const String knowledgeSearch = '/api/knowledge/search';
+
+  /// `POST /api/knowledge/{kbId}/gdrive-import` — import file from Drive.
+  static String knowledgeGdriveImport(String kbId) =>
+      '/api/knowledge/$kbId/gdrive-import';
+
   // ── Skills (kinship-agent) ────────────────────────────────────────────
 
   /// `POST /api/skills` — create a new skill.
@@ -50,11 +93,6 @@ abstract class ApiEndpoints {
 
   /// `GET /api/tools/available` — discover tools from MCP servers.
   static const String toolsAvailable = '/api/tools/available';
-
-  // ── Agent updates (kinship-agent) ─────────────────────────────────────
-
-  /// `PATCH /api/agents/{id}` — update agent fields (e.g. `skill_ids`).
-  static String agentUpdate(String agentId) => '/api/agents/$agentId';
 
   // ── Tool connections (kinship-agent) ──────────────────────────────────
 

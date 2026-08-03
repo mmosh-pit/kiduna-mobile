@@ -115,18 +115,14 @@ class SkillService {
       final internal = body['internal'] as List<dynamic>? ?? [];
       for (final item in internal) {
         if (item is Map<String, dynamic>) {
-          tools.add(
-            AvailableToolModel.fromJson(item, defaultType: 'internal'),
-          );
+          tools.add(AvailableToolModel.fromJson(item, defaultType: 'internal'));
         }
       }
 
       final external = body['external'] as List<dynamic>? ?? [];
       for (final item in external) {
         if (item is Map<String, dynamic>) {
-          tools.add(
-            AvailableToolModel.fromJson(item, defaultType: 'external'),
-          );
+          tools.add(AvailableToolModel.fromJson(item));
         }
       }
 
@@ -311,10 +307,7 @@ class SkillService {
         ApiEndpoints.skillStatus(skillId),
         data: {'status': status},
       );
-      AppLogger.info(
-        'Skill $skillId status → $status',
-        tag: 'SkillService',
-      );
+      AppLogger.info('Skill $skillId status → $status', tag: 'SkillService');
     } on DioException catch (e) {
       if (e.error is AppException) {
         throw e.error!;

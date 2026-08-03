@@ -109,8 +109,7 @@ class _ConnectionsPanelState extends ConsumerState<ConnectionsPanel>
                   .toList(),
               expanded: _expandedTool == def.id,
               onToggleExpand: () => setState(() {
-                _expandedTool =
-                    _expandedTool == def.id ? null : def.id;
+                _expandedTool = _expandedTool == def.id ? null : def.id;
               }),
               onAdd: () {
                 if (def.id == 'google') {
@@ -170,8 +169,8 @@ class _ToolRow extends StatelessWidget {
     final borderColor = expanded
         ? def.color.withValues(alpha: 0.3)
         : connected
-            ? def.color.withValues(alpha: 0.18)
-            : colors.camel.withValues(alpha: 0.14);
+        ? def.color.withValues(alpha: 0.18)
+        : colors.camel.withValues(alpha: 0.14);
 
     return Container(
       decoration: BoxDecoration(
@@ -236,8 +235,10 @@ class _ToolRow extends StatelessWidget {
                           Text(
                             connected
                                 ? accounts
-                                    .map((a) => a.externalHandle ?? 'Connected')
-                                    .join(' · ')
+                                      .map(
+                                        (a) => a.externalHandle ?? 'Connected',
+                                      )
+                                      .join(' · ')
                                 : def.detail,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -277,9 +278,7 @@ class _ToolRow extends StatelessWidget {
             Container(
               decoration: BoxDecoration(
                 border: Border(
-                  top: BorderSide(
-                    color: colors.camel.withValues(alpha: 0.1),
-                  ),
+                  top: BorderSide(color: colors.camel.withValues(alpha: 0.1)),
                 ),
               ),
               child: Column(
@@ -317,9 +316,7 @@ class _ConnectButton extends StatelessWidget {
         foregroundColor: c.skyButtonInk,
         backgroundColor: c.sky,
         side: BorderSide.none,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(5),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
         textStyle: t.label.copyWith(fontWeight: FontWeight.w700),
       ),
       child: const Text('Connect'),
@@ -416,7 +413,8 @@ class _AccountSubRowState extends State<_AccountSubRow> {
               final confirmed = await ConfirmDialog.show(
                 context: context,
                 title: 'Disconnect Account',
-                message: 'Disconnect $handle? Skills using this '
+                message:
+                    'Disconnect $handle? Skills using this '
                     'connection will stop working.',
                 confirmLabel: 'Disconnect',
                 isDestructive: true,

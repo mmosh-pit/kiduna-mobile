@@ -46,6 +46,17 @@ void main() {
     expect(ally.tone, '');
     expect(ally.accessLevel, '');
     expect(ally.presenceSubtype, '');
+    expect(ally.knowledgeBaseIds, isEmpty);
+  });
+
+  test('fromJson parses knowledgeBaseIds', () {
+    final ally = AllyAgentModel.fromJson(const {
+      'id': 'agent_1',
+      'name': 'Ki',
+      'isAlly': true,
+      'knowledgeBaseIds': <dynamic>['kb_1', 'kb_2'],
+    });
+    expect(ally.knowledgeBaseIds, ['kb_1', 'kb_2']);
   });
 
   test('fromJson defaults missing required fields to empty', () {

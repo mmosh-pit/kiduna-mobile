@@ -25,12 +25,10 @@ class _SkillsPanelState extends ConsumerState<SkillsPanel> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(
-      () {
-        ref.read(fieldControllerProvider.notifier).fetchSkills();
-        ref.read(fieldControllerProvider.notifier).fetchAvailableTools();
-      },
-    );
+    Future.microtask(() {
+      ref.read(fieldControllerProvider.notifier).fetchSkills();
+      ref.read(fieldControllerProvider.notifier).fetchAvailableTools();
+    });
   }
 
   Future<void> _downloadSkill(
@@ -55,19 +53,21 @@ class _SkillsPanelState extends ConsumerState<SkillsPanel> {
     );
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          duration: const Duration(seconds: 2),
-        ),
+        SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
       );
     }
   }
 
-  Future<void> _confirmRemove(BuildContext context, String skillId, String skillName) async {
+  Future<void> _confirmRemove(
+    BuildContext context,
+    String skillId,
+    String skillName,
+  ) async {
     final confirmed = await ConfirmDialog.show(
       context: context,
       title: 'Remove Skill',
-      message: 'This will permanently delete "$skillName". This action cannot be undone.',
+      message:
+          'This will permanently delete "$skillName". This action cannot be undone.',
       confirmLabel: 'Remove',
       isDestructive: true,
     );
@@ -132,19 +132,13 @@ class _SkillsPanelState extends ConsumerState<SkillsPanel> {
                   ),
                   CapacityActionButton(
                     label: l10n.remove,
-                    onPressed: () => _confirmRemove(
-                      context,
-                      skill.id,
-                      skill.name,
-                    ),
+                    onPressed: () =>
+                        _confirmRemove(context, skill.id, skill.name),
                   ),
                   CapacityActionButton(
                     label: l10n.download,
-                    onPressed: () => _downloadSkill(
-                      context,
-                      skill.name,
-                      skill.skillContent,
-                    ),
+                    onPressed: () =>
+                        _downloadSkill(context, skill.name, skill.skillContent),
                   ),
                   CapacityActionButton(
                     label: skill.status == 'active' ? 'Pause' : 'Resume',
@@ -163,7 +157,7 @@ class _SkillsPanelState extends ConsumerState<SkillsPanel> {
           const SizedBox(height: 14),
           FieldPrimaryButton(
             label: l10n.createNewSkillWithKi,
-            onPressed: () => controller.openSkillForm(),
+            onPressed: controller.openSkillForm,
           ),
         ],
       ),
