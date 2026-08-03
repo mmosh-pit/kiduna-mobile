@@ -67,4 +67,20 @@ class ApiClient {
       },
     ),
   )..interceptors.addAll([ErrorInterceptor(), AppLogInterceptor()]);
+
+  /// A third Dio instance pointed at the **studio** backend
+  /// (`Env.studioBaseUrl` — kinship-studio Next.js).  Used for dunas, markets,
+  /// and other studio-specific endpoints.  No auth interceptor — the dunas GET
+  /// endpoint returns the genesis row to anonymous callers.
+  late final Dio studioDio = Dio(
+    BaseOptions(
+      baseUrl: Env.studioBaseUrl,
+      connectTimeout: AppConstants.connectTimeout,
+      receiveTimeout: AppConstants.receiveTimeout,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+    ),
+  )..interceptors.addAll([ErrorInterceptor(), AppLogInterceptor()]);
 }

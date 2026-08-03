@@ -3,11 +3,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../config/assets.dart';
 import '../../../core/extensions/context_extensions.dart';
+import '../../auth/controllers/auth_controller.dart';
 import '../controllers/field_controller.dart';
 import '../data/field_fixtures.dart';
 import 'field_inputs.dart';
 
-/// The Form a New Realm working panel: name, type, and purpose, then Create.
+/// The Form a New Realm working panel.
+///
+/// When the selected type is **Organization**, the form shows:
+/// Organization Name, Registration, Purpose, and Email.
+/// ecosystemId, capacities, organizations, and members are auto-generated
+/// server-side.
+///
+/// On create, the Organization is persisted via
+/// `POST /api/v1/dunas/organizations` under the Genesis DUNA.
+///
+/// For other types the form keeps the original 3 fields (name, type, purpose)
+/// and creation remains local (UI-only).
 class RealmPanel extends ConsumerStatefulWidget {
   const RealmPanel({super.key});
 
@@ -18,13 +30,48 @@ class RealmPanel extends ConsumerStatefulWidget {
 class _RealmPanelState extends ConsumerState<RealmPanel> {
   final TextEditingController _name = TextEditingController();
   final TextEditingController _purpose = TextEditingController();
-  String _type = 'Community';
+  final TextEditingController _registration = TextEditingController();
+  final TextEditingController _email = TextEditingController();
+  String _type = 'Organization';
+  bool _submitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final user = ref.read(authControllerProvider).user;
+    if (user != null && user.email.isNotEmpty) {
+      _email.text = user.email;
+    }
+  }
 
   @override
   void dispose() {
     _name.dispose();
     _purpose.dispose();
+    _registration.dispose();
+    _email.dispose();
     super.dispose();
+  }
+
+  bool get _isOrganization => _type == 'Organization';
+
+  Future<void> _handleCreate() async {
+    final nameText = _name.text.trim();
+    if (nameText.isEmpty) return;
+
+    setState(() => _submitting = true);
+
+    await ref.read(fieldControllerProvider.notifier).createRealm(
+          name: nameText,
+          type: _type,
+          purpose: _purpose.text.trim(),
+          registration: _isOrganization ? _registration.text.trim() : null,
+          email: _isOrganization ? _email.text.trim() : null,
+        );
+
+    if (mounted) {
+      setState(() => _submitting = false);
+    }
   }
 
   @override
@@ -38,14 +85,19 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
+          // ── Row 1: Name + Type ─────────────────────────────────────
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: FieldTextInput(
-                  label: l10n.realmName,
+                  label: _isOrganization
+                      ? l10n.organizationName
+                      : l10n.realmName,
                   controller: _name,
-                  hint: l10n.nameThisRealm,
+                  hint: _isOrganization
+                      ? l10n.nameThisOrganization
+                      : l10n.nameThisRealm,
                 ),
               ),
               const SizedBox(width: 12),
@@ -60,13 +112,39 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
             ],
           ),
           const SizedBox(height: 12),
+
+          // ── Organization-specific: Registration ────────────────────
+          if (_isOrganization) ...[
+            FieldTextInput(
+              label: l10n.registrationLabel,
+              controller: _registration,
+              hint: l10n.registrationHint,
+            ),
+            const SizedBox(height: 12),
+          ],
+
+          // ── Purpose (always shown) ─────────────────────────────────
           FieldTextInput(
             label: l10n.purpose,
             controller: _purpose,
-            hint: l10n.whatShouldThisRealmBringIntoBeing,
+            hint: _isOrganization
+                ? l10n.whatIsTheMissionYourMembersShare
+                : l10n.whatShouldThisRealmBringIntoBeing,
             maxLines: 3,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
+
+          // ── Organization-specific: Email ────────────────────────────
+          if (_isOrganization) ...[
+            FieldTextInput(
+              label: l10n.emailLabel,
+              controller: _email,
+              hint: l10n.emailHint,
+            ),
+            const SizedBox(height: 12),
+          ],
+
+          // ── Portrait preview ────────────────────────────────────────
           Container(
             padding: const EdgeInsets.all(13),
             decoration: BoxDecoration(
@@ -79,7 +157,8 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
                 ],
               ),
               border: Border.all(color: colors.gold.withValues(alpha: 0.24)),
-              borderRadius: BorderRadius.circular(context.metrics.radiusPanel),
+              borderRadius:
+                  BorderRadius.circular(context.metrics.radiusPanel),
             ),
             child: Row(
               children: [
@@ -100,10 +179,12 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
                     image: DecorationImage(
                       image: ResizeImage(
                         AssetImage(AppAssets.realmEmblem(_type)),
-                        width: (74 * MediaQuery.devicePixelRatioOf(context))
-                            .round(),
-                        height: (74 * MediaQuery.devicePixelRatioOf(context))
-                            .round(),
+                        width:
+                            (74 * MediaQuery.devicePixelRatioOf(context))
+                                .round(),
+                        height:
+                            (74 * MediaQuery.devicePixelRatioOf(context))
+                                .round(),
                       ),
                       fit: BoxFit.cover,
                     ),
@@ -159,19 +240,27 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
             ),
           ),
           const SizedBox(height: 14),
+
+          // ── Create button ───────────────────────────────────────────
           Align(
             alignment: Alignment.centerLeft,
-            child: ValueListenableBuilder<TextEditingValue>(
-              valueListenable: _name,
-              builder: (context, value, _) {
-                final canCreate = value.text.trim().isNotEmpty;
+            child: ListenableBuilder(
+              listenable: Listenable.merge([_name, _purpose, _email]),
+              builder: (context, _) {
+                final nameOk = _name.text.trim().isNotEmpty;
+                final purposeOk =
+                    !_isOrganization || _purpose.text.trim().length >= 10;
+                final emailOk =
+                    !_isOrganization || _email.text.trim().isNotEmpty;
+                final canCreate =
+                    nameOk && purposeOk && emailOk && !_submitting;
                 return FieldPrimaryButton(
-                  label: l10n.createRealmAction,
-                  onPressed: canCreate
-                      ? () => ref
-                            .read(fieldControllerProvider.notifier)
-                            .createRealm(name: value.text.trim(), type: _type)
-                      : null,
+                  label: _submitting
+                      ? l10n.creating
+                      : (_isOrganization
+                          ? l10n.createOrganizationAction
+                          : l10n.createRealmAction),
+                  onPressed: canCreate ? _handleCreate : null,
                 );
               },
             ),

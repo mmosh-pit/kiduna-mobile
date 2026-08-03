@@ -14,3 +14,5 @@ export '../features/field/controllers/ki_chat_controller.dart'
     show kiChatControllerProvider;
 export '../features/field/controllers/knowledge_controller.dart'
     show knowledgeControllerProvider;
+export '../features/field/controllers/ecosystem_controller.dart'
+    show ecosystemControllerProvider;

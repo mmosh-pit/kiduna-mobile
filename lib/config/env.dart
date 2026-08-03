@@ -36,6 +36,9 @@ abstract class Env {
   /// Base URL for authentication calls (kinship-backend), from `AUTH_API_URL`.
   static String get authApiUrl => _raw('AUTH_API_URL');
 
+  /// Base URL for kinship-studio API (Next.js), from `STUDIO_BASE_URL`.
+  static String get studioBaseUrl => _raw('STUDIO_BASE_URL');
+
   /// Whether the app is running against the production environment.
   static bool get isProduction => current == Environment.prod;
 
