@@ -132,6 +132,7 @@ class KnowledgeController extends Notifier<KnowledgeState> {
     state = state.copyWith(
       knowledgeBases: [...state.knowledgeBases, kb],
       activeKb: kb,
+      isCreateMode: false,
     );
     AppLogger.info(
       'Auto-created and linked KB ${kb.id} to agent $agentId',
@@ -315,7 +316,10 @@ class KnowledgeController extends Notifier<KnowledgeState> {
 
   /// Open KB detail panel for an existing KB.
   void openKbDetail(String kbId) {
-    state = state.copyWith(kbDetailOpen: true, isCreateMode: false);
+    state = state.copyWith(
+      kbDetailOpen: true,
+      isCreateMode: false,
+    );
     selectKnowledgeBase(kbId);
   }
 
@@ -330,7 +334,10 @@ class KnowledgeController extends Notifier<KnowledgeState> {
 
   /// Close the KB detail panel.
   void closeKbDetail() {
-    state = state.copyWith(kbDetailOpen: false, isCreateMode: false);
+    state = state.copyWith(
+      kbDetailOpen: false,
+      isCreateMode: false,
+    );
   }
 
   /// Set the selected privacy for the next KB creation.
@@ -383,7 +390,11 @@ class KnowledgeController extends Notifier<KnowledgeState> {
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
-      await _service.updateKnowledgeBase(kbId, name: name, privacy: privacy);
+      await _service.updateKnowledgeBase(
+        kbId,
+        name: name,
+        privacy: privacy,
+      );
       if (!ref.mounted) return;
 
       // Re-fetch the full KB (with items + stats) so nothing is lost.
@@ -395,7 +406,10 @@ class KnowledgeController extends Notifier<KnowledgeState> {
         final updatedList = state.knowledgeBases.map((kb) {
           return kb.id == kbId ? refreshedKb : kb;
         }).toList();
-        state = state.copyWith(isLoading: false, knowledgeBases: updatedList);
+        state = state.copyWith(
+          isLoading: false,
+          knowledgeBases: updatedList,
+        );
       } else {
         state = state.copyWith(isLoading: false);
       }
@@ -489,8 +503,50 @@ class KnowledgeController extends Notifier<KnowledgeState> {
   ///
   /// This is a POST — never retry on failure. After upload, the
   /// active KB is refreshed to show new items.
+  /// Maximum file size in bytes (5 MB — matches Studio + backend).
+  static const _kMaxFileSize = 5 * 1024 * 1024;
+
   Future<void> uploadFiles(List<({String name, List<int> bytes})> files) async {
     state = state.copyWith(isUploading: true, clearError: true);
+
+    // ── Size check — reject files over 5 MB ──
+    final oversized = files
+        .where((f) => f.bytes.length > _kMaxFileSize)
+        .map((f) => f.name)
+        .toList();
+    if (oversized.isNotEmpty) {
+      state = state.copyWith(
+        isUploading: false,
+        error: '${oversized.join(", ")} exceeds the 5 MB size limit.',
+      );
+      return;
+    }
+
+    // ── Duplicate check — skip files already in the KB ──
+    final existingNames = state.activeKb?.items
+            .map((i) => i.name.toLowerCase())
+            .toSet() ??
+        <String>{};
+    final duplicates = files
+        .where((f) => existingNames.contains(f.name.toLowerCase()))
+        .map((f) => f.name)
+        .toList();
+    if (duplicates.isNotEmpty) {
+      state = state.copyWith(
+        isUploading: false,
+        error: '${duplicates.join(", ")} already exists in this knowledge base.',
+      );
+      return;
+    }
+
+    // ── Filter to valid files only ──
+    final validFiles = files
+        .where((f) => f.bytes.length <= _kMaxFileSize)
+        .toList();
+    if (validFiles.isEmpty) {
+      state = state.copyWith(isUploading: false);
+      return;
+    }
 
     try {
       final kb = await _ensureActiveKb();
@@ -503,12 +559,12 @@ class KnowledgeController extends Notifier<KnowledgeState> {
         return;
       }
 
-      await _service.uploadFiles(kb.id, files);
+      await _service.uploadFiles(kb.id, validFiles);
       if (!ref.mounted) return;
 
       state = state.copyWith(isUploading: false);
       AppLogger.info(
-        'Uploaded ${files.length} files to KB ${kb.id}',
+        'Uploaded ${validFiles.length} files to KB ${kb.id}',
         tag: 'KnowledgeCtrl',
       );
 
@@ -625,7 +681,10 @@ class KnowledgeController extends Notifier<KnowledgeState> {
 
       if (!ref.mounted) return;
 
-      state = state.copyWith(isImportingDrive: false, driveImportDone: 1);
+      state = state.copyWith(
+        isImportingDrive: false,
+        driveImportDone: 1,
+      );
 
       AppLogger.info(
         'Drive ${isFolder ? 'folder' : 'file'} imported to KB ${kb.id}',
