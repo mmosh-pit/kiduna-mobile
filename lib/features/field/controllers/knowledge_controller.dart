@@ -21,6 +21,8 @@ class KnowledgeState {
     this.driveImportTotal = 0,
     this.driveImportDone = 0,
     this.selectedPrivacy = KbPrivacy.private,
+    this.kbDetailOpen = false,
+    this.isCreateMode = false,
   });
 
   final bool isLoading;
@@ -32,6 +34,8 @@ class KnowledgeState {
   final int driveImportTotal;
   final int driveImportDone;
   final KbPrivacy selectedPrivacy;
+  final bool kbDetailOpen;
+  final bool isCreateMode;
 
   KnowledgeState copyWith({
     bool? isLoading,
@@ -43,6 +47,8 @@ class KnowledgeState {
     int? driveImportTotal,
     int? driveImportDone,
     KbPrivacy? selectedPrivacy,
+    bool? kbDetailOpen,
+    bool? isCreateMode,
     bool clearError = false,
     bool clearActiveKb = false,
   }) {
@@ -56,6 +62,8 @@ class KnowledgeState {
       driveImportTotal: driveImportTotal ?? this.driveImportTotal,
       driveImportDone: driveImportDone ?? this.driveImportDone,
       selectedPrivacy: selectedPrivacy ?? this.selectedPrivacy,
+      kbDetailOpen: kbDetailOpen ?? this.kbDetailOpen,
+      isCreateMode: isCreateMode ?? this.isCreateMode,
     );
   }
 }
@@ -233,6 +241,7 @@ class KnowledgeController extends Notifier<KnowledgeState> {
         isLoading: false,
         knowledgeBases: [...state.knowledgeBases, kb],
         activeKb: kb,
+        isCreateMode: false,
       );
       AppLogger.info(
         'Created and linked KB ${kb.id} to agent $agentId',
@@ -304,6 +313,32 @@ class KnowledgeController extends Notifier<KnowledgeState> {
     }
   }
 
+  /// Open KB detail panel for an existing KB.
+  void openKbDetail(String kbId) {
+    state = state.copyWith(
+      kbDetailOpen: true,
+      isCreateMode: false,
+    );
+    selectKnowledgeBase(kbId);
+  }
+
+  /// Open KB detail panel in create mode (empty form).
+  void openCreateKbForm() {
+    state = state.copyWith(
+      kbDetailOpen: true,
+      isCreateMode: true,
+      clearActiveKb: true,
+    );
+  }
+
+  /// Close the KB detail panel.
+  void closeKbDetail() {
+    state = state.copyWith(
+      kbDetailOpen: false,
+      isCreateMode: false,
+    );
+  }
+
   /// Set the selected privacy for the next KB creation.
   void setPrivacy(KbPrivacy privacy) {
     state = state.copyWith(selectedPrivacy: privacy);
@@ -354,22 +389,29 @@ class KnowledgeController extends Notifier<KnowledgeState> {
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
-      final updated = await _service.updateKnowledgeBase(
+      await _service.updateKnowledgeBase(
         kbId,
         name: name,
         privacy: privacy,
       );
       if (!ref.mounted) return;
 
-      final updatedList = state.knowledgeBases.map((kb) {
-        return kb.id == kbId ? updated : kb;
-      }).toList();
+      // Re-fetch the full KB (with items + stats) so nothing is lost.
+      await selectKnowledgeBase(kbId);
 
-      state = state.copyWith(
-        isLoading: false,
-        knowledgeBases: updatedList,
-        activeKb: state.activeKb?.id == kbId ? updated : null,
-      );
+      // Also refresh the list-level entry (name/privacy may have changed).
+      final refreshedKb = state.activeKb;
+      if (refreshedKb != null) {
+        final updatedList = state.knowledgeBases.map((kb) {
+          return kb.id == kbId ? refreshedKb : kb;
+        }).toList();
+        state = state.copyWith(
+          isLoading: false,
+          knowledgeBases: updatedList,
+        );
+      } else {
+        state = state.copyWith(isLoading: false);
+      }
     } on AppException catch (e) {
       if (!ref.mounted) return;
       AppLogger.error('Update KB failed', tag: 'KnowledgeCtrl', error: e);
@@ -557,6 +599,71 @@ class KnowledgeController extends Notifier<KnowledgeState> {
   /// Follows the kinship-shared pattern: each file is sent to the
   /// backend proxy which downloads it server-side and feeds it into
   /// the upload pipeline. This is a POST — never retry on failure.
+  /// Import a single file or folder from Google Drive via backend proxy.
+  ///
+  /// When [isFolder] is true, the backend lists folder contents and
+  /// imports each file. The wallet is passed so the backend can look up
+  /// the stored Google OAuth token internally.
+  Future<void> importFromGdriveSingle({
+    required String fileId,
+    required String fileName,
+    required String wallet,
+    bool isFolder = false,
+  }) async {
+    state = state.copyWith(
+      isImportingDrive: true,
+      clearError: true,
+      driveImportTotal: 1,
+      driveImportDone: 0,
+    );
+
+    try {
+      final kb = await _ensureActiveKb();
+      if (!ref.mounted) return;
+      if (kb == null) {
+        state = state.copyWith(
+          isImportingDrive: false,
+          error: 'Not connected. Please try again.',
+        );
+        return;
+      }
+
+      await _service.importFromGdrive(
+        kb.id,
+        fileId: fileId,
+        fileName: fileName,
+        wallet: wallet,
+        isFolder: isFolder,
+      );
+
+      if (!ref.mounted) return;
+
+      state = state.copyWith(
+        isImportingDrive: false,
+        driveImportDone: 1,
+      );
+
+      AppLogger.info(
+        'Drive ${isFolder ? 'folder' : 'file'} imported to KB ${kb.id}',
+        tag: 'KnowledgeCtrl',
+      );
+
+      await selectKnowledgeBase(kb.id);
+    } on AppException catch (e) {
+      if (!ref.mounted) return;
+      AppLogger.error(
+        'Drive import failed for "$fileName"',
+        tag: 'KnowledgeCtrl',
+        error: e,
+      );
+      state = state.copyWith(
+        isImportingDrive: false,
+        error: 'Import failed. Please try again.',
+      );
+    }
+  }
+
+  /// Import multiple files from Google Drive via backend proxy (bulk).
   Future<void> importFromGdrive({
     required List<({String fileId, String fileName, String? mimeType})> files,
     required String accessToken,
@@ -587,7 +694,7 @@ class KnowledgeController extends Notifier<KnowledgeState> {
             kb.id,
             fileId: file.fileId,
             fileName: file.fileName,
-            accessToken: accessToken,
+            wallet: accessToken,
             mimeType: file.mimeType,
           );
           if (!ref.mounted) return;

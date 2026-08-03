@@ -236,8 +236,9 @@ class KnowledgeService {
     String kbId, {
     required String fileId,
     required String fileName,
-    required String accessToken,
+    required String wallet,
     String? mimeType,
+    bool isFolder = false,
   }) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
@@ -246,7 +247,8 @@ class KnowledgeService {
           'kbId': kbId,
           'fileId': fileId,
           'fileName': fileName,
-          'accessToken': accessToken,
+          'wallet': wallet,
+          'is_folder': isFolder,
           if (mimeType != null) 'mimeType': mimeType,
         },
       );

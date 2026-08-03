@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/enums/capacity_target.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../controllers/field_controller.dart';
+import '../controllers/knowledge_controller.dart';
 import '../data/field_fixtures.dart';
 import 'automations_panel.dart';
 import 'capacity_choices.dart';
 import 'connections_panel.dart';
 import 'field_panel.dart';
 import 'invite_panel.dart';
+import 'kb_detail_panel.dart';
 import 'portrait_designer.dart';
 import 'presence_panel_cap.dart';
 import 'present_panel.dart';
@@ -20,7 +23,7 @@ import 'wisdom_panel.dart';
 
 /// The dynamically opened working panels: open actions, capacity panels,
 /// and portrait designers.
-class FieldWorkingPanels extends StatelessWidget {
+class FieldWorkingPanels extends ConsumerWidget {
   const FieldWorkingPanels({
     super.key,
     required this.state,
@@ -45,7 +48,7 @@ class FieldWorkingPanels extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final children = <Widget>[];
     var stagger = 0;
@@ -153,6 +156,26 @@ class FieldWorkingPanels extends StatelessWidget {
       );
     }
 
+    final kbState = ref.watch(knowledgeControllerProvider);
+    if (kbState.kbDetailOpen) {
+      final kbCtrl = ref.read(knowledgeControllerProvider.notifier);
+      final kbLabel = kbState.isCreateMode
+          ? l10n.createKnowledgeBase
+          : kbState.activeKb?.name ?? l10n.wisdom;
+      children.add(
+        FieldPanel(
+          key: ValueKey('kb-detail-${kbState.activeKb?.id ?? 'create'}'),
+          label: kbLabel,
+          bounds: bounds,
+          width: 420,
+          opacity: opacity,
+          initialOffset: Offset((bounds.width - 420) / 2, 60),
+          onClose: kbCtrl.closeKbDetail,
+          child: KbDetailPanel(onClose: kbCtrl.closeKbDetail),
+        ),
+      );
+    }
+
     return Stack(children: children);
   }
 
@@ -177,13 +200,17 @@ class FieldWorkingPanels extends StatelessWidget {
   FieldPanel _capacityPanel(String id, CapacityTarget target, int index) {
     final capacity = FieldFixtures.capacities.firstWhere((c) => c.id == id);
     final prefix = target == CapacityTarget.ally ? 'ally' : 'realm';
+    final panelWidth = id == 'wisdom' ? 480.0 : 760.0;
+    final offset = id == 'wisdom'
+        ? Offset((bounds.width - panelWidth) / 2, 120)
+        : _staggeredOffset(panelWidth, index);
     return FieldPanel(
       key: ValueKey('$prefix-cap-$id'),
       label: capacity.label,
       bounds: bounds,
-      width: 760,
+      width: panelWidth,
       opacity: opacity,
-      initialOffset: _staggeredOffset(760, index),
+      initialOffset: offset,
       onClose: () => controller.closeCapacity(target, id),
       child: _capacityBody(id),
     );

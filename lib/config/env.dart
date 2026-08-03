@@ -36,6 +36,9 @@ abstract class Env {
   /// Base URL for authentication calls (kinship-backend), from `AUTH_API_URL`.
   static String get authApiUrl => _raw('AUTH_API_URL');
 
+  /// Google OAuth client ID for browser-based sign-in (Drive import).
+  static String get googleClientId => _raw('GOOGLE_CLIENT_ID');
+
   /// Whether the app is running against the production environment.
   static bool get isProduction => current == Environment.prod;
 

@@ -109,4 +109,8 @@ abstract class ApiEndpoints {
   /// `DELETE /api/tools/saved/{id}?wallet={wallet}` — disconnect a tool.
   static String toolsRemove(String id, String wallet) =>
       '/api/tools/saved/$id?wallet=${Uri.encodeComponent(wallet)}';
+
+  /// `GET /api/tools/saved/by-wallet?wallet={wallet}&tool_name={tool}` — get tool credentials.
+  static String toolsSavedByWallet(String wallet, String toolName) =>
+      '/api/tools/saved/by-wallet?wallet=${Uri.encodeComponent(wallet)}&tool_name=$toolName';
 }
