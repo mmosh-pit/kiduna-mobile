@@ -1061,10 +1061,37 @@ class FieldController extends Notifier<FieldState> {
       }
 
       // Step 2: Save to the wallet's global pool.
+      // Merge verify result identity into credentials so backend can
+      // store external_handle and external_user_id properly.
+      final enrichedCredentials = {
+        ...credentials,
+        if (result.externalHandle != null)
+          'external_handle': result.externalHandle!,
+        if (result.externalUserId != null)
+          'external_user_id': result.externalUserId!,
+      };
+
+      // Check for duplicate — skip save if this account is already connected.
+      final alreadyConnected = state.savedTools.any(
+        (t) =>
+            t.toolName == toolName &&
+            t.isActive &&
+            result.externalHandle != null &&
+            t.externalHandle == result.externalHandle,
+      );
+      if (alreadyConnected) {
+        state = state.copyWith(
+          toolVerifying: false,
+          toolVerifyError:
+              '${result.externalHandle} is already connected',
+        );
+        return;
+      }
+
       final saved = await ToolConnectionService.instance.save(
         wallet: wallet,
         toolName: toolName,
-        credentials: credentials,
+        credentials: enrichedCredentials,
       );
 
       if (!ref.mounted) {
