@@ -38,4 +38,8 @@ abstract class AppAssets {
   /// Organization crest by [name], e.g. `beacon`, `bridge`, `grove`.
   static String organizationCrest(String name) =>
       'assets/images/organization-crests/$name.png';
+
+  /// Tool brand icon SVG by [toolName] — `bluesky`, `google`, `telegram`,
+  /// `solana`. Returns path for use with `SvgPicture.asset`.
+  static String toolIcon(String toolName) => 'assets/icons/$toolName.svg';
 }

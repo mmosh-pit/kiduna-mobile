@@ -32,9 +32,9 @@ abstract class ApiEndpoints {
   static String conversationHistory(String presenceId, String userWallet) =>
       '/api/conversations/$presenceId/$userWallet';
 
-  // ── Agents (kinship-agent) — update ──────────────────────────────────
+  // ── Agent updates (kinship-agent) ─────────────────────────────────────
 
-  /// `PATCH /api/agents/{agentId}` — update agent properties.
+  /// `PATCH /api/agents/{id}` — update agent fields.
   static String agentUpdate(String agentId) => '/api/agents/$agentId';
 
   // ── Prompts (kinship-agent) ────────────────────────────────────────
@@ -74,4 +74,39 @@ abstract class ApiEndpoints {
   /// `POST /api/knowledge/{kbId}/gdrive-import` — import file from Drive.
   static String knowledgeGdriveImport(String kbId) =>
       '/api/knowledge/$kbId/gdrive-import';
+
+  // ── Skills (kinship-agent) ────────────────────────────────────────────
+
+  /// `POST /api/skills` — create a new skill.
+  static const String skills = '/api/skills';
+
+  /// `DELETE /api/skills/{id}` — delete a skill.
+  static String skillDelete(String skillId) => '/api/skills/$skillId';
+
+  /// `PATCH /api/skills/{id}` — update a skill's configuration.
+  static String skillUpdate(String skillId) => '/api/skills/$skillId';
+
+  /// `PATCH /api/skills/{id}/status` — pause or resume a skill.
+  static String skillStatus(String skillId) => '/api/skills/$skillId/status';
+
+  // ── Tools (kinship-agent) ─────────────────────────────────────────────
+
+  /// `GET /api/tools/available` — discover tools from MCP servers.
+  static const String toolsAvailable = '/api/tools/available';
+
+  // ── Tool connections (kinship-agent) ──────────────────────────────────
+
+  /// `POST /api/tools/verify` — test credentials without saving.
+  static const String toolsVerify = '/api/tools/verify';
+
+  /// `POST /api/tools/save` — save verified tool to the wallet's global pool.
+  static const String toolsSave = '/api/tools/save';
+
+  /// `GET /api/tools/saved?wallet={wallet}` — list connected tool accounts.
+  static String toolsSaved(String wallet) =>
+      '/api/tools/saved?wallet=${Uri.encodeComponent(wallet)}';
+
+  /// `DELETE /api/tools/saved/{id}?wallet={wallet}` — disconnect a tool.
+  static String toolsRemove(String id, String wallet) =>
+      '/api/tools/saved/$id?wallet=${Uri.encodeComponent(wallet)}';
 }
