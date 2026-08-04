@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/extensions/context_extensions.dart';
+import '../../../data/models/prompt_model.dart';
+import '../../../shared/widgets/confirm_dialog.dart';
 import '../controllers/ally_controller.dart';
+import '../controllers/presence_controller.dart';
 import 'capacity_header.dart';
 import 'field_inputs.dart';
 
-/// Presence capacity workspace — system instructions editor wired to the
-/// ally agent's `systemPrompt` field via PATCH `/api/agents/{id}`.
+/// Presence listing panel — shows all prompts linked to Ki.
+/// Tap Edit → opens detail panel. Same pattern as WisdomPanel.
 class PresenceCapacityPanel extends ConsumerStatefulWidget {
   const PresenceCapacityPanel({super.key, required this.realmName});
 
@@ -18,151 +21,214 @@ class PresenceCapacityPanel extends ConsumerStatefulWidget {
       _PresenceCapacityPanelState();
 }
 
-class _PresenceCapacityPanelState extends ConsumerState<PresenceCapacityPanel> {
-  late final TextEditingController _instructions;
-  bool _initialised = false;
+class _PresenceCapacityPanelState
+    extends ConsumerState<PresenceCapacityPanel> {
+  bool _loaded = false;
 
   @override
-  void initState() {
-    super.initState();
-    _instructions = TextEditingController();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_loaded) {
+      _loaded = true;
+      Future.microtask(
+        () => ref.read(presenceControllerProvider.notifier).loadPrompts(),
+      );
+    }
   }
 
-  @override
-  void dispose() {
-    _instructions.dispose();
-    super.dispose();
-  }
-
-  void _syncFromAlly(AllyState allyState) {
-    if (_initialised) return;
-    final saved = allyState.ally?.systemPrompt ?? '';
-    _instructions.text = saved.isNotEmpty
-        ? saved
-        : context.l10n.presenceDefaultPrompt(widget.realmName);
-    _initialised = true;
-  }
-
-  String _computeStatus(AllyState allyState) {
+  Future<void> _confirmDelete(
+    BuildContext context,
+    PresenceController ctrl,
+    PromptModel prompt,
+  ) async {
     final l10n = context.l10n;
-    if (allyState.isSavingPresence) return l10n.presenceStatusSaving;
-
-    final saved = allyState.ally?.systemPrompt ?? '';
-    final current = _instructions.text;
-
-    if (saved.isEmpty) return l10n.presenceStatusInherited;
-    if (current == saved) return l10n.presenceStatusSaved;
-    return l10n.presenceStatusDraft;
-  }
-
-  Future<void> _save() async {
-    await ref
-        .read(allyControllerProvider.notifier)
-        .updateSystemPrompt(_instructions.text);
-    if (!mounted) return;
-    setState(() {});
-  }
-
-  void _resetToDefault() {
-    final defaultText = context.l10n.presenceDefaultPrompt(widget.realmName);
-    _instructions.text = defaultText;
-    setState(() {});
+    final confirmed = await ConfirmDialog.show(
+      context: context,
+      title: l10n.promptDeleteTitle,
+      message: l10n.promptDeleteConfirm(prompt.name),
+    );
+    if (confirmed == true && context.mounted) {
+      await ctrl.deletePrompt(prompt.id);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final pState = ref.watch(presenceControllerProvider);
+    final ctrl = ref.read(presenceControllerProvider.notifier);
     final allyState = ref.watch(allyControllerProvider);
-    _syncFromAlly(allyState);
+    final activePromptId = allyState.ally?.promptId ?? '';
 
-    final l10n = context.l10n;
     final colors = context.kiduna;
     final text = context.kidunaText;
-    final status = _computeStatus(allyState);
+    final l10n = context.l10n;
 
-    return ConstrainedBox(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.sizeOf(context).height * 0.65,
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CapacityHeader(
+            eyebrow: l10n.presence,
+            heading: l10n.promptHowRealmBehaves(widget.realmName),
+            status: pState.isLoading
+                ? l10n.promptLoading
+                : l10n.promptCountStatus(pState.prompts.length),
+          ),
+          const SizedBox(height: 16),
+
+          // Error row.
+          if (pState.error != null) ...[
+            _ErrorRow(message: pState.error!),
+            const SizedBox(height: 8),
+          ],
+
+          // Empty state.
+          if (pState.prompts.isEmpty && !pState.isLoading)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Text(
+                l10n.promptNoPrompts,
+                style: text.caption.copyWith(color: colors.quiet),
+                textAlign: TextAlign.center,
+              ),
+            ),
+
+          // Prompt rows.
+          ...pState.prompts.map((prompt) {
+            final isActive = prompt.id == activePromptId;
+            return _PromptRow(
+              prompt: prompt,
+              isActive: isActive,
+              onEdit: () => ctrl.openDetail(prompt.id),
+              onDelete: () => _confirmDelete(context, ctrl, prompt),
+            );
+          }),
+
+          const SizedBox(height: 12),
+
+          // Create button.
+          FieldPrimaryButton(
+            label: l10n.promptCreateNew,
+            onPressed: ctrl.openCreate,
+          ),
+        ],
       ),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sub-widgets
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _PromptRow extends StatelessWidget {
+  const _PromptRow({
+    required this.prompt,
+    required this.isActive,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final PromptModel prompt;
+  final bool isActive;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.kiduna;
+    final text = context.kidunaText;
+    final l10n = context.l10n;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isActive
+              ? colors.sky.withValues(alpha: 0.06)
+              : const Color.fromRGBO(6, 3, 4, 0.36),
+          border: Border.all(
+            color: isActive
+                ? colors.sky.withValues(alpha: 0.3)
+                : colors.camel.withValues(alpha: 0.14),
+          ),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
           children: [
-            CapacityHeader(
-              eyebrow: l10n.presence,
-              heading: l10n.howRealmBehaves(widget.realmName),
-              status: status,
+            Icon(
+              Icons.description_outlined,
+              size: 16,
+              color: isActive ? colors.sky : colors.quiet,
             ),
-            const SizedBox(height: 12),
-            Text(
-              l10n.currentSystemInstructions,
-              style: text.micro.copyWith(color: colors.cream),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _instructions,
-              maxLines: 6,
-              onChanged: (_) => setState(() {}),
-              style: text.caption.copyWith(color: colors.text, height: 1.4),
-              decoration: InputDecoration(
-                isDense: true,
-                filled: true,
-                fillColor: const Color.fromRGBO(6, 3, 4, 0.66),
-                contentPadding: const EdgeInsets.all(8),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(4),
-                  borderSide: BorderSide(
-                    color: colors.camel.withValues(alpha: 0.24),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    prompt.name,
+                    style: text.caption.copyWith(color: colors.cream),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(4),
-                  borderSide: BorderSide(
-                    color: colors.camel.withValues(alpha: 0.24),
-                  ),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(4),
-                  borderSide: BorderSide(color: colors.sky),
-                ),
+                  if (isActive)
+                    Text(
+                      l10n.promptActive,
+                      style: text.micro.copyWith(color: colors.sky),
+                    ),
+                ],
               ),
             ),
-            if (allyState.error != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                allyState.error!,
-                style: text.micro.copyWith(color: colors.error),
-              ),
-            ],
-            const SizedBox(height: 8),
-            Text(
-              l10n.presenceRequired,
-              style: text.micro.copyWith(color: colors.quiet),
+            CapacityActionButton(
+              label: l10n.promptEdit,
+              onPressed: onEdit,
             ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                CapacityActionButton(
-                  label: l10n.presenceSave,
-                  onPressed: allyState.isSavingPresence ? null : _save,
-                ),
-                CapacityActionButton(
-                  label: l10n.resetToDefault,
-                  onPressed: _resetToDefault,
-                ),
-                CapacityActionButton(label: l10n.download, onPressed: () {}),
-              ],
-            ),
-            const SizedBox(height: 12),
-            FieldPrimaryButton(
-              label: l10n.developNewPresenceWithKi,
-              onPressed: () {},
+            const SizedBox(width: 4),
+            CapacityActionButton(
+              label: l10n.promptDelete,
+              onPressed: onDelete,
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ErrorRow extends StatelessWidget {
+  const _ErrorRow({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = context.kidunaText;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color.fromRGBO(227, 72, 72, 0.08),
+        border: Border.all(color: const Color.fromRGBO(227, 72, 72, 0.4)),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.error_outline,
+            size: 16,
+            color: Color(0xFFE34848),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: text.caption.copyWith(color: const Color(0xFFE34848)),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -496,5 +496,49 @@
     }
   },
   "presenceSave": "Save Presence",
-  "presenceSaveFailed": "Unable to save presence. Please try again."
+  "presenceSaveFailed": "Unable to save presence. Please try again.",
+  "promptName": "Prompt Name",
+  "promptNameHint": "e.g. Professional Tone",
+  "promptGoal": "Goal",
+  "promptGoalHint": "What should this prompt accomplish?",
+  "promptStance": "Stance",
+  "promptInformKb": "Inform (Knowledge Base)",
+  "promptNone": "None",
+  "promptActive": "Active",
+  "promptEdit": "Edit",
+  "promptDelete": "Delete",
+  "promptDeleteTitle": "Delete Prompt",
+  "promptDeleteConfirm": "Delete \"{name}\"? This cannot be undone.",
+  "@promptDeleteConfirm": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "promptCreateNew": "Create New Prompt",
+  "promptCreateTitle": "Create Prompt",
+  "promptGenerateWithAi": "Generate with AI",
+  "promptSave": "Save",
+  "promptSaving": "Saving…",
+  "promptNoPrompts": "No prompts yet. Create one below.",
+  "promptHowRealmBehaves": "How {name} behaves",
+  "@promptHowRealmBehaves": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "promptCountStatus": "{count} prompts",
+  "@promptCountStatus": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "promptLoading": "Loading…",
+  "promptStanceHint": "System prompt content…",
+  "promptCharsWords": "{chars} chars · {words} words",
+  "@promptCharsWords": {
+    "placeholders": {
+      "chars": { "type": "int" },
+      "words": { "type": "int" }
+    }
+  }
 }
