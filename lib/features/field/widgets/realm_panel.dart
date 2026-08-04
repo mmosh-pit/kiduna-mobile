@@ -8,6 +8,7 @@ import '../../../core/errors/exceptions.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../data/services/alliance_service.dart';
 import '../../../data/services/institution_service.dart';
+import '../../../data/services/duna_service.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../controllers/field_controller.dart';
 import '../data/field_fixtures.dart';
@@ -213,11 +214,19 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
           walletEnabled: true, authToken: auth.token,
         );
         if (mounted) ref.read(fieldControllerProvider.notifier).onInstitutionCreated(institution);
+      } else if (_isOrganization) {
+        final auth = ref.read(authControllerProvider);
+        await DunaService.instance.createOrganization(
+          name: nameText,
+          purpose: _purpose.text.trim(),
+          email: _email.text.trim(),
+          registration: _registration.text.trim(),
+          authToken: auth.token,
+        );
+        if (mounted) ref.read(fieldControllerProvider.notifier).onOrganizationCreated(nameText);
       } else {
         await ref.read(fieldControllerProvider.notifier).createRealm(
           name: nameText, type: _type, purpose: _purpose.text.trim(),
-          registration: _isOrganization ? _registration.text.trim() : null,
-          email: _isOrganization ? _email.text.trim() : null,
         );
       }
     } on AppException catch (e) {

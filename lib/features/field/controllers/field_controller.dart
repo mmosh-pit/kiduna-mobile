@@ -17,7 +17,6 @@ import '../../../data/models/invitation_response.dart';
 import '../../../data/models/ki_topic.dart';
 import '../../../data/models/saved_tool_model.dart';
 import '../../../data/models/skill_model.dart';
-import '../../../data/services/duna_service.dart';
 import '../../../data/services/invitation_service.dart';
 import '../../../data/services/skill_service.dart';
 import '../../../data/services/tool_connection_service.dart';
@@ -470,104 +469,57 @@ class FieldController extends Notifier<FieldState> {
     required String name,
     required String type,
     String? purpose,
-    String? registration,
-    String? email,
   }) async {
-    if (type == 'Organization') {
-      // Validate required fields for Organization creation.
-      final trimmedPurpose = (purpose ?? '').trim();
-      final trimmedEmail = (email ?? '').trim();
-      if (trimmedPurpose.length < 10 || trimmedEmail.isEmpty) {
-        askAbout(
-          const KiTopic(
-            title: 'Missing information',
-            body:
-                'An Organization needs a purpose (at least 10 characters) '
-                'and an email address. Please fill in the required fields.',
-          ),
-        );
-        return;
-      }
+    // Non-API types remain local (UI-only).
+    state = state.copyWith(
+      currentRealm: FieldRealm(
+        name: name,
+        type: type,
+        emblemAsset: AppAssets.realmEmblem(type),
+      ),
+      openActions: state.openActions
+          .where((item) => item != 'realm')
+          .toList(),
+    );
+    askAbout(
+      KiTopic(
+        title: '$name created',
+        body:
+            'Ki has created $name as a $type and brought Alice inside it. '
+            'Kinship Duna remains its containing Ecosystem and return path.',
+        invitation:
+            "Ki can help shape the new Realm's purpose, boundaries, "
+            'capacities, and people through dialogue.',
+      ),
+    );
+  }
 
-      state = state.copyWith(isLoading: true);
-      try {
-        final auth = ref.read(authControllerProvider);
-        final token = auth.token;
+  /// Called by [RealmPanel] after a successful Organization creation.
+  void onOrganizationCreated(String name) {
+    // Refresh ecosystem state so the genesis organizations count updates.
+    unawaited(ref.read(ecosystemControllerProvider.notifier).load());
 
-        await DunaService.instance.createOrganization(
-          name: name,
-          purpose: trimmedPurpose,
-          email: trimmedEmail,
-          registration: registration,
-          authToken: token,
-        );
-
-        // Refresh ecosystem state so the genesis organizations count updates.
-        unawaited(ref.read(ecosystemControllerProvider.notifier).load());
-
-        state = state.copyWith(
-          isLoading: false,
-          currentRealm: FieldRealm(
-            name: name,
-            type: type,
-            emblemAsset: AppAssets.realmEmblem(type),
-          ),
-          openActions: state.openActions
-              .where((item) => item != 'realm')
-              .toList(),
-        );
-        askAbout(
-          KiTopic(
-            title: '$name created',
-            body:
-                'Ki has created $name as an Organization under the Genesis '
-                'ecosystem and brought Alice inside it.',
-            invitation:
-                "Ki can help shape the new Organization's purpose, boundaries, "
-                'capacities, and people through dialogue.',
-          ),
-        );
-      } on AppException catch (e) {
-        state = state.copyWith(isLoading: false);
-        askAbout(
-          KiTopic(
-            title: 'Could not create $name',
-            body: e.message ?? 'Something went wrong. Please try again.',
-          ),
-        );
-      } catch (e) {
-        state = state.copyWith(isLoading: false);
-        askAbout(
-          KiTopic(
-            title: 'Could not create $name',
-            body: 'Something went wrong. Please try again.',
-          ),
-        );
-      }
-    } else {
-      // Non-Organization types remain local (UI-only).
-      state = state.copyWith(
-        currentRealm: FieldRealm(
-          name: name,
-          type: type,
-          emblemAsset: AppAssets.realmEmblem(type),
-        ),
-        openActions: state.openActions
-            .where((item) => item != 'realm')
-            .toList(),
-      );
-      askAbout(
-        KiTopic(
-          title: '$name created',
-          body:
-              'Ki has created $name as a $type and brought Alice inside it. '
-              'Kinship Duna remains its containing Ecosystem and return path.',
-          invitation:
-              "Ki can help shape the new Realm's purpose, boundaries, "
-              'capacities, and people through dialogue.',
-        ),
-      );
-    }
+    state = state.copyWith(
+      currentRealm: FieldRealm(
+        name: name,
+        type: 'Organization',
+        emblemAsset: AppAssets.realmEmblem('Organization'),
+      ),
+      openActions: state.openActions
+          .where((item) => item != 'realm')
+          .toList(),
+    );
+    askAbout(
+      KiTopic(
+        title: '$name created',
+        body:
+            'Ki has created $name as an Organization under the Genesis '
+            'ecosystem and brought Alice inside it.',
+        invitation:
+            "Ki can help shape the new Organization's purpose, boundaries, "
+            'capacities, and people through dialogue.',
+      ),
+    );
   }
 
   /// Called by [RealmPanel] after a successful Alliance creation.
