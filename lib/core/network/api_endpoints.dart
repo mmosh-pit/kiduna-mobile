@@ -89,13 +89,13 @@ abstract class ApiEndpoints {
   /// `PATCH /api/skills/{id}/status` — pause or resume a skill.
   static String skillStatus(String skillId) => '/api/skills/$skillId/status';
 
-  // ── Dunas (kinship-studio) ───────────────────────────────────────────
+  // ── Dunas (kinship-backend) ───────────────────────────────────────────
 
-  /// `GET /api/v1/dunas` — fetch genesis duna and user dunas.
-  static const String dunas = '/api/v1/dunas';
+  /// `GET /dunas` — fetch genesis duna and user dunas.
+  static const String dunas = '/dunas';
 
-  /// `POST /api/v1/dunas/organizations` — create an organization under genesis.
-  static const String dunasOrganizations = '/api/v1/dunas/organizations';
+  /// `POST /dunas/organizations` — create an organization under genesis.
+  static const String dunasOrganizations = '/dunas/organizations';
 
   // ── Alliances (kinship-backend) ─────────────────────────────────────
 
