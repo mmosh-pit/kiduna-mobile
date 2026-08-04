@@ -110,6 +110,16 @@ abstract class ApiEndpoints {
   static const String allianceHandleAvailability =
       '/alliances/handle-availability';
 
+  // ── Institutions (kinship-backend) ──────────────────────────────────
+
+  /// `POST /institutions` — create a new institution (+ Squads wallet).
+  /// `GET /institutions` — list caller's institutions.
+  static const String institutions = '/institutions';
+
+  /// `GET /institutions/handle-availability?handle=...`
+  static const String institutionHandleAvailability =
+      '/institutions/handle-availability';
+
   // ── Tools (kinship-agent) ─────────────────────────────────────────────
 
   /// `GET /api/tools/available` — discover tools from MCP servers.

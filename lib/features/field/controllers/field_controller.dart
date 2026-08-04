@@ -30,6 +30,7 @@ import 'ally_controller.dart';
 import 'ecosystem_controller.dart';
 import '../../../data/services/alliance_service.dart';
 import '../../../data/models/alliance_model.dart';
+import '../../../data/models/institution_model.dart';
 
 /// UI state for the Field.
 @immutable
@@ -603,6 +604,35 @@ class FieldController extends Notifier<FieldState> {
   /// Check if a handle is available for an Alliance.
   Future<bool> checkHandleAvailability(String handle) async {
     return AllianceService.instance.checkHandleAvailability(handle);
+  }
+
+  /// Called by [RealmPanel] after a successful Institution creation.
+  void onInstitutionCreated(InstitutionModel institution) {
+    final pda = institution.vaultPda;
+    final walletInfo = pda != null
+        ? 'Team Wallet ${pda.substring(0, 4)}…${pda.substring(pda.length - 4)} ready.'
+        : '';
+
+    state = state.copyWith(
+      currentRealm: FieldRealm(
+        name: institution.name,
+        type: 'Institution',
+        emblemAsset: AppAssets.realmEmblem('Institution'),
+      ),
+      openActions:
+          state.openActions.where((item) => item != 'realm').toList(),
+    );
+    askAbout(
+      KiTopic(
+        title: '${institution.name} created',
+        body:
+            'Ki has created the Institution "${institution.name}" with handle '
+            '@${institution.handle}. Status: Draft. $walletInfo',
+        invitation:
+            'Ki can help add members, upload standing documentation, or '
+            'publish the Institution when ready.',
+      ),
+    );
   }
 
   void savePresentation({required String name, required String type}) {
