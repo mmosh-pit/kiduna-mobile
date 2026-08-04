@@ -265,10 +265,11 @@ class _KbDetailPanelState extends ConsumerState<KbDetailPanel> {
     _nameCtrl.clear();
   }
 
-  void _onSave(KnowledgeController ctrl, String kbId) {
+  Future<void> _onSave(KnowledgeController ctrl, String kbId) async {
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) return;
-    unawaited(ctrl.updateKnowledgeBase(kbId, name: name));
+    await ctrl.updateKnowledgeBase(kbId, name: name);
+    ctrl.closeKbDetail();
   }
 
   Future<void> _confirmRemoveItem(
@@ -370,11 +371,6 @@ class _ItemRow extends StatelessWidget {
       name: item.name,
       detail: '$statusLabel · ${item.chunkCount} chunks',
       actions: [
-        if (isIngested)
-          CapacityActionButton(
-            label: l10n.download,
-            onPressed: onDownload,
-          ),
         CapacityActionButton(label: l10n.remove, onPressed: onRemove),
       ],
     );
