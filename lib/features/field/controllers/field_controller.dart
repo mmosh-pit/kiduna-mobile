@@ -28,6 +28,8 @@ import '../data/field_fixtures.dart';
 import '../data/realm_atlas.dart';
 import 'ally_controller.dart';
 import 'ecosystem_controller.dart';
+import '../../../data/services/alliance_service.dart';
+import '../../../data/models/alliance_model.dart';
 
 /// UI state for the Field.
 @immutable
@@ -565,6 +567,42 @@ class FieldController extends Notifier<FieldState> {
         ),
       );
     }
+  }
+
+  /// Called by [RealmPanel] after a successful Alliance creation.
+  /// Updates the field state and shows a Ki confirmation message.
+  /// The API call itself lives in the panel so errors display in-form.
+  void onAllianceCreated(AllianceModel alliance) {
+    final pda = alliance.vaultPda;
+    final walletInfo = pda != null
+        ? 'Team Wallet ${pda.substring(0, 4)}…${pda.substring(pda.length - 4)} ready.'
+        : '';
+
+    state = state.copyWith(
+      currentRealm: FieldRealm(
+        name: alliance.name,
+        type: 'Alliance',
+        emblemAsset: AppAssets.realmEmblem('Alliance'),
+      ),
+      openActions:
+          state.openActions.where((item) => item != 'realm').toList(),
+    );
+    askAbout(
+      KiTopic(
+        title: '${alliance.name} created',
+        body:
+            'Ki has created the Alliance "${alliance.name}" with handle '
+            '@${alliance.handle}. You are its first Wizard. $walletInfo',
+        invitation:
+            'Ki can help add members, set the spending rule, or '
+            'shape the Alliance\'s purpose and boundaries.',
+      ),
+    );
+  }
+
+  /// Check if a handle is available for an Alliance.
+  Future<bool> checkHandleAvailability(String handle) async {
+    return AllianceService.instance.checkHandleAvailability(handle);
   }
 
   void savePresentation({required String name, required String type}) {

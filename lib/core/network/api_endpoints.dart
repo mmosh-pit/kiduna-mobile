@@ -97,6 +97,19 @@ abstract class ApiEndpoints {
   /// `POST /api/v1/dunas/organizations` — create an organization under genesis.
   static const String dunasOrganizations = '/api/v1/dunas/organizations';
 
+  // ── Alliances (kinship-backend) ─────────────────────────────────────
+
+  /// `POST /alliances` — create a new alliance (+ Squads wallet if enabled).
+  /// `GET /alliances` — list caller's alliances.
+  static const String alliances = '/alliances';
+
+  /// `GET /alliances/:id` — single alliance detail.
+  static String allianceById(String id) => '/alliances/$id';
+
+  /// `GET /alliances/handle-availability?handle=...`
+  static const String allianceHandleAvailability =
+      '/alliances/handle-availability';
+
   // ── Tools (kinship-agent) ─────────────────────────────────────────────
 
   /// `GET /api/tools/available` — discover tools from MCP servers.
