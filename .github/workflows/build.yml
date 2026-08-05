@@ -9,6 +9,7 @@ on:
 jobs:
   linux-android-web:
     runs-on: ubuntu-latest
+    environment: dev
 
     steps:
       - uses: actions/checkout@v4
@@ -17,6 +18,17 @@ jobs:
         with:
           channel: stable
           cache: true
+
+      - name: Create .env
+        shell: bash
+        run: |
+          cat > .env <<EOF
+          ENV=${{ vars.APP_ENV || 'dev' }}
+          API_BASE_URL=${{ secrets.API_BASE_URL }}
+          AUTH_API_URL=${{ secrets.AUTH_API_URL }}
+          STUDIO_BASE_URL=${{ secrets.STUDIO_BASE_URL }}
+          GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+          EOF
 
       - run: flutter pub get
 
@@ -70,6 +82,7 @@ jobs:
 
   windows:
     runs-on: windows-latest
+    environment: dev
 
     steps:
       - uses: actions/checkout@v4
@@ -78,6 +91,17 @@ jobs:
         with:
           channel: stable
           cache: true
+
+      - name: Create .env
+        shell: bash
+        run: |
+          cat > .env <<EOF
+          ENV=${{ vars.APP_ENV || 'dev' }}
+          API_BASE_URL=${{ secrets.API_BASE_URL }}
+          AUTH_API_URL=${{ secrets.AUTH_API_URL }}
+          STUDIO_BASE_URL=${{ secrets.STUDIO_BASE_URL }}
+          GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+          EOF
 
       - run: flutter pub get
 
@@ -95,6 +119,7 @@ jobs:
 
   macos:
     runs-on: macos-latest
+    environment: dev
 
     steps:
       - uses: actions/checkout@v4
@@ -103,6 +128,17 @@ jobs:
         with:
           channel: stable
           cache: true
+
+      - name: Create .env
+        shell: bash
+        run: |
+          cat > .env <<EOF
+          ENV=${{ vars.APP_ENV || 'dev' }}
+          API_BASE_URL=${{ secrets.API_BASE_URL }}
+          AUTH_API_URL=${{ secrets.AUTH_API_URL }}
+          STUDIO_BASE_URL=${{ secrets.STUDIO_BASE_URL }}
+          GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+          EOF
 
       - run: flutter pub get
 
@@ -137,6 +173,7 @@ jobs:
   release:
     needs: [linux-android-web, windows, macos]
     runs-on: ubuntu-latest
+    environment: dev
     permissions:
       contents: write
 
