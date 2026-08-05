@@ -3,37 +3,38 @@ import 'package:dio/dio.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/api_endpoints.dart';
 import '../../core/utils/logger.dart';
-import '../models/prompt_model.dart';
+import '../models/instruct_model.dart';
 
-/// Service for Prompt (system stance) CRUD + AI generation.
-class PromptService {
-  PromptService._();
-  static final PromptService instance = PromptService._();
+/// Service for Instruct (system stance) CRUD + AI generation.
+/// Backend API path stays /api/prompts — only Flutter-side naming changes.
+class InstructService {
+  InstructService._();
+  static final InstructService instance = InstructService._();
 
   Dio get _dio => ApiClient.instance.dio;
 
-  /// List all prompts for a wallet.
-  Future<List<PromptModel>> listPrompts(String wallet) async {
+  /// List all instructs for a wallet.
+  Future<List<InstructModel>> listInstructs(String wallet) async {
     final response = await _dio.get<Map<String, dynamic>>(
       ApiEndpoints.prompts,
       queryParameters: {'wallet': wallet},
     );
     final list = response.data?['prompts'] as List<dynamic>? ?? [];
     return list
-        .map((e) => PromptModel.fromJson(e as Map<String, dynamic>))
+        .map((e) => InstructModel.fromJson(e as Map<String, dynamic>))
         .toList();
   }
 
-  /// Fetch a single prompt by ID.
-  Future<PromptModel> fetchPrompt(String promptId) async {
+  /// Fetch a single instruct by ID.
+  Future<InstructModel> fetchInstruct(String instructId) async {
     final response = await _dio.get<Map<String, dynamic>>(
-      ApiEndpoints.promptUpdate(promptId),
+      ApiEndpoints.promptUpdate(instructId),
     );
-    return PromptModel.fromJson(response.data ?? {});
+    return InstructModel.fromJson(response.data ?? {});
   }
 
-  /// Create a new prompt.
-  Future<PromptModel> createPrompt({
+  /// Create a new instruct.
+  Future<InstructModel> createInstruct({
     required String name,
     required String wallet,
     String content = '',
@@ -52,12 +53,12 @@ class PromptService {
         if (connectedKbName != null) 'connectedKBName': connectedKbName,
       },
     );
-    return PromptModel.fromJson(response.data ?? {});
+    return InstructModel.fromJson(response.data ?? {});
   }
 
-  /// Update a prompt (PATCH).
-  Future<PromptModel> updatePrompt(
-    String promptId, {
+  /// Update an instruct (PATCH).
+  Future<InstructModel> updateInstruct(
+    String instructId, {
     String? name,
     String? content,
     String? goal,
@@ -72,28 +73,26 @@ class PromptService {
     if (connectedKbName != null) data['connectedKBName'] = connectedKbName;
 
     final response = await _dio.patch<Map<String, dynamic>>(
-      ApiEndpoints.promptUpdate(promptId),
+      ApiEndpoints.promptUpdate(instructId),
       data: data,
     );
-    return PromptModel.fromJson(response.data ?? {});
+    return InstructModel.fromJson(response.data ?? {});
   }
 
-  /// Delete a prompt.
-  Future<void> deletePrompt(String promptId) async {
-    await _dio.delete<void>(ApiEndpoints.promptUpdate(promptId));
+  /// Delete an instruct.
+  Future<void> deleteInstruct(String instructId) async {
+    await _dio.delete<void>(ApiEndpoints.promptUpdate(instructId));
   }
 
   /// Generate system prompt content from goal via AI.
   Future<String> generateFromGoal({
     required String goal,
-    String? name,
     String? knowledgeBaseName,
   }) async {
     final response = await _dio.post<Map<String, dynamic>>(
       '${ApiEndpoints.prompts}/generate',
       data: {
         'goal': goal,
-        if (name != null) 'name': name,
         if (knowledgeBaseName != null) 'knowledgeBaseName': knowledgeBaseName,
       },
     );
@@ -118,7 +117,7 @@ class PromptService {
     final message = data['message'] as String? ?? '';
     AppLogger.info(
       'validate-goal: valid=$valid message=$message',
-      tag: 'PromptService',
+      tag: 'InstructService',
     );
     return (valid: valid, message: message);
   }

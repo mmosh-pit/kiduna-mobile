@@ -182,11 +182,11 @@ class FieldWorkingPanels extends ConsumerWidget {
     if (pState.detailOpen) {
       final pCtrl = ref.read(presenceControllerProvider.notifier);
       final pLabel = pState.isCreateMode
-          ? 'Create Prompt'
-          : pState.activePrompt?.name ?? 'Presence';
+          ? 'Create Instruct'
+          : pState.activeInstruct?.name ?? 'Presence';
       children.add(
         FieldPanel(
-          key: ValueKey('presence-detail-${pState.activePrompt?.id ?? 'create'}'),
+          key: ValueKey('presence-detail-${pState.activeInstruct?.id ?? 'create'}'),
           label: pLabel,
           bounds: bounds,
           width: 420,

@@ -2,12 +2,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/exceptions.dart';
 import '../../../core/utils/logger.dart';
-import '../../../data/models/prompt_model.dart';
-import '../../../data/services/prompt_service.dart';
+import '../../../data/models/instruct_model.dart';
+import '../../../data/services/instruct_service.dart';
 import '../../auth/controllers/auth_controller.dart';
 import 'ally_controller.dart';
 
-/// Global presence (prompt listing + detail) state provider.
+/// Global presence (instruct listing + detail) state provider.
 final presenceControllerProvider =
     NotifierProvider<PresenceController, PresenceState>(
   PresenceController.new,
@@ -18,8 +18,8 @@ class PresenceState {
     this.isLoading = false,
     this.isGenerating = false,
     this.isValidating = false,
-    this.prompts = const [],
-    this.activePrompt,
+    this.instructs = const [],
+    this.activeInstruct,
     this.detailOpen = false,
     this.isCreateMode = false,
     this.error,
@@ -28,8 +28,8 @@ class PresenceState {
   final bool isLoading;
   final bool isGenerating;
   final bool isValidating;
-  final List<PromptModel> prompts;
-  final PromptModel? activePrompt;
+  final List<InstructModel> instructs;
+  final InstructModel? activeInstruct;
   final bool detailOpen;
   final bool isCreateMode;
   final String? error;
@@ -38,21 +38,21 @@ class PresenceState {
     bool? isLoading,
     bool? isGenerating,
     bool? isValidating,
-    List<PromptModel>? prompts,
-    PromptModel? activePrompt,
+    List<InstructModel>? instructs,
+    InstructModel? activeInstruct,
     bool? detailOpen,
     bool? isCreateMode,
     String? error,
     bool clearError = false,
-    bool clearActivePrompt = false,
+    bool clearActiveInstruct = false,
   }) {
     return PresenceState(
       isLoading: isLoading ?? this.isLoading,
       isGenerating: isGenerating ?? this.isGenerating,
       isValidating: isValidating ?? this.isValidating,
-      prompts: prompts ?? this.prompts,
-      activePrompt:
-          clearActivePrompt ? null : (activePrompt ?? this.activePrompt),
+      instructs: instructs ?? this.instructs,
+      activeInstruct:
+          clearActiveInstruct ? null : (activeInstruct ?? this.activeInstruct),
       detailOpen: detailOpen ?? this.detailOpen,
       isCreateMode: isCreateMode ?? this.isCreateMode,
       error: clearError ? null : (error ?? this.error),
@@ -61,7 +61,7 @@ class PresenceState {
 }
 
 class PresenceController extends Notifier<PresenceState> {
-  PromptService get _service => PromptService.instance;
+  InstructService get _service => InstructService.instance;
 
   @override
   PresenceState build() => const PresenceState();
@@ -72,31 +72,32 @@ class PresenceController extends Notifier<PresenceState> {
   String? get _kiAgentId =>
       ref.read(allyControllerProvider).ally?.id;
 
-  /// Load all prompts for current wallet.
-  Future<void> loadPrompts() async {
+  /// Load all instructs for current wallet.
+  Future<void> loadInstructs() async {
     if (_wallet.isEmpty) return;
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
-      final prompts = await _service.listPrompts(_wallet);
+      final instructs = await _service.listInstructs(_wallet);
       if (!ref.mounted) return;
-      state = state.copyWith(isLoading: false, prompts: prompts);
+      state = state.copyWith(isLoading: false, instructs: instructs);
     } on AppException catch (e) {
       if (!ref.mounted) return;
       state = state.copyWith(
         isLoading: false,
-        error: e.message ?? 'Failed to load prompts.',
+        error: e.message ?? 'Failed to load instructs.',
       );
     }
   }
 
-  /// Open detail panel for existing prompt.
-  void openDetail(String promptId) {
-    final prompt = state.prompts.where((p) => p.id == promptId).firstOrNull;
+  /// Open detail panel for existing instruct.
+  void openDetail(String instructId) {
+    final instruct =
+        state.instructs.where((i) => i.id == instructId).firstOrNull;
     state = state.copyWith(
       detailOpen: true,
       isCreateMode: false,
-      activePrompt: prompt,
+      activeInstruct: instruct,
     );
   }
 
@@ -105,7 +106,7 @@ class PresenceController extends Notifier<PresenceState> {
     state = state.copyWith(
       detailOpen: true,
       isCreateMode: true,
-      clearActivePrompt: true,
+      clearActiveInstruct: true,
     );
   }
 
@@ -117,8 +118,8 @@ class PresenceController extends Notifier<PresenceState> {
     );
   }
 
-  /// Create a new prompt and link to Ki agent.
-  Future<void> createPrompt({
+  /// Create a new instruct and link to Ki agent.
+  Future<void> createInstruct({
     required String name,
     String content = '',
     String? goal,
@@ -129,7 +130,7 @@ class PresenceController extends Notifier<PresenceState> {
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
-      final prompt = await _service.createPrompt(
+      final instruct = await _service.createInstruct(
         name: name,
         wallet: _wallet,
         content: content,
@@ -144,32 +145,32 @@ class PresenceController extends Notifier<PresenceState> {
       if (kiId != null) {
         await ref
             .read(allyControllerProvider.notifier)
-            .updatePromptId(prompt.id);
+            .updatePromptId(instruct.id);
       }
 
       state = state.copyWith(
         isLoading: false,
-        prompts: [...state.prompts, prompt],
-        activePrompt: prompt,
+        instructs: [...state.instructs, instruct],
+        activeInstruct: instruct,
         isCreateMode: false,
       );
 
       AppLogger.info(
-        'Created prompt ${prompt.id} linked to Ki',
+        'Created instruct ${instruct.id} linked to Ki',
         tag: 'PresenceCtrl',
       );
     } on AppException catch (e) {
       if (!ref.mounted) return;
       state = state.copyWith(
         isLoading: false,
-        error: e.message ?? 'Failed to create prompt.',
+        error: e.message ?? 'Failed to create instruct.',
       );
     }
   }
 
-  /// Update existing prompt.
-  Future<void> updatePrompt(
-    String promptId, {
+  /// Update existing instruct.
+  Future<void> updateInstruct(
+    String instructId, {
     String? name,
     String? content,
     String? goal,
@@ -179,8 +180,8 @@ class PresenceController extends Notifier<PresenceState> {
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
-      final updated = await _service.updatePrompt(
-        promptId,
+      final updated = await _service.updateInstruct(
+        instructId,
         name: name,
         content: content,
         goal: goal,
@@ -189,51 +190,50 @@ class PresenceController extends Notifier<PresenceState> {
       );
       if (!ref.mounted) return;
 
-      final updatedList = state.prompts.map((p) {
-        return p.id == promptId ? updated : p;
+      final updatedList = state.instructs.map((i) {
+        return i.id == instructId ? updated : i;
       }).toList();
 
       state = state.copyWith(
         isLoading: false,
-        prompts: updatedList,
-        activePrompt: updated,
+        instructs: updatedList,
+        activeInstruct: updated,
       );
     } on AppException catch (e) {
       if (!ref.mounted) return;
       state = state.copyWith(
         isLoading: false,
-        error: e.message ?? 'Failed to update prompt.',
+        error: e.message ?? 'Failed to update instruct.',
       );
     }
   }
 
-  /// Delete a prompt.
-  Future<void> deletePrompt(String promptId) async {
+  /// Delete an instruct.
+  Future<void> deleteInstruct(String instructId) async {
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
-      await _service.deletePrompt(promptId);
+      await _service.deleteInstruct(instructId);
       if (!ref.mounted) return;
 
       final updatedList =
-          state.prompts.where((p) => p.id != promptId).toList();
+          state.instructs.where((i) => i.id != instructId).toList();
 
-      // If detail panel was open for this prompt, close it.
-      final shouldClose = state.activePrompt?.id == promptId;
+      final shouldClose = state.activeInstruct?.id == instructId;
 
       state = state.copyWith(
         isLoading: false,
-        prompts: updatedList,
+        instructs: updatedList,
         detailOpen: shouldClose ? false : null,
-        clearActivePrompt: shouldClose,
+        clearActiveInstruct: shouldClose,
       );
 
-      AppLogger.info('Deleted prompt $promptId', tag: 'PresenceCtrl');
+      AppLogger.info('Deleted instruct $instructId', tag: 'PresenceCtrl');
     } on AppException catch (e) {
       if (!ref.mounted) return;
       state = state.copyWith(
         isLoading: false,
-        error: e.message ?? 'Failed to delete prompt.',
+        error: e.message ?? 'Failed to delete instruct.',
       );
     }
   }
@@ -241,7 +241,6 @@ class PresenceController extends Notifier<PresenceState> {
   /// Generate system prompt content from goal via AI.
   Future<String?> generateFromGoal({
     required String goal,
-    String? name,
     String? knowledgeBaseName,
   }) async {
     state = state.copyWith(isGenerating: true, clearError: true);
@@ -249,7 +248,6 @@ class PresenceController extends Notifier<PresenceState> {
     try {
       final content = await _service.generateFromGoal(
         goal: goal,
-        name: name,
         knowledgeBaseName: knowledgeBaseName,
       );
       if (!ref.mounted) return null;
@@ -267,7 +265,6 @@ class PresenceController extends Notifier<PresenceState> {
   }
 
   /// Validate goal clarity via AI before generation.
-  /// Returns `(valid, message)` — message contains GPT feedback.
   Future<({bool valid, String message})> validateGoal({
     required String goal,
     String? name,
@@ -287,7 +284,6 @@ class PresenceController extends Notifier<PresenceState> {
         return (valid: false, message: '');
       }
       state = state.copyWith(isValidating: false);
-      // On API error, allow generation (same as backend fallback).
       AppLogger.warning(
         'Goal validation failed: ${e.message}',
         tag: 'PresenceCtrl',

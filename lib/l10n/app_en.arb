@@ -497,45 +497,45 @@
   },
   "presenceSave": "Save Presence",
   "presenceSaveFailed": "Unable to save presence. Please try again.",
-  "promptName": "Prompt Name",
-  "promptNameHint": "e.g. Professional Tone",
-  "promptGoal": "Goal",
-  "promptGoalHint": "What should this prompt accomplish?",
-  "promptStance": "Stance",
-  "promptInformKb": "Inform (Knowledge Base)",
-  "promptNone": "None",
-  "promptActive": "Active",
-  "promptEdit": "Edit",
-  "promptDelete": "Delete",
-  "promptDeleteTitle": "Delete Prompt",
-  "promptDeleteConfirm": "Delete \"{name}\"? This cannot be undone.",
-  "@promptDeleteConfirm": {
+  "instructName": "Instruct Name",
+  "instructNameHint": "e.g. Professional Tone",
+  "instructGoal": "Goal",
+  "instructGoalHint": "What should this instruct accomplish?",
+  "instructStance": "Stance",
+  "instructInformKb": "Inform (Knowledge Base)",
+  "instructNone": "None",
+  "instructActive": "Active",
+  "instructEdit": "Edit",
+  "instructDelete": "Delete",
+  "instructDeleteTitle": "Delete Instruct",
+  "instructDeleteConfirm": "Delete \"{name}\"? This cannot be undone.",
+  "@instructDeleteConfirm": {
     "placeholders": {
       "name": { "type": "String" }
     }
   },
-  "promptCreateNew": "Create New Prompt",
-  "promptCreateTitle": "Create Prompt",
-  "promptGenerateWithAi": "Generate with AI",
-  "promptSave": "Save",
-  "promptSaving": "Saving…",
-  "promptNoPrompts": "No prompts yet. Create one below.",
-  "promptHowRealmBehaves": "How {name} behaves",
-  "@promptHowRealmBehaves": {
+  "instructCreateNew": "Create New Instruct",
+  "instructCreateTitle": "Create Instruct",
+  "instructGenerateWithAi": "Generate with AI",
+  "instructSave": "Save",
+  "instructSaving": "Saving…",
+  "instructNoInstructs": "No instructs yet. Create one below.",
+  "instructHowRealmBehaves": "How {name} behaves",
+  "@instructHowRealmBehaves": {
     "placeholders": {
       "name": { "type": "String" }
     }
   },
-  "promptCountStatus": "{count} prompts",
-  "@promptCountStatus": {
+  "instructCountStatus": "{count} instructs",
+  "@instructCountStatus": {
     "placeholders": {
       "count": { "type": "int" }
     }
   },
-  "promptLoading": "Loading…",
-  "promptStanceHint": "System prompt content…",
-  "promptCharsWords": "{chars} chars · {words} words",
-  "@promptCharsWords": {
+  "instructLoading": "Loading…",
+  "instructStanceHint": "System instruct content…",
+  "instructCharsWords": "{chars} chars · {words} words",
+  "@instructCharsWords": {
     "placeholders": {
       "chars": { "type": "int" },
       "words": { "type": "int" }

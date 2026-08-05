@@ -13,7 +13,7 @@ const _kMinGoalLength = 50;
 /// Minimum characters for the Name field.
 const _kMinNameLength = 3;
 
-/// Detail panel for creating or editing a single Prompt (system stance).
+/// Detail panel for creating or editing a single Instruct (system stance).
 class PresenceDetailPanel extends ConsumerStatefulWidget {
   const PresenceDetailPanel({super.key, required this.onClose});
 
@@ -38,7 +38,7 @@ class _PresenceDetailPanelState extends ConsumerState<PresenceDetailPanel> {
   void initState() {
     super.initState();
     final s = ref.read(presenceControllerProvider);
-    final p = s.activePrompt;
+    final p = s.activeInstruct;
 
     _nameCtrl = TextEditingController(text: p?.name ?? '');
     _stanceCtrl = TextEditingController(text: p?.content ?? '');
@@ -49,6 +49,14 @@ class _PresenceDetailPanelState extends ConsumerState<PresenceDetailPanel> {
     _goalCtrl.addListener(_onFieldChanged);
     _stanceCtrl.addListener(_onFieldChanged);
     _nameCtrl.addListener(_onFieldChanged);
+
+    // Ensure KBs are loaded for the dropdown.
+    final kbState = ref.read(knowledgeControllerProvider);
+    if (kbState.knowledgeBases.isEmpty && !kbState.isLoading) {
+      Future.microtask(
+        () => ref.read(knowledgeControllerProvider.notifier).loadKnowledgeBases(),
+      );
+    }
   }
 
   void _onFieldChanged() {
@@ -92,7 +100,6 @@ class _PresenceDetailPanelState extends ConsumerState<PresenceDetailPanel> {
     final ctrl = ref.read(presenceControllerProvider.notifier);
     final validation = await ctrl.validateGoal(
       goal: goal,
-      name: _nameCtrl.text.trim(),
     );
     if (!mounted) return;
 
@@ -113,7 +120,6 @@ class _PresenceDetailPanelState extends ConsumerState<PresenceDetailPanel> {
     final ctrl = ref.read(presenceControllerProvider.notifier);
     final content = await ctrl.generateFromGoal(
       goal: goal,
-      name: _nameCtrl.text.trim(),
       knowledgeBaseName: _selectedKbName,
     );
     if (content != null && mounted) {
@@ -136,16 +142,16 @@ class _PresenceDetailPanelState extends ConsumerState<PresenceDetailPanel> {
     final s = ref.read(presenceControllerProvider);
 
     if (s.isCreateMode) {
-      await ctrl.createPrompt(
+      await ctrl.createInstruct(
         name: name,
         content: _stanceCtrl.text,
         goal: _goalCtrl.text.trim(),
         connectedKbId: _selectedKbId,
         connectedKbName: _selectedKbName,
       );
-    } else if (s.activePrompt != null) {
-      await ctrl.updatePrompt(
-        s.activePrompt!.id,
+    } else if (s.activeInstruct != null) {
+      await ctrl.updateInstruct(
+        s.activeInstruct!.id,
         name: name,
         content: _stanceCtrl.text,
         goal: _goalCtrl.text.trim(),
@@ -192,9 +198,9 @@ class _PresenceDetailPanelState extends ConsumerState<PresenceDetailPanel> {
               children: [
                 // ── Name ──
                 _CounterField(
-                  label: l10n.promptName,
+                  label: l10n.instructName,
                   controller: _nameCtrl,
-                  hint: l10n.promptNameHint,
+                  hint: l10n.instructNameHint,
                   current: nameText.length,
                   min: _kMinNameLength,
                 ),
@@ -212,9 +218,9 @@ class _PresenceDetailPanelState extends ConsumerState<PresenceDetailPanel> {
 
                 // ── Goal ──
                 _CounterField(
-                  label: l10n.promptGoal,
+                  label: l10n.instructGoal,
                   controller: _goalCtrl,
-                  hint: l10n.promptGoalHint,
+                  hint: l10n.instructGoalHint,
                   current: goalText.length,
                   min: _kMinGoalLength,
                 ),
@@ -270,7 +276,7 @@ class _PresenceDetailPanelState extends ConsumerState<PresenceDetailPanel> {
                                 : colors.quiet,
                           ),
                           label: Text(
-                            l10n.promptGenerateWithAi,
+                            l10n.instructGenerateWithAi,
                             style: text.caption.copyWith(
                               color: goalLongEnough
                                   ? colors.sky
@@ -286,11 +292,11 @@ class _PresenceDetailPanelState extends ConsumerState<PresenceDetailPanel> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      l10n.promptStance,
+                      l10n.instructStance,
                       style: text.caption.copyWith(color: colors.quiet),
                     ),
                     Text(
-                      l10n.promptCharsWords(charCount, wordCount),
+                      l10n.instructCharsWords(charCount, wordCount),
                       style: text.micro.copyWith(color: colors.quiet),
                     ),
                   ],
@@ -314,7 +320,7 @@ class _PresenceDetailPanelState extends ConsumerState<PresenceDetailPanel> {
                       fontSize: 13,
                     ),
                     decoration: InputDecoration(
-                      hintText: l10n.promptStanceHint,
+                      hintText: l10n.instructStanceHint,
                       hintStyle: text.body.copyWith(
                         color: colors.quiet,
                         fontSize: 13,
@@ -328,7 +334,7 @@ class _PresenceDetailPanelState extends ConsumerState<PresenceDetailPanel> {
 
                 // ── Inform KB dropdown ──
                 Text(
-                  l10n.promptInformKb,
+                  l10n.instructInformKb,
                   style: text.caption.copyWith(color: colors.quiet),
                 ),
                 const SizedBox(height: 4),
@@ -359,8 +365,8 @@ class _PresenceDetailPanelState extends ConsumerState<PresenceDetailPanel> {
                 // ── Save ──
                 FieldPrimaryButton(
                   label: pState.isLoading
-                      ? l10n.promptSaving
-                      : l10n.promptSave,
+                      ? l10n.instructSaving
+                      : l10n.instructSave,
                   onPressed: pState.isLoading || !nameValid
                       ? null
                       : _save,
@@ -479,7 +485,7 @@ class _KbDropdown extends StatelessWidget {
           ? Padding(
               padding: const EdgeInsets.symmetric(vertical: 12),
               child: Text(
-                l10n.promptLoading,
+                l10n.instructLoading,
                 style: text.caption.copyWith(color: colors.quiet),
               ),
             )
@@ -491,13 +497,13 @@ class _KbDropdown extends StatelessWidget {
                 isExpanded: true,
                 dropdownColor: const Color(0xFF1A1410),
                 hint: Text(
-                  l10n.promptNone,
+                  l10n.instructNone,
                   style: text.caption.copyWith(color: colors.quiet),
                 ),
                 items: [
                   DropdownMenuItem<String?>(
                     child: Text(
-                      l10n.promptNone,
+                      l10n.instructNone,
                       style: text.caption.copyWith(color: colors.quiet),
                     ),
                   ),

@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart';
 
-/// A prompt (system stance) for an agent.
+/// An instruct (system stance) for an agent.
 @immutable
-class PromptModel {
-  const PromptModel({
+class InstructModel {
+  const InstructModel({
     required this.id,
     required this.name,
     this.content = '',
@@ -27,8 +27,8 @@ class PromptModel {
   final String? connectedKbName;
   final String status;
 
-  factory PromptModel.fromJson(Map<String, dynamic> json) {
-    return PromptModel(
+  factory InstructModel.fromJson(Map<String, dynamic> json) {
+    return InstructModel(
       id: json['id'] as String? ?? '',
       name: json['name'] as String? ?? '',
       content: json['content'] as String? ?? '',
