@@ -53,13 +53,19 @@ class _KbDetailPanelState extends ConsumerState<KbDetailPanel> {
       _nameInitialized = true;
     }
 
-    return Padding(
-      padding: const EdgeInsets.all(17),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: [
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Padding(
+          padding: const EdgeInsets.all(17),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: constraints.maxHeight - 34,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
             CapacityHeader(
               eyebrow: l10n.wisdom,
               heading: isCreate
@@ -71,13 +77,9 @@ class _KbDetailPanelState extends ConsumerState<KbDetailPanel> {
 
             // Error.
             if (kbState.error != null) ...[
-              _ErrorRow(message: kbState.error!, onRetry: ctrl.loadKnowledgeBases),
+              _ErrorRow(message: kbState.error!),
               const SizedBox(height: 7),
             ],
-
-            // Loading.
-            if (kbState.isLoading && items.isEmpty)
-              const _LoadingRow(),
 
             // Name — label above, field below.
             Text(
@@ -202,7 +204,7 @@ class _KbDetailPanelState extends ConsumerState<KbDetailPanel> {
                 if (_sourcesExpanded) ...[
                   const SizedBox(height: 5),
                   ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 200),
+                    constraints: const BoxConstraints(maxHeight: 95),
                     child: ListView.separated(
                       shrinkWrap: true,
                       itemCount: items.length,
@@ -247,6 +249,9 @@ class _KbDetailPanelState extends ConsumerState<KbDetailPanel> {
           ],
         ),
       ),
+    ),
+    );
+      },
     );
   }
 
@@ -260,10 +265,11 @@ class _KbDetailPanelState extends ConsumerState<KbDetailPanel> {
     _nameCtrl.clear();
   }
 
-  void _onSave(KnowledgeController ctrl, String kbId) {
+  Future<void> _onSave(KnowledgeController ctrl, String kbId) async {
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) return;
-    unawaited(ctrl.updateKnowledgeBase(kbId, name: name));
+    await ctrl.updateKnowledgeBase(kbId, name: name);
+    ctrl.closeKbDetail();
   }
 
   Future<void> _confirmRemoveItem(
@@ -365,11 +371,6 @@ class _ItemRow extends StatelessWidget {
       name: item.name,
       detail: '$statusLabel · ${item.chunkCount} chunks',
       actions: [
-        if (isIngested)
-          CapacityActionButton(
-            label: l10n.download,
-            onPressed: onDownload,
-          ),
         CapacityActionButton(label: l10n.remove, onPressed: onRemove),
       ],
     );
@@ -483,31 +484,29 @@ class _PrivacyDropdown extends StatelessWidget {
 }
 
 class _ErrorRow extends StatelessWidget {
-  const _ErrorRow({required this.message, required this.onRetry});
+  const _ErrorRow({required this.message});
 
   final String message;
-  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.kiduna;
     final text = context.kidunaText;
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: const Color.fromRGBO(6, 3, 4, 0.36),
-        border: Border.all(color: colors.camel.withValues(alpha: 0.14)),
+        color: const Color.fromRGBO(227, 72, 72, 0.08),
+        border: Border.all(color: const Color.fromRGBO(227, 72, 72, 0.4)),
         borderRadius: BorderRadius.circular(7),
       ),
       child: Row(
         children: [
-          Expanded(
-            child: Text(message, style: text.caption.copyWith(color: colors.cream)),
-          ),
+          const Icon(Icons.error_outline, size: 16, color: Color(0xFFE34848)),
           const SizedBox(width: 8),
-          CapacityActionButton(
-            label: context.l10n.retry,
-            onPressed: onRetry,
+          Expanded(
+            child: Text(
+              message,
+              style: text.caption.copyWith(color: const Color(0xFFE34848)),
+            ),
           ),
         ],
       ),
@@ -547,7 +546,7 @@ String _statusText(KnowledgeState s, AppLocalizations l10n) {
     return l10n.nSourcesAvailable(kb.items.length);
   }
   if (kb != null && kb.items.isEmpty) {
-    return 'Sources processing — reopen to refresh';
+    return 'Upload or import sources below';
   }
-  return l10n.noWisdomItems;
+  return '';
 }

@@ -6,16 +6,16 @@ import '../../core/network/api_endpoints.dart';
 import '../../core/utils/logger.dart';
 import '../models/duna_model.dart';
 
-/// Fetches DUNA registrations from the kinship-studio API.
+/// Fetches DUNA registrations from the kinship-backend API.
 ///
-/// Uses [ApiClient.studioDio] — the dunas GET endpoint returns the genesis
-/// row to anonymous callers, so no auth token is required.
+/// Uses [ApiClient.authDio] — ecosystem endpoints migrated to kinship-backend.
+/// GET /dunas is auth-optional (genesis is public), POST requires auth.
 class DunaService {
   DunaService._();
 
   static final DunaService instance = DunaService._();
 
-  Dio get _dio => ApiClient.instance.studioDio;
+  Dio get _dio => ApiClient.instance.authDio;
 
   /// Fetch the genesis duna and the caller's own dunas.
   ///

@@ -17,7 +17,6 @@ import '../../../data/models/invitation_response.dart';
 import '../../../data/models/ki_topic.dart';
 import '../../../data/models/saved_tool_model.dart';
 import '../../../data/models/skill_model.dart';
-import '../../../data/services/duna_service.dart';
 import '../../../data/services/invitation_service.dart';
 import '../../../data/services/skill_service.dart';
 import '../../../data/services/tool_connection_service.dart';
@@ -28,6 +27,9 @@ import '../data/field_fixtures.dart';
 import '../data/realm_atlas.dart';
 import 'ally_controller.dart';
 import 'ecosystem_controller.dart';
+import '../../../data/services/alliance_service.dart';
+import '../../../data/models/alliance_model.dart';
+import '../../../data/models/institution_model.dart';
 
 /// UI state for the Field.
 @immutable
@@ -467,104 +469,122 @@ class FieldController extends Notifier<FieldState> {
     required String name,
     required String type,
     String? purpose,
-    String? registration,
-    String? email,
   }) async {
-    if (type == 'Organization') {
-      // Validate required fields for Organization creation.
-      final trimmedPurpose = (purpose ?? '').trim();
-      final trimmedEmail = (email ?? '').trim();
-      if (trimmedPurpose.length < 10 || trimmedEmail.isEmpty) {
-        askAbout(
-          const KiTopic(
-            title: 'Missing information',
-            body:
-                'An Organization needs a purpose (at least 10 characters) '
-                'and an email address. Please fill in the required fields.',
-          ),
-        );
-        return;
-      }
+    // Non-API types remain local (UI-only).
+    state = state.copyWith(
+      currentRealm: FieldRealm(
+        name: name,
+        type: type,
+        emblemAsset: AppAssets.realmEmblem(type),
+      ),
+      openActions: state.openActions
+          .where((item) => item != 'realm')
+          .toList(),
+    );
+    askAbout(
+      KiTopic(
+        title: '$name created',
+        body:
+            'Ki has created $name as a $type and brought Alice inside it. '
+            'Kinship Duna remains its containing Ecosystem and return path.',
+        invitation:
+            "Ki can help shape the new Realm's purpose, boundaries, "
+            'capacities, and people through dialogue.',
+      ),
+    );
+  }
 
-      state = state.copyWith(isLoading: true);
-      try {
-        final auth = ref.read(authControllerProvider);
-        final token = auth.token;
+  /// Called by [RealmPanel] after a successful Organization creation.
+  void onOrganizationCreated(String name) {
+    // Refresh ecosystem state so the genesis organizations count updates.
+    unawaited(ref.read(ecosystemControllerProvider.notifier).load());
 
-        await DunaService.instance.createOrganization(
-          name: name,
-          purpose: trimmedPurpose,
-          email: trimmedEmail,
-          registration: registration,
-          authToken: token,
-        );
+    state = state.copyWith(
+      currentRealm: FieldRealm(
+        name: name,
+        type: 'Organization',
+        emblemAsset: AppAssets.realmEmblem('Organization'),
+      ),
+      openActions: state.openActions
+          .where((item) => item != 'realm')
+          .toList(),
+    );
+    askAbout(
+      KiTopic(
+        title: '$name created',
+        body:
+            'Ki has created $name as an Organization under the Genesis '
+            'ecosystem and brought Alice inside it.',
+        invitation:
+            "Ki can help shape the new Organization's purpose, boundaries, "
+            'capacities, and people through dialogue.',
+      ),
+    );
+  }
 
-        // Refresh ecosystem state so the genesis organizations count updates.
-        unawaited(ref.read(ecosystemControllerProvider.notifier).load());
+  /// Called by [RealmPanel] after a successful Alliance creation.
+  /// Updates the field state and shows a Ki confirmation message.
+  /// The API call itself lives in the panel so errors display in-form.
+  void onAllianceCreated(AllianceModel alliance) {
+    final pda = alliance.vaultPda;
+    final walletInfo = pda != null
+        ? 'Team Wallet ${pda.substring(0, 4)}…${pda.substring(pda.length - 4)} ready.'
+        : '';
 
-        state = state.copyWith(
-          isLoading: false,
-          currentRealm: FieldRealm(
-            name: name,
-            type: type,
-            emblemAsset: AppAssets.realmEmblem(type),
-          ),
-          openActions: state.openActions
-              .where((item) => item != 'realm')
-              .toList(),
-        );
-        askAbout(
-          KiTopic(
-            title: '$name created',
-            body:
-                'Ki has created $name as an Organization under the Genesis '
-                'ecosystem and brought Alice inside it.',
-            invitation:
-                "Ki can help shape the new Organization's purpose, boundaries, "
-                'capacities, and people through dialogue.',
-          ),
-        );
-      } on AppException catch (e) {
-        state = state.copyWith(isLoading: false);
-        askAbout(
-          KiTopic(
-            title: 'Could not create $name',
-            body: e.message ?? 'Something went wrong. Please try again.',
-          ),
-        );
-      } catch (e) {
-        state = state.copyWith(isLoading: false);
-        askAbout(
-          KiTopic(
-            title: 'Could not create $name',
-            body: 'Something went wrong. Please try again.',
-          ),
-        );
-      }
-    } else {
-      // Non-Organization types remain local (UI-only).
-      state = state.copyWith(
-        currentRealm: FieldRealm(
-          name: name,
-          type: type,
-          emblemAsset: AppAssets.realmEmblem(type),
-        ),
-        openActions: state.openActions
-            .where((item) => item != 'realm')
-            .toList(),
-      );
-      askAbout(
-        KiTopic(
-          title: '$name created',
-          body:
-              'Ki has created $name as a $type and brought Alice inside it. '
-              'Kinship Duna remains its containing Ecosystem and return path.',
-          invitation:
-              "Ki can help shape the new Realm's purpose, boundaries, "
-              'capacities, and people through dialogue.',
-        ),
-      );
-    }
+    state = state.copyWith(
+      currentRealm: FieldRealm(
+        name: alliance.name,
+        type: 'Alliance',
+        emblemAsset: AppAssets.realmEmblem('Alliance'),
+      ),
+      openActions:
+          state.openActions.where((item) => item != 'realm').toList(),
+    );
+    askAbout(
+      KiTopic(
+        title: '${alliance.name} created',
+        body:
+            'Ki has created the Alliance "${alliance.name}" with handle '
+            '@${alliance.handle}. You are its first Wizard. $walletInfo',
+        invitation:
+            'Ki can help add members, set the spending rule, or '
+            'shape the Alliance\'s purpose and boundaries.',
+      ),
+    );
+  }
+
+  /// Check if a handle is available for an Alliance.
+  Future<bool> checkHandleAvailability(String handle) async {
+    return AllianceService.instance.checkHandleAvailability(handle);
+  }
+
+  /// Called by [RealmPanel] after a successful Institution creation.
+  void onInstitutionCreated(InstitutionModel institution) {
+    final pda = institution.vaultPda;
+    final walletInfo = pda != null
+        ? 'Team Wallet ${pda.substring(0, 4)}…${pda.substring(pda.length - 4)} ready.'
+        : '';
+
+    state = state.copyWith(
+      currentRealm: FieldRealm(
+        name: institution.name,
+        type: 'Institution',
+        emblemAsset: AppAssets.realmEmblem('Institution'),
+      ),
+      openActions:
+          state.openActions.where((item) => item != 'realm').toList(),
+    );
+    askAbout(
+      KiTopic(
+        title: '${institution.name} created',
+        body:
+            'Ki has created the Institution "${institution.name}" with handle '
+            '@${institution.handle}. Status: Draft. $walletInfo',
+        invitation:
+            'Ki can help add members, upload standing documentation, or '
+            'publish the Institution when ready.',
+      ),
+    );
   }
 
   void savePresentation({required String name, required String type}) {
