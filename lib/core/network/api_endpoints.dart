@@ -89,6 +89,9 @@ abstract class ApiEndpoints {
   /// `PATCH /api/skills/{id}/status` — pause or resume a skill.
   static String skillStatus(String skillId) => '/api/skills/$skillId/status';
 
+  /// `POST /api/skills/generate-content` — AI-generate SKILL.md content.
+  static const String skillGenerateContent = '/api/skills/generate-content';
+
   // ── Dunas (kinship-backend) ───────────────────────────────────────────
 
   /// `GET /dunas` — fetch genesis duna and user dunas.

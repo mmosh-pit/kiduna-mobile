@@ -4,9 +4,10 @@ import '../../../core/extensions/context_extensions.dart';
 
 /// CSS `.fieldTitle` — label text + 24px circular "→" ask-Ki button.
 class FieldLabel extends StatelessWidget {
-  const FieldLabel({super.key, required this.text, this.onAskKi});
+  const FieldLabel({super.key, required this.text, this.counter, this.onAskKi});
 
   final String text;
+  final String? counter;
   final VoidCallback? onAskKi;
 
   @override
@@ -17,9 +18,25 @@ class FieldLabel extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Text(
-              text,
-              style: context.kidunaText.label.copyWith(color: colors.cream),
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: text,
+                    style: context.kidunaText.label.copyWith(color: colors.cream),
+                  ),
+                  if (counter != null) ...[
+                    const TextSpan(text: '  '),
+                    TextSpan(
+                      text: counter,
+                      style: context.kidunaText.micro.copyWith(
+                        color: colors.muted,
+                        fontSize: 8,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
           const SizedBox(width: 8),
@@ -100,6 +117,7 @@ class FieldTextInput extends StatelessWidget {
     required this.controller,
     this.hint,
     this.maxLines = 1,
+    this.maxLength,
     this.minHeight,
     this.onAskKi,
   });
@@ -108,6 +126,7 @@ class FieldTextInput extends StatelessWidget {
   final TextEditingController controller;
   final String? hint;
   final int maxLines;
+  final int? maxLength;
   final double? minHeight;
   final VoidCallback? onAskKi;
 
@@ -117,11 +136,26 @@ class FieldTextInput extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        FieldLabel(text: label, onAskKi: onAskKi),
+        if (maxLength != null)
+          ListenableBuilder(
+            listenable: controller,
+            builder: (context, _) => FieldLabel(
+              text: label,
+              counter: '${controller.text.length}/$maxLength',
+              onAskKi: onAskKi,
+            ),
+          )
+        else
+          FieldLabel(text: label, onAskKi: onAskKi),
         const SizedBox(height: 6),
         TextField(
           controller: controller,
           maxLines: maxLines,
+          maxLength: maxLength,
+          buildCounter: maxLength != null
+              ? (context, {required currentLength, required isFocused, required maxLength}) =>
+                  null
+              : null,
           style: context.kidunaText.caption.copyWith(
             color: context.kiduna.text,
             height: 1.4,
@@ -157,28 +191,62 @@ class FieldDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.kiduna;
+    final border = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(context.metrics.radiusMd),
+      borderSide: BorderSide(color: colors.camel.withValues(alpha: 0.24)),
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         FieldLabel(text: label, onAskKi: onAskKi),
         const SizedBox(height: 6),
-        DropdownButtonFormField<String>(
-          initialValue: value,
-          dropdownColor: context.kiduna.raised,
-          style: context.kidunaText.caption.copyWith(
-            color: context.kiduna.text,
-            height: 1.4,
+        SizedBox(
+          height: 37,
+          child: DropdownButtonFormField<String>(
+            initialValue: value,
+            dropdownColor: colors.raised,
+            icon: Icon(
+              Icons.arrow_drop_down,
+              color: colors.muted,
+              size: 18,
+            ),
+            isDense: true,
+            style: context.kidunaText.caption.copyWith(
+              color: colors.text,
+              height: 1.4,
+            ),
+            decoration: InputDecoration(
+              isDense: true,
+              filled: true,
+              fillColor: const Color.fromRGBO(6, 3, 4, 0.66),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 8,
+              ),
+              constraints: const BoxConstraints(
+                minHeight: 37,
+                maxHeight: 37,
+              ),
+              border: border,
+              enabledBorder: border,
+              focusedBorder: border.copyWith(
+                borderSide: BorderSide(color: colors.sky),
+              ),
+            ),
+            items: [
+              for (final option in options)
+                DropdownMenuItem<String>(
+                  value: option,
+                  child: Text(option),
+                ),
+            ],
+            onChanged: (next) {
+              if (next != null) {
+                onChanged(next);
+              }
+            },
           ),
-          decoration: _decoration(context, null),
-          items: [
-            for (final option in options)
-              DropdownMenuItem<String>(value: option, child: Text(option)),
-          ],
-          onChanged: (next) {
-            if (next != null) {
-              onChanged(next);
-            }
-          },
         ),
       ],
     );
