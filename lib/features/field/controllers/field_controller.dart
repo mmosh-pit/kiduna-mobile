@@ -744,9 +744,64 @@ class FieldController extends Notifier<FieldState> {
 
       // Attach the skill to the Ki agent so the scheduler activates it.
       await _attachSkillToAlly(created.id);
+
+      // Generate AI SKILL.md content in the background.
+      // Use original skill data (has correct when/then text) with
+      // the backend-assigned ID from created.
+      _generateSkillContent(SkillModel(
+        id: created.id,
+        name: skill.name,
+        triggerType: skill.triggerType,
+        whenText: skill.whenText,
+        thenText: skill.thenText,
+        tools: skill.tools,
+      ));
     } on AppException catch (e) {
       AppLogger.warning(
         'Skill sync failed: ${e.message}',
+        tag: 'FieldController',
+      );
+    }
+  }
+
+  /// Generate AI SKILL.md content and update the skill.
+  Future<void> _generateSkillContent(SkillModel skill) async {
+    try {
+      final content = await SkillService.instance.generateContent(
+        name: skill.name,
+        triggerType: skill.triggerType.name,
+        whenText: skill.whenText,
+        thenText: skill.thenText,
+        tools: skill.tools,
+      );
+
+      if (content == null || content.isEmpty || !ref.mounted) {
+        return;
+      }
+
+      // Update skill with generated content.
+      final updated = await SkillService.instance.update(
+        skill.id,
+        skillContent: content,
+      );
+
+      if (!ref.mounted) {
+        return;
+      }
+
+      state = state.copyWith(
+        skills: [
+          for (final s in state.skills)
+            if (s.id == skill.id) updated else s,
+        ],
+      );
+      AppLogger.info(
+        'SKILL.md generated for ${skill.id}',
+        tag: 'FieldController',
+      );
+    } on AppException catch (e) {
+      AppLogger.warning(
+        'SKILL.md generation failed: ${e.message}',
         tag: 'FieldController',
       );
     }

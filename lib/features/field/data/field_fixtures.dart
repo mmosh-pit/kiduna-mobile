@@ -1,5 +1,4 @@
 import '../../../config/assets.dart';
-import '../../../core/enums/skill_trigger_type.dart';
 import '../../../data/models/field_realm.dart';
 import '../../../data/models/ki_topic.dart';
 
@@ -346,34 +345,101 @@ abstract class FieldFixtures {
     'webhook',
   ];
 
-  /// Quick-pick "when" suggestions per trigger type.
-  static const Map<SkillTriggerType, List<String>> whenSuggestions = {
-    SkillTriggerType.event: [
-      'A new member joins the Realm',
-      'A file is uploaded to Wisdom',
-      'An invitation is accepted',
+  /// Quick-pick "when" suggestions — one per tool provider.
+  static const List<String> whenSuggestions = [
+    'A new email arrives in Gmail',
+    'Someone mentions me on Bluesky',
+    'A message arrives on Telegram',
+    'Wallet balance drops below threshold',
+  ];
+
+  /// Quick-pick "then" suggestions — one per tool provider.
+  static const List<String> thenSuggestions = [
+    'Read the email and send a reply',
+    'Post an update on Bluesky',
+    'Send a notification on Telegram',
+    'Check SOL wallet balance and report',
+  ];
+
+  // ── Tool Auto-Detection ──────────────────────────────────────
+
+  /// Keyword → tool provider mapping. Scanned against when + then text
+  /// to auto-detect which tools a skill needs.
+  static const Map<String, List<String>> toolKeywordMap = {
+    'google': [
+      'email', 'gmail', 'inbox', 'mail', 'send email', 'read email',
+      'reply email', 'draft email', 'compose email', 'forward email',
+      'calendar', 'event', 'schedule', 'meeting', 'appointment',
+      'google meet', 'meet link',
     ],
-    SkillTriggerType.time: [
-      'Every weekday at 9:00 AM',
-      'Every Monday at 8:00 AM',
-      'First day of each month',
+    'bluesky': [
+      'bluesky', 'bsky', 'post on bluesky', 'bluesky post',
+      'mention', 'timeline', 'social post', 'create post',
+      'reply to post', 'like post', 'repost',
     ],
-    SkillTriggerType.condition: [
-      'Treasury balance drops below threshold',
-      'Member count exceeds limit',
-      'No activity for 7 days',
+    'telegram': [
+      'telegram', 'tg message', 'send message', 'bot message',
+      'telegram group', 'telegram channel',
     ],
-    SkillTriggerType.command: [
-      'A member says "generate report"',
-      'A member says "summarize activity"',
-      'A member says "prepare onboarding"',
+    'solana': [
+      'solana', 'wallet', 'sol balance', 'transfer sol',
+      'send sol', 'token', 'transaction', 'treasury',
     ],
   };
 
-  /// Quick-pick "then" suggestions.
-  static const List<String> thenSuggestions = [
-    'Send a welcome message with Realm guidelines',
-    'Generate a weekly activity summary',
-    'Notify the Catalyst with a status report',
-  ];
+  /// Keyword → trigger type mapping. Scanned against when text
+  /// to auto-detect the trigger type.
+  static const Map<String, List<String>> triggerKeywordMap = {
+    'event': [
+      'arrives', 'new', 'someone', 'receives', 'detected',
+      'incoming', 'when a', 'joins', 'uploaded', 'accepted',
+      'mentions', 'replies',
+    ],
+    'time': [
+      'every', 'daily', 'weekly', 'monthly', 'at 9', 'at 8',
+      'schedule', 'morning', 'evening', 'hour', 'minute',
+      'first day', 'weekday',
+    ],
+    'condition': [
+      'drops below', 'exceeds', 'falls', 'changes',
+      'threshold', 'above', 'below', 'more than', 'less than',
+      'no activity',
+    ],
+  };
+
+  /// Detect which tool providers are needed from when + then text.
+  static Set<String> detectTools(String whenText, String thenText) {
+    final text = '${whenText.toLowerCase()} ${thenText.toLowerCase()}';
+    final detected = <String>{};
+    for (final entry in toolKeywordMap.entries) {
+      for (final keyword in entry.value) {
+        if (text.contains(keyword)) {
+          detected.add(entry.key);
+          break;
+        }
+      }
+    }
+    return detected;
+  }
+
+  /// Detect trigger type from when text.
+  static String detectTriggerType(String whenText) {
+    final text = whenText.toLowerCase();
+    for (final entry in triggerKeywordMap.entries) {
+      for (final keyword in entry.value) {
+        if (text.contains(keyword)) {
+          return entry.key;
+        }
+      }
+    }
+    return 'command';
+  }
+
+  /// Human-friendly tool provider names.
+  static const Map<String, String> toolDisplayNames = {
+    'google': 'Google',
+    'bluesky': 'Bluesky',
+    'telegram': 'Telegram',
+    'solana': 'Solana',
+  };
 }

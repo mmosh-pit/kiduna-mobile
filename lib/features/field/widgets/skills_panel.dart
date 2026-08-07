@@ -27,7 +27,7 @@ class _SkillsPanelState extends ConsumerState<SkillsPanel> {
     super.initState();
     Future.microtask(() {
       ref.read(fieldControllerProvider.notifier).fetchSkills();
-      ref.read(fieldControllerProvider.notifier).fetchAvailableTools();
+      ref.read(fieldControllerProvider.notifier).fetchSavedTools();
     });
   }
 

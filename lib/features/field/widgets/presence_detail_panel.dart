@@ -203,6 +203,7 @@ class _PresenceDetailPanelState extends ConsumerState<PresenceDetailPanel> {
                   hint: l10n.instructNameHint,
                   current: nameText.length,
                   min: _kMinNameLength,
+                  max: 20,
                 ),
                 if (_nameWarning != null)
                   Padding(
@@ -390,6 +391,7 @@ class _CounterField extends StatelessWidget {
     required this.controller,
     required this.current,
     required this.min,
+    this.max,
     this.hint,
   });
 
@@ -397,18 +399,28 @@ class _CounterField extends StatelessWidget {
   final TextEditingController controller;
   final int current;
   final int min;
+  final int? max;
   final String? hint;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.kiduna;
     final text = context.kidunaText;
-    final valid = current >= min;
+    final valid = current >= min && (max == null || current <= max!);
     // Only show error state after user starts typing.
     final showError = current > 0 && !valid;
+    final counterText = max != null ? '$current/$max' : '$current/$min';
 
     return TextField(
       controller: controller,
+      maxLength: max,
+      buildCounter: max != null
+          ? (context,
+                  {required currentLength,
+                  required isFocused,
+                  required maxLength}) =>
+              null
+          : null,
       style: text.caption.copyWith(color: colors.text, height: 1.4),
       decoration: InputDecoration(
         labelText: label,
@@ -416,7 +428,7 @@ class _CounterField extends StatelessWidget {
         floatingLabelBehavior: FloatingLabelBehavior.always,
         hintText: hint,
         hintStyle: text.caption.copyWith(color: colors.quiet, height: 1.4),
-        suffixText: '$current/$min',
+        suffixText: counterText,
         suffixStyle: text.micro.copyWith(
           color: showError ? const Color(0xFFE34848) : colors.quiet,
         ),

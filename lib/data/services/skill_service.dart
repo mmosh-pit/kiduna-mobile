@@ -74,7 +74,9 @@ class SkillService {
         throw const ServerException('Empty response from skill creation');
       }
 
-      final result = SkillModel.fromJson(body);
+      // Backend returns {"skill": {...}} — unwrap.
+      final skillJson = body['skill'] as Map<String, dynamic>? ?? body;
+      final result = SkillModel.fromJson(skillJson);
 
       AppLogger.info('Skill created: ${result.id}', tag: 'SkillService');
       return result;
@@ -141,6 +143,56 @@ class SkillService {
         tag: 'SkillService',
       );
       return [];
+    }
+  }
+
+  /// AI-generate SKILL.md content from skill details.
+  ///
+  /// Sends `POST /api/skills/generate-content` with the skill's name,
+  /// trigger type, when/then text, and tools. Returns the AI-generated
+  /// markdown string, or `null` on failure.
+  Future<String?> generateContent({
+    required String name,
+    required String triggerType,
+    required String whenText,
+    required String thenText,
+    required List<String> tools,
+  }) async {
+    try {
+      final payload = {
+        'name': name,
+        'trigger_type': triggerType,
+        'when_text': whenText,
+        'then_text': thenText,
+        'tools': tools,
+      };
+      AppLogger.info(
+        'generateContent payload: $payload',
+        tag: 'SkillService',
+      );
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.skillGenerateContent,
+        data: payload,
+      );
+
+      final body = response.data;
+      final content = body?['skill_content'] as String?;
+
+      if (content != null && content.isNotEmpty) {
+        AppLogger.info(
+          'Generated SKILL.md content (${content.length} chars)',
+          tag: 'SkillService',
+        );
+      }
+      return content;
+    } on DioException catch (e) {
+      final responseData = e.response?.data;
+      AppLogger.warning(
+        'Failed to generate skill content: ${e.message} '
+        'status=${e.response?.statusCode} body=$responseData',
+        tag: 'SkillService',
+      );
+      return null;
     }
   }
 
