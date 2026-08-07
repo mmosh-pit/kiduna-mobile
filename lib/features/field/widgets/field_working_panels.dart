@@ -120,7 +120,7 @@ class FieldWorkingPanels extends ConsumerWidget {
           opacity: opacity,
           initialOffset: Offset(
             _clampLeft(bounds.width * 0.5 - 620 / 2 + stagger * 26),
-            (bounds.height * 0.05).clamp(8.0, double.infinity),
+            (bounds.height * 0.12).clamp(8.0, double.infinity),
           ),
           onClose: controller.closeSkillForm,
           child: SkillCreateForm(onClose: controller.closeSkillForm),

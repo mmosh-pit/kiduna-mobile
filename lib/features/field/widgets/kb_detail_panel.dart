@@ -91,6 +91,13 @@ class _KbDetailPanelState extends ConsumerState<KbDetailPanel> {
             const SizedBox(height: 4),
             TextField(
               controller: _nameCtrl,
+              maxLength: 20,
+              onChanged: (_) => setState(() {}),
+              buildCounter: (context,
+                      {required currentLength,
+                      required isFocused,
+                      required maxLength}) =>
+                  null,
               style: context.kidunaText.caption.copyWith(
                 color: context.kiduna.text,
                 height: 1.4,
@@ -102,6 +109,11 @@ class _KbDetailPanelState extends ConsumerState<KbDetailPanel> {
                 hintText: l10n.kbNameHint,
                 hintStyle: context.kidunaText.caption.copyWith(
                   color: context.kiduna.quiet,
+                ),
+                suffixText: '${_nameCtrl.text.length}/20',
+                suffixStyle: context.kidunaText.micro.copyWith(
+                  color: context.kiduna.quiet,
+                  fontSize: 9,
                 ),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 9,

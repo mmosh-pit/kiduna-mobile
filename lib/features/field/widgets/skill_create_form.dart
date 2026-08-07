@@ -167,7 +167,7 @@ class _SkillCreateFormState extends ConsumerState<SkillCreateForm> {
             label: l10n.skillName,
             controller: _nameCtrl,
             hint: l10n.nameThisSkill,
-            maxLength: 50,
+            maxLength: 20,
           ),
           const SizedBox(height: 14),
 
@@ -176,6 +176,7 @@ class _SkillCreateFormState extends ConsumerState<SkillCreateForm> {
             label: l10n.whenLabel,
             controller: _whenCtrl,
             hint: l10n.whenHint,
+            maxLength: 200,
           ),
           const SizedBox(height: 4),
           QuickPickChips(
@@ -189,6 +190,7 @@ class _SkillCreateFormState extends ConsumerState<SkillCreateForm> {
             label: l10n.thenLabel,
             controller: _thenCtrl,
             hint: l10n.thenHint,
+            maxLength: 200,
           ),
           const SizedBox(height: 4),
           QuickPickChips(
@@ -211,28 +213,20 @@ class _SkillCreateFormState extends ConsumerState<SkillCreateForm> {
           ),
           const SizedBox(height: 14),
 
-          // ── Approval + Submit ──
-          Row(
-            children: [
-              Expanded(
-                child: ApprovalToggle(
-                  value: _requiresApproval,
-                  onChanged: (v) => setState(() => _requiresApproval = v),
+          // ── Submit ──
+          ListenableBuilder(
+            listenable: Listenable.merge([_nameCtrl, _whenCtrl, _thenCtrl]),
+            builder: (context, _) {
+              final detected = _detectedTools;
+              final canCreate = _canCreate(detected, connected);
+              return Align(
+                alignment: Alignment.centerRight,
+                child: FieldPrimaryButton(
+                  label: isEditing ? 'Save changes' : l10n.createSkill,
+                  onPressed: canCreate ? () => _submit(detected) : null,
                 ),
-              ),
-              const SizedBox(width: 12),
-              ListenableBuilder(
-                listenable: Listenable.merge([_nameCtrl, _whenCtrl, _thenCtrl]),
-                builder: (context, _) {
-                  final detected = _detectedTools;
-                  final canCreate = _canCreate(detected, connected);
-                  return FieldPrimaryButton(
-                    label: isEditing ? 'Save changes' : l10n.createSkill,
-                    onPressed: canCreate ? () => _submit(detected) : null,
-                  );
-                },
-              ),
-            ],
+              );
+            },
           ),
         ],
       ),

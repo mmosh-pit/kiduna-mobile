@@ -4,10 +4,9 @@ import '../../../core/extensions/context_extensions.dart';
 
 /// CSS `.fieldTitle` — label text + 24px circular "→" ask-Ki button.
 class FieldLabel extends StatelessWidget {
-  const FieldLabel({super.key, required this.text, this.counter, this.onAskKi});
+  const FieldLabel({super.key, required this.text, this.onAskKi});
 
   final String text;
-  final String? counter;
   final VoidCallback? onAskKi;
 
   @override
@@ -18,25 +17,9 @@ class FieldLabel extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(
-                    text: text,
-                    style: context.kidunaText.label.copyWith(color: colors.cream),
-                  ),
-                  if (counter != null) ...[
-                    const TextSpan(text: '  '),
-                    TextSpan(
-                      text: counter,
-                      style: context.kidunaText.micro.copyWith(
-                        color: colors.muted,
-                        fontSize: 8,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
+            child: Text(
+              text,
+              style: context.kidunaText.label.copyWith(color: colors.cream),
             ),
           ),
           const SizedBox(width: 8),
@@ -83,6 +66,7 @@ InputDecoration _decoration(
   String? hint, {
   bool isMultiLine = false,
   double? minHeight,
+  String? suffixText,
 }) {
   final colors = context.kiduna;
   final inputStyle = context.kidunaText.caption.copyWith(height: 1.4);
@@ -96,6 +80,13 @@ InputDecoration _decoration(
     fillColor: const Color.fromRGBO(6, 3, 4, 0.66),
     hintText: hint,
     hintStyle: inputStyle.copyWith(color: colors.quiet),
+    suffixText: suffixText,
+    suffixStyle: suffixText != null
+        ? context.kidunaText.micro.copyWith(
+            color: colors.quiet,
+            fontSize: 9,
+          )
+        : null,
     contentPadding: isMultiLine
         ? const EdgeInsets.fromLTRB(10, 9, 10, 9)
         : const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
@@ -136,37 +127,48 @@ class FieldTextInput extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        FieldLabel(text: label, onAskKi: onAskKi),
+        const SizedBox(height: 6),
         if (maxLength != null)
           ListenableBuilder(
             listenable: controller,
-            builder: (context, _) => FieldLabel(
-              text: label,
-              counter: '${controller.text.length}/$maxLength',
-              onAskKi: onAskKi,
+            builder: (context, _) => TextField(
+              controller: controller,
+              maxLines: maxLines,
+              maxLength: maxLength,
+              buildCounter: (context,
+                      {required currentLength,
+                      required isFocused,
+                      required maxLength}) =>
+                  null,
+              style: context.kidunaText.caption.copyWith(
+                color: context.kiduna.text,
+                height: 1.4,
+              ),
+              decoration: _decoration(
+                context,
+                hint,
+                isMultiLine: isMultiLine,
+                minHeight: minHeight,
+                suffixText: '${controller.text.length}/$maxLength',
+              ),
             ),
           )
         else
-          FieldLabel(text: label, onAskKi: onAskKi),
-        const SizedBox(height: 6),
-        TextField(
-          controller: controller,
-          maxLines: maxLines,
-          maxLength: maxLength,
-          buildCounter: maxLength != null
-              ? (context, {required currentLength, required isFocused, required maxLength}) =>
-                  null
-              : null,
-          style: context.kidunaText.caption.copyWith(
-            color: context.kiduna.text,
-            height: 1.4,
+          TextField(
+            controller: controller,
+            maxLines: maxLines,
+            style: context.kidunaText.caption.copyWith(
+              color: context.kiduna.text,
+              height: 1.4,
+            ),
+            decoration: _decoration(
+              context,
+              hint,
+              isMultiLine: isMultiLine,
+              minHeight: minHeight,
+            ),
           ),
-          decoration: _decoration(
-            context,
-            hint,
-            isMultiLine: isMultiLine,
-            minHeight: minHeight,
-          ),
-        ),
       ],
     );
   }
