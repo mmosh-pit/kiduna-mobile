@@ -120,4 +120,15 @@ class AllyService {
       throw const ServerException('Unable to save presence. Please try again.');
     }
   }
+
+  /// Patch agent with arbitrary data.
+  Future<void> patchAgent(
+    String agentId,
+    Map<String, dynamic> data,
+  ) async {
+    await _dio.patch<Map<String, dynamic>>(
+      ApiEndpoints.agentUpdate(agentId),
+      data: data,
+    );
+  }
 }

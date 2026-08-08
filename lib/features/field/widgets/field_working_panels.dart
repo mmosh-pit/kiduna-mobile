@@ -5,6 +5,7 @@ import '../../../core/enums/capacity_target.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../controllers/field_controller.dart';
 import '../controllers/knowledge_controller.dart';
+import '../controllers/presence_controller.dart';
 import '../data/field_fixtures.dart';
 import 'automations_panel.dart';
 import 'capacity_choices.dart';
@@ -13,6 +14,7 @@ import 'field_panel.dart';
 import 'invite_panel.dart';
 import 'kb_detail_panel.dart';
 import 'portrait_designer.dart';
+import 'presence_detail_panel.dart';
 import 'presence_panel_cap.dart';
 import 'present_panel.dart';
 import 'realm_panel.dart';
@@ -116,11 +118,15 @@ class FieldWorkingPanels extends ConsumerWidget {
           bounds: bounds,
           width: 620,
           opacity: opacity,
-          initialOffset: _staggeredOffset(620, stagger++),
+          initialOffset: Offset(
+            _clampLeft(bounds.width * 0.5 - 620 / 2 + stagger * 26),
+            (bounds.height * 0.12).clamp(8.0, double.infinity),
+          ),
           onClose: controller.closeSkillForm,
           child: SkillCreateForm(onClose: controller.closeSkillForm),
         ),
       );
+      stagger++;
     }
 
     if (state.connectingTool != null) {
@@ -176,6 +182,26 @@ class FieldWorkingPanels extends ConsumerWidget {
       );
     }
 
+    final pState = ref.watch(presenceControllerProvider);
+    if (pState.detailOpen) {
+      final pCtrl = ref.read(presenceControllerProvider.notifier);
+      final pLabel = pState.isCreateMode
+          ? 'Create Instruct'
+          : pState.activeInstruct?.name ?? 'Presence';
+      children.add(
+        FieldPanel(
+          key: ValueKey('presence-detail-${pState.activeInstruct?.id ?? 'create'}'),
+          label: pLabel,
+          bounds: bounds,
+          width: 420,
+          opacity: opacity,
+          initialOffset: Offset((bounds.width - 420) / 2, 60),
+          onClose: pCtrl.closeDetail,
+          child: PresenceDetailPanel(onClose: pCtrl.closeDetail),
+        ),
+      );
+    }
+
     return Stack(children: children);
   }
 
@@ -200,8 +226,8 @@ class FieldWorkingPanels extends ConsumerWidget {
   FieldPanel _capacityPanel(String id, CapacityTarget target, int index) {
     final capacity = FieldFixtures.capacities.firstWhere((c) => c.id == id);
     final prefix = target == CapacityTarget.ally ? 'ally' : 'realm';
-    final panelWidth = id == 'wisdom' ? 480.0 : 760.0;
-    final offset = id == 'wisdom'
+    final panelWidth = (id == 'wisdom' || id == 'presence') ? 480.0 : 760.0;
+    final offset = (id == 'wisdom' || id == 'presence')
         ? Offset((bounds.width - panelWidth) / 2, 120)
         : _staggeredOffset(panelWidth, index);
     return FieldPanel(

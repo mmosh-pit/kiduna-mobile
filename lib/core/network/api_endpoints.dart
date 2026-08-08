@@ -89,13 +89,39 @@ abstract class ApiEndpoints {
   /// `PATCH /api/skills/{id}/status` — pause or resume a skill.
   static String skillStatus(String skillId) => '/api/skills/$skillId/status';
 
-  // ── Dunas (kinship-studio) ───────────────────────────────────────────
+  /// `POST /api/skills/generate-content` — AI-generate SKILL.md content.
+  static const String skillGenerateContent = '/api/skills/generate-content';
 
-  /// `GET /api/v1/dunas` — fetch genesis duna and user dunas.
-  static const String dunas = '/api/v1/dunas';
+  // ── Dunas (kinship-backend) ───────────────────────────────────────────
 
-  /// `POST /api/v1/dunas/organizations` — create an organization under genesis.
-  static const String dunasOrganizations = '/api/v1/dunas/organizations';
+  /// `GET /dunas` — fetch genesis duna and user dunas.
+  static const String dunas = '/dunas';
+
+  /// `POST /dunas/organizations` — create an organization under genesis.
+  static const String dunasOrganizations = '/dunas/organizations';
+
+  // ── Alliances (kinship-backend) ─────────────────────────────────────
+
+  /// `POST /alliances` — create a new alliance (+ Squads wallet if enabled).
+  /// `GET /alliances` — list caller's alliances.
+  static const String alliances = '/alliances';
+
+  /// `GET /alliances/:id` — single alliance detail.
+  static String allianceById(String id) => '/alliances/$id';
+
+  /// `GET /alliances/handle-availability?handle=...`
+  static const String allianceHandleAvailability =
+      '/alliances/handle-availability';
+
+  // ── Institutions (kinship-backend) ──────────────────────────────────
+
+  /// `POST /institutions` — create a new institution (+ Squads wallet).
+  /// `GET /institutions` — list caller's institutions.
+  static const String institutions = '/institutions';
+
+  /// `GET /institutions/handle-availability?handle=...`
+  static const String institutionHandleAvailability =
+      '/institutions/handle-availability';
 
   // ── Tools (kinship-agent) ─────────────────────────────────────────────
 

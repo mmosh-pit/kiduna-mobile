@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/extensions/context_extensions.dart';
 import '../../../data/models/chat_message_model.dart';
@@ -619,6 +620,11 @@ class _AssistantBubble extends StatelessWidget {
       child: MarkdownBody(
         data: text,
         selectable: true,
+        onTapLink: (text, href, title) {
+          if (href != null && (href.startsWith('http://') || href.startsWith('https://'))) {
+              launchUrl(Uri.parse(href), mode: LaunchMode.externalApplication);
+          }
+        },
         styleSheet: MarkdownStyleSheet(
           p: TextStyle(
             fontFamily: 'Avenir',
