@@ -345,21 +345,64 @@ abstract class FieldFixtures {
     'webhook',
   ];
 
-  /// Quick-pick "when" suggestions — one per tool provider.
-  static const List<String> whenSuggestions = [
-    'A new email arrives in Gmail',
-    'Someone mentions me on Bluesky',
-    'A message arrives on Telegram',
-    'Wallet balance drops below threshold',
-  ];
+  /// Quick-pick "when" suggestions — 3 per tool (shown when tool is selected).
+  static const Map<String, List<String>> toolWhenSuggestions = {
+    'bluesky': [
+      'Someone mentions me on Bluesky',
+      'Someone follows me on Bluesky',
+      'Someone replies to my post on Bluesky',
+    ],
+    'google': [
+      'A new email arrives in Gmail',
+      'A calendar event starts soon',
+      'User asks to send an email',
+    ],
+    'telegram': [
+      'A new message arrives on Telegram',
+      'Someone joins the Telegram group',
+      'User asks to send a Telegram message',
+    ],
+    'solana': [
+      'Wallet balance drops below threshold',
+      'New transaction received',
+      'User asks to check balance',
+    ],
+  };
 
-  /// Quick-pick "then" suggestions — one per tool provider.
-  static const List<String> thenSuggestions = [
-    'Read the email and send a reply',
-    'Post an update on Bluesky',
-    'Send a notification on Telegram',
-    'Check SOL wallet balance and report',
-  ];
+  /// Default "when" suggestion — 1 per tool (shown when NO tool is selected).
+  static const Map<String, String> toolDefaultWhen = {
+    'bluesky': 'Someone mentions me on Bluesky',
+    'google': 'A new email arrives in Gmail',
+    'telegram': 'A new message arrives on Telegram',
+    'solana': 'Wallet balance changes',
+  };
+
+  /// Default "then" suggestion — 1 per tool (shown when NO tool is selected).
+  static const Map<String, String> toolDefaultThen = {
+    'bluesky': 'Reply To Post',
+    'google': 'Send Email',
+    'telegram': 'Send Message',
+    'solana': 'Check Balance',
+  };
+
+  // ── Tool Actions ─────────────────────────────────────────────
+
+  /// Maps connected tool name (from GlobalToolAccount) → MCP service names.
+  /// Used to filter availableTools by the selected connected tool.
+  static const Map<String, List<String>> toolServiceMap = {
+    'bluesky': ['bluesky'],
+    'google': ['google_gmail_tool', 'google_calendar_tool', 'google_meet_tool'],
+    'telegram': ['telegram_bot_tool'],
+    'solana': ['solana'],
+  };
+
+  /// Tool colors for UI chips.
+  static const Map<String, int> toolColors = {
+    'bluesky': 0xFF38BDF8,
+    'google': 0xFF34D399,
+    'telegram': 0xFF60A5FA,
+    'solana': 0xFFA78BFA,
+  };
 
   // ── Tool Auto-Detection ──────────────────────────────────────
 

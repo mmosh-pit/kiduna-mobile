@@ -28,6 +28,9 @@ class _SkillsPanelState extends ConsumerState<SkillsPanel> {
     Future.microtask(() {
       ref.read(fieldControllerProvider.notifier).fetchSkills();
       ref.read(fieldControllerProvider.notifier).fetchSavedTools();
+      ref.read(fieldControllerProvider.notifier).fetchAvailableTools(
+            force: true,
+          );
     });
   }
 
