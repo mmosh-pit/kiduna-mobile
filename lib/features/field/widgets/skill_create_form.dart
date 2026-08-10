@@ -30,6 +30,8 @@ class _SkillCreateFormState extends ConsumerState<SkillCreateForm> {
   late final TextEditingController _whenCtrl;
   late final TextEditingController _thenCtrl;
   String? _selectedTool;
+  bool _requiresApproval = false;
+  bool _actionsExpanded = true;
   bool _initialized = false;
 
   @override
@@ -44,6 +46,7 @@ class _SkillCreateFormState extends ConsumerState<SkillCreateForm> {
         final tool = editing.tools.first;
         if (tool != 'chat') _selectedTool = tool;
       }
+      _requiresApproval = editing?.requiresApproval ?? false;
       _initialized = true;
       // Ensure available tools are loaded when form opens.
       Future.microtask(() {
@@ -133,6 +136,7 @@ class _SkillCreateFormState extends ConsumerState<SkillCreateForm> {
         whenText: _whenCtrl.text.trim(),
         thenText: _thenCtrl.text.trim(),
         tools: tools,
+        requiresApproval: _requiresApproval,
       );
     } else {
       controller.createSkill(
@@ -141,6 +145,7 @@ class _SkillCreateFormState extends ConsumerState<SkillCreateForm> {
         whenText: _whenCtrl.text.trim(),
         thenText: _thenCtrl.text.trim(),
         tools: tools,
+        requiresApproval: _requiresApproval,
       );
     }
     widget.onClose();
@@ -244,6 +249,7 @@ class _SkillCreateFormState extends ConsumerState<SkillCreateForm> {
                       selected: _selectedTool == tool,
                       onTap: () => setState(() {
                         _selectedTool = _selectedTool == tool ? null : tool;
+                        _actionsExpanded = true;
                       }),
                     ),
                 ],
@@ -252,32 +258,65 @@ class _SkillCreateFormState extends ConsumerState<SkillCreateForm> {
 
             // ── Available Actions (from MCP API) ──
             if (_selectedTool != null) ...[
-              Text(
-                'Available ${FieldFixtures.toolDisplayNames[_selectedTool] ?? _selectedTool} actions',
-                style: text.label.copyWith(
-                  color: toolColor,
-                  fontSize: 11,
+              GestureDetector(
+                onTap: () => setState(() {
+                  _actionsExpanded = !_actionsExpanded;
+                }),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: toolColor.withValues(alpha: 0.08),
+                    border: Border.all(
+                      color: toolColor.withValues(alpha: 0.2),
+                    ),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Available ${FieldFixtures.toolDisplayNames[_selectedTool] ?? _selectedTool} actions',
+                          style: text.label.copyWith(
+                            color: toolColor,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                      Icon(
+                        _actionsExpanded
+                            ? Icons.keyboard_arrow_up
+                            : Icons.keyboard_arrow_down,
+                        size: 16,
+                        color: toolColor,
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 6),
-              if (actions.isEmpty)
-                Text(
-                  'No actions available — MCP server may be offline',
-                  style: text.micro.copyWith(
-                    color: colors.muted,
-                    fontSize: 9,
-                  ),
-                )
-              else
-                Wrap(
-                  spacing: 5,
-                  runSpacing: 4,
-                  children: [
-                    for (final action in actions)
-                      GestureDetector(
-                        onTap: () => setState(() {
-                          _thenCtrl.text = action.name;
-                        }),
+              if (_actionsExpanded) ...[
+                const SizedBox(height: 6),
+                if (actions.isEmpty)
+                  Text(
+                    'No actions available — MCP server may be offline',
+                    style: text.micro.copyWith(
+                      color: colors.muted,
+                      fontSize: 9,
+                    ),
+                  )
+                else
+                  Wrap(
+                    spacing: 5,
+                    runSpacing: 4,
+                    children: [
+                      for (final action in actions)
+                        GestureDetector(
+                          onTap: () => setState(() {
+                            _thenCtrl.text = action.name;
+                            _actionsExpanded = false;
+                          }),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
@@ -301,6 +340,7 @@ class _SkillCreateFormState extends ConsumerState<SkillCreateForm> {
                       ),
                   ],
                 ),
+              ],
               const SizedBox(height: 14),
             ],
 
@@ -377,6 +417,39 @@ class _SkillCreateFormState extends ConsumerState<SkillCreateForm> {
                 },
               ),
             const SizedBox(height: 14),
+
+            // ── Approval toggle ──
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Requires approval',
+                        style: text.caption.copyWith(
+                          color: colors.cream,
+                          fontSize: 11,
+                        ),
+                      ),
+                      Text(
+                        'Ask before executing',
+                        style: text.micro.copyWith(
+                          color: colors.muted,
+                          fontSize: 8,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Switch(
+                  value: _requiresApproval,
+                  onChanged: (v) => setState(() => _requiresApproval = v),
+                  activeColor: colors.sky,
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
 
             // ── Submit ──
             ListenableBuilder(

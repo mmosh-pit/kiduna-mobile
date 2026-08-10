@@ -18,6 +18,7 @@ import '../../../data/models/ki_topic.dart';
 import '../../../data/models/saved_tool_model.dart';
 import '../../../data/models/skill_model.dart';
 import '../../../data/services/invitation_service.dart';
+import '../../../data/services/approval_service.dart';
 import '../../../data/services/skill_service.dart';
 import '../../../data/services/tool_connection_service.dart';
 import '../../auth/controllers/auth_controller.dart';
@@ -64,6 +65,8 @@ class FieldState {
     this.availableTools = const [],
     this.toolsLoaded = false,
     this.skillFormOpen = false,
+    this.approvalsOpen = false,
+    this.pendingApprovalCount = 0,
     this.editingSkill,
     this.savedTools = const [],
     this.skillsLoading = false,
@@ -121,6 +124,8 @@ class FieldState {
 
   /// Whether the skill creation form panel is open.
   final bool skillFormOpen;
+  final bool approvalsOpen;
+  final int pendingApprovalCount;
 
   /// Skill being edited — null means creating new.
   final SkillModel? editingSkill;
@@ -173,6 +178,8 @@ class FieldState {
     List<AvailableToolModel>? availableTools,
     bool? toolsLoaded,
     bool? skillFormOpen,
+    bool? approvalsOpen,
+    int? pendingApprovalCount,
     SkillModel? editingSkill,
     bool clearEditingSkill = false,
     List<SavedToolModel>? savedTools,
@@ -217,6 +224,9 @@ class FieldState {
       availableTools: availableTools ?? this.availableTools,
       toolsLoaded: toolsLoaded ?? this.toolsLoaded,
       skillFormOpen: skillFormOpen ?? this.skillFormOpen,
+      approvalsOpen: approvalsOpen ?? this.approvalsOpen,
+      pendingApprovalCount:
+          pendingApprovalCount ?? this.pendingApprovalCount,
       editingSkill: clearEditingSkill
           ? null
           : (editingSkill ?? this.editingSkill),
@@ -278,6 +288,16 @@ class FieldController extends Notifier<FieldState> {
             type: 'Ecosystem',
             emblemAsset: '',
           );
+
+    // Fetch pending approval count when auth state changes (user logs in).
+    ref.listen(authControllerProvider, (prev, next) {
+      if (next.user != null && (prev?.user == null || prev?.user?.wallet != next.user?.wallet)) {
+        fetchPendingApprovalCount();
+      }
+    });
+
+    // Fetch pending approval count in the background.
+    Future.microtask(fetchPendingApprovalCount);
 
     return FieldState(
       kiTopic: FieldFixtures.defaultKi,
@@ -614,6 +634,33 @@ class FieldController extends Notifier<FieldState> {
   // ── Skills ───────────────────────────────────────────────────────────
 
   /// Open the skill creation form as a separate working panel.
+  void openApprovals() {
+    state = state.copyWith(approvalsOpen: true);
+  }
+
+  void closeApprovals() {
+    state = state.copyWith(approvalsOpen: false);
+    // Refresh count after panel closes (approvals may have been resolved).
+    fetchPendingApprovalCount();
+  }
+
+  /// Fetch the number of pending approvals for the current user.
+  Future<void> fetchPendingApprovalCount() async {
+    final auth = ref.read(authControllerProvider);
+    final wallet = auth.user?.wallet ?? '';
+    if (wallet.isEmpty) return;
+
+    try {
+      final approvals = await ApprovalService.instance.fetchPending(
+        wallet: wallet,
+      );
+      if (!ref.mounted) return;
+      state = state.copyWith(pendingApprovalCount: approvals.length);
+    } catch (_) {
+      // Silently ignore — badge just won't show.
+    }
+  }
+
   void openSkillForm() {
     state = state.copyWith(skillFormOpen: true, clearEditingSkill: true);
     fetchAvailableTools();

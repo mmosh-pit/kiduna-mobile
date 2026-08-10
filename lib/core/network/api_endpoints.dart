@@ -92,6 +92,20 @@ abstract class ApiEndpoints {
   /// `POST /api/skills/generate-content` — AI-generate SKILL.md content.
   static const String skillGenerateContent = '/api/skills/generate-content';
 
+  // ── Approvals ──────────────────────────────────────────────────
+
+  /// `GET /api/approvals` — list approval requests.
+  static const String approvals = '/api/approvals';
+
+  /// `GET /api/approvals/stats` — approval statistics.
+  static const String approvalStats = '/api/approvals/stats';
+
+  /// `PATCH /api/approvals/{id}/approve` — approve an action.
+  static String approvalApprove(String id) => '/api/approvals/$id/approve';
+
+  /// `PATCH /api/approvals/{id}/reject` — reject an action.
+  static String approvalReject(String id) => '/api/approvals/$id/reject';
+
   // ── Dunas (kinship-backend) ───────────────────────────────────────────
 
   /// `GET /dunas` — fetch genesis duna and user dunas.
