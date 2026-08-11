@@ -3,54 +3,56 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/exceptions.dart';
 import '../../../core/utils/logger.dart';
-import '../../../data/models/duna_model.dart';
-import '../../../data/services/duna_service.dart';
+import '../../../data/models/realm_model.dart';
+import '../../../data/services/realm_service.dart';
 
-/// UI state for the ecosystem (genesis duna + organizations + user dunas).
+/// UI state for the ecosystem (genesis Realm + child Realms).
 @immutable
 class EcosystemState {
   const EcosystemState({
     this.genesis,
     this.organizations = const [],
-    this.dunas = const [],
+    this.realms = const [],
     this.isLoading = false,
     this.error,
   });
 
-  final DunaModel? genesis;
+  /// The genesis Ecosystem Realm visible to everyone.
+  final RealmModel? genesis;
 
-  /// Organizations registered under the genesis DUNA.
-  final List<DunaModel> organizations;
+  /// Organizations registered under the genesis Ecosystem.
+  final List<RealmModel> organizations;
 
-  final List<DunaModel> dunas;
+  /// The caller's own Realms.
+  final List<RealmModel> realms;
   final bool isLoading;
   final String? error;
 
-  /// All dunas in display order: genesis first, then organizations, then user dunas.
-  List<DunaModel> get all => [
+  /// All Realms in display order: genesis first, then organizations, then others.
+  List<RealmModel> get all => [
     if (genesis != null) genesis!,
     ...organizations,
-    ...dunas,
+    ...realms,
   ];
 
   EcosystemState copyWith({
-    DunaModel? genesis,
-    List<DunaModel>? organizations,
-    List<DunaModel>? dunas,
+    RealmModel? genesis,
+    List<RealmModel>? organizations,
+    List<RealmModel>? realms,
     bool? isLoading,
     String? error,
   }) {
     return EcosystemState(
       genesis: genesis ?? this.genesis,
       organizations: organizations ?? this.organizations,
-      dunas: dunas ?? this.dunas,
+      realms: realms ?? this.realms,
       isLoading: isLoading ?? this.isLoading,
       error: error,
     );
   }
 }
 
-/// Manages the ecosystem state — fetches dunas from the studio API.
+/// Manages the ecosystem state — fetches Realms from the backend API.
 class EcosystemController extends Notifier<EcosystemState> {
   @override
   EcosystemState build() {
@@ -59,40 +61,56 @@ class EcosystemController extends Notifier<EcosystemState> {
     return const EcosystemState(isLoading: true);
   }
 
-  /// Fetch dunas from the API.
+  /// Fetch the genesis Ecosystem and the caller's Realms from the API.
+  ///
+  /// The ecosystem fetch is public (no auth) and must succeed independently
+  /// of the realms fetch (which requires auth and may 401 if the user hasn't
+  /// fully authenticated yet).
   Future<void> load() async {
     state = state.copyWith(isLoading: true);
+
+    // 1. Fetch genesis ecosystem (public, no auth) — always works.
+    RealmModel? ecosystem;
     try {
-      final response = await DunaService.instance.fetchDunas();
-      state = EcosystemState(
-        genesis: response.genesis,
-        organizations: response.organizations,
-        dunas: response.dunas,
-      );
-    } on AppException catch (e) {
-      AppLogger.warning(
-        'Ecosystem load failed: $e',
-        tag: 'EcosystemController',
-      );
-      state = state.copyWith(isLoading: false, error: e.message);
+      ecosystem = await RealmService.instance.fetchEcosystem();
     } catch (e) {
-      AppLogger.error(
-        'Ecosystem load unexpected error',
+      AppLogger.warning(
+        'Ecosystem fetch failed: $e',
         tag: 'EcosystemController',
-        error: e,
-      );
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Something went wrong. Please try again.',
       );
     }
+
+    // 2. Fetch caller's Realms (auth required) — may fail with 401.
+    List<RealmModel> allRealms = [];
+    try {
+      allRealms = await RealmService.instance.fetchRealms();
+    } catch (e) {
+      AppLogger.warning(
+        'Realms fetch failed (may need auth): $e',
+        tag: 'EcosystemController',
+      );
+    }
+
+    // Separate organizations from other Realms
+    final organizations = allRealms
+        .where((r) => r.type == 'organization')
+        .toList();
+    final otherRealms = allRealms
+        .where((r) => r.type != 'organization' && r.type != 'ecosystem')
+        .toList();
+
+    state = EcosystemState(
+      genesis: ecosystem,
+      organizations: organizations,
+      realms: otherRealms,
+    );
   }
 
   /// Retry after a failure.
   Future<void> retry() => load();
 }
 
-/// Global provider for the ecosystem (dunas) state.
+/// Global provider for the ecosystem (Realms) state.
 final ecosystemControllerProvider =
     NotifierProvider<EcosystemController, EcosystemState>(
       EcosystemController.new,

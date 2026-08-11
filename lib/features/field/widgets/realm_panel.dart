@@ -6,10 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/assets.dart';
 import '../../../core/errors/exceptions.dart';
 import '../../../core/extensions/context_extensions.dart';
-import '../../../data/services/alliance_service.dart';
-import '../../../data/services/institution_service.dart';
-import '../../../data/services/duna_service.dart';
+import '../../../data/services/realm_service.dart';
 import '../../auth/controllers/auth_controller.dart';
+import '../controllers/ecosystem_controller.dart';
 import '../controllers/field_controller.dart';
 import '../data/field_fixtures.dart';
 import 'field_inputs.dart';
@@ -104,12 +103,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
     setState(() { _handleAvailable = null; _handleChecking = handle.isNotEmpty; });
     if (handle.isEmpty) return;
     _handleDebounce = Timer(const Duration(milliseconds: 400), () async {
-      bool available;
-      if (_isInstitution) {
-        available = await InstitutionService.instance.checkHandleAvailability(handle);
-      } else {
-        available = await ref.read(fieldControllerProvider.notifier).checkHandleAvailability(handle);
-      }
+      final available = await RealmService.instance.checkHandleAvailability(handle);
       if (mounted && _handle.text == handle) {
         setState(() { _handleAvailable = available; _handleChecking = false; });
       }
@@ -190,42 +184,60 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
     setState(() { _submitting = true; _error = null; });
 
     try {
+      final auth = ref.read(authControllerProvider);
+      final fieldCtrl = ref.read(fieldControllerProvider.notifier);
+
       if (_isAlliance) {
-        final auth = ref.read(authControllerProvider);
-        final alliance = await AllianceService.instance.createAlliance(
-          name: nameText, handle: _handle.text.trim(),
+        final realm = await RealmService.instance.createRealm(
+          name: nameText, type: 'alliance',
+          handle: _handle.text.trim(),
           description: _description.text.trim(),
           purpose: _sharedPurpose.text.trim(),
           visibility: _visibility, walletEnabled: true, authToken: auth.token,
         );
-        if (mounted) ref.read(fieldControllerProvider.notifier).onAllianceCreated(alliance);
+        if (mounted) fieldCtrl.onRealmCreated(realm);
       } else if (_isInstitution) {
-        final auth = ref.read(authControllerProvider);
-        final institution = await InstitutionService.instance.createInstitution(
-          name: nameText, handle: _handle.text.trim(),
+        final realm = await RealmService.instance.createRealm(
+          name: nameText, type: 'institution',
+          handle: _handle.text.trim(),
           description: _description.text.trim(),
           purpose: _sharedPurpose.text.trim(),
-          entityType: _entityType,
-          registrationDomain: _regDomain.text.trim(),
-          standingDocUrl: _standingDocUrl.text.trim(),
-          designateContact: _designateContact.text.trim(),
-          designateEmail: _designateEmail.text.trim(),
-          address: _address.text.trim(),
+          config: {
+            'entityType': _entityType,
+            if (_regDomain.text.trim().isNotEmpty)
+              'registrationDomain': _regDomain.text.trim(),
+            if (_standingDocUrl.text.trim().isNotEmpty)
+              'standingDocUrl': _standingDocUrl.text.trim(),
+            if (_designateContact.text.trim().isNotEmpty)
+              'designateContact': _designateContact.text.trim(),
+            if (_designateEmail.text.trim().isNotEmpty)
+              'designateEmail': _designateEmail.text.trim(),
+            if (_address.text.trim().isNotEmpty)
+              'address': _address.text.trim(),
+          },
           walletEnabled: true, authToken: auth.token,
         );
-        if (mounted) ref.read(fieldControllerProvider.notifier).onInstitutionCreated(institution);
+        if (mounted) fieldCtrl.onRealmCreated(realm);
       } else if (_isOrganization) {
-        final auth = ref.read(authControllerProvider);
-        await DunaService.instance.createOrganization(
-          name: nameText,
+        // Organization: parentId is the genesis Ecosystem
+        final ecosystemState = ref.read(ecosystemControllerProvider);
+        final parentId = ecosystemState.genesis?.id;
+
+        final realm = await RealmService.instance.createRealm(
+          name: nameText, type: 'organization',
+          parentId: parentId,
           purpose: _purpose.text.trim(),
           email: _email.text.trim(),
-          registration: _registration.text.trim(),
+          config: {
+            if (_registration.text.trim().isNotEmpty)
+              'registration': _registration.text.trim(),
+          },
           authToken: auth.token,
         );
-        if (mounted) ref.read(fieldControllerProvider.notifier).onOrganizationCreated(nameText);
+        if (mounted) fieldCtrl.onRealmCreated(realm);
       } else {
-        await ref.read(fieldControllerProvider.notifier).createRealm(
+        // Other types (chapter, guild, cooperative, etc.) — local UI-only for now
+        await fieldCtrl.createRealm(
           name: nameText, type: _type, purpose: _purpose.text.trim(),
         );
       }

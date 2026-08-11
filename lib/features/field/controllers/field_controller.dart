@@ -28,9 +28,8 @@ import '../data/field_fixtures.dart';
 import '../data/realm_atlas.dart';
 import 'ally_controller.dart';
 import 'ecosystem_controller.dart';
-import '../../../data/services/alliance_service.dart';
-import '../../../data/models/alliance_model.dart';
-import '../../../data/models/institution_model.dart';
+import '../../../data/services/realm_service.dart';
+import '../../../data/models/realm_model.dart';
 
 /// UI state for the Field.
 @immutable
@@ -542,69 +541,45 @@ class FieldController extends Notifier<FieldState> {
     );
   }
 
-  /// Called by [RealmPanel] after a successful Alliance creation.
+  /// Called by [RealmPanel] after a successful Realm creation (any type).
   /// Updates the field state and shows a Ki confirmation message.
   /// The API call itself lives in the panel so errors display in-form.
-  void onAllianceCreated(AllianceModel alliance) {
-    final pda = alliance.vaultPda;
+  void onRealmCreated(RealmModel realm) {
+    final pda = realm.vaultPda;
     final walletInfo = pda != null
         ? 'Team Wallet ${pda.substring(0, 4)}…${pda.substring(pda.length - 4)} ready.'
         : '';
 
     state = state.copyWith(
       currentRealm: FieldRealm(
-        name: alliance.name,
-        type: 'Alliance',
-        emblemAsset: AppAssets.realmEmblem('Alliance'),
+        name: realm.name,
+        type: realm.typeLabel,
+        emblemAsset: AppAssets.realmEmblem(realm.typeLabel),
       ),
       openActions:
           state.openActions.where((item) => item != 'realm').toList(),
     );
+
+    final statusNote = realm.type == 'institution'
+        ? ' Status: ${realm.status}.'
+        : '';
+
     askAbout(
       KiTopic(
-        title: '${alliance.name} created',
+        title: '${realm.name} created',
         body:
-            'Ki has created the Alliance "${alliance.name}" with handle '
-            '@${alliance.handle}. You are its first Wizard. $walletInfo',
+            'Ki has created the ${realm.typeLabel} "${realm.name}" with handle '
+            '@${realm.handle}.$statusNote $walletInfo',
         invitation:
-            'Ki can help add members, set the spending rule, or '
-            'shape the Alliance\'s purpose and boundaries.',
+            'Ki can help add members, shape purpose and boundaries, or '
+            'configure the ${realm.typeLabel}.',
       ),
     );
   }
 
-  /// Check if a handle is available for an Alliance.
+  /// Check if a handle is available for any Realm type (unified endpoint).
   Future<bool> checkHandleAvailability(String handle) async {
-    return AllianceService.instance.checkHandleAvailability(handle);
-  }
-
-  /// Called by [RealmPanel] after a successful Institution creation.
-  void onInstitutionCreated(InstitutionModel institution) {
-    final pda = institution.vaultPda;
-    final walletInfo = pda != null
-        ? 'Team Wallet ${pda.substring(0, 4)}…${pda.substring(pda.length - 4)} ready.'
-        : '';
-
-    state = state.copyWith(
-      currentRealm: FieldRealm(
-        name: institution.name,
-        type: 'Institution',
-        emblemAsset: AppAssets.realmEmblem('Institution'),
-      ),
-      openActions:
-          state.openActions.where((item) => item != 'realm').toList(),
-    );
-    askAbout(
-      KiTopic(
-        title: '${institution.name} created',
-        body:
-            'Ki has created the Institution "${institution.name}" with handle '
-            '@${institution.handle}. Status: Draft. $walletInfo',
-        invitation:
-            'Ki can help add members, upload standing documentation, or '
-            'publish the Institution when ready.',
-      ),
-    );
+    return RealmService.instance.checkHandleAvailability(handle);
   }
 
   void savePresentation({required String name, required String type}) {
