@@ -50,7 +50,10 @@ jobs:
           languages: ${{ matrix.language }}
 
       - name: Install Flutter dependencies
-        run: flutter pub get
+        run: | 
+          flutter clean
+          rm -rf android/.gradle
+          flutter pub get
       - name: env copy
         run: |
           cp .env.example .env
