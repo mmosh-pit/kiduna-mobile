@@ -11,6 +11,7 @@ import '../../auth/controllers/auth_controller.dart';
 import '../controllers/ecosystem_controller.dart';
 import '../controllers/field_controller.dart';
 import '../data/field_fixtures.dart';
+import '../data/realm_themes.dart';
 import 'field_inputs.dart';
 
 /// The Form a New Realm working panel.
@@ -48,6 +49,8 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
   String _type = 'Organization';
   String _visibility = 'public';
   String _entityType = 'company';
+  String? _primaryTheme;
+  String? _primaryFocus;
   bool _submitting = false;
   String? _error;
 
@@ -79,7 +82,9 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
   bool get _isOrganization => _type == 'Organization';
   bool get _isAlliance => _type == 'Alliance';
   bool get _isInstitution => _type == 'Institution';
-  bool get _hasHandle => _isAlliance || _isInstitution;
+  bool get _isCommunity => _type == 'Community';
+  bool get _hasHandle => _isAlliance || _isInstitution || _isCommunity;
+  bool get _requiresTheme => _isOrganization || _isAlliance || _isInstitution || _isCommunity;
 
   void _autoSuggestHandle() {
     if (!_hasHandle) return;
@@ -170,6 +175,11 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
       if (!_emailRe.hasMatch(orgEmail)) return 'Email format is invalid.';
     }
 
+    if (_requiresTheme) {
+      if (_primaryTheme == null) return 'Primary Theme is required.';
+      if (_primaryFocus == null) return 'Primary Focus is required.';
+    }
+
     return null;
   }
 
@@ -193,7 +203,10 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
           handle: _handle.text.trim(),
           description: _description.text.trim(),
           purpose: _sharedPurpose.text.trim(),
-          visibility: _visibility, walletEnabled: true, authToken: auth.token,
+          visibility: _visibility, walletEnabled: true,
+          primaryTheme: _primaryTheme,
+          primaryFocus: _primaryFocus,
+          authToken: auth.token,
         );
         if (mounted) fieldCtrl.onRealmCreated(realm);
       } else if (_isInstitution) {
@@ -215,7 +228,10 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
             if (_address.text.trim().isNotEmpty)
               'address': _address.text.trim(),
           },
-          walletEnabled: true, authToken: auth.token,
+          walletEnabled: true,
+          primaryTheme: _primaryTheme,
+          primaryFocus: _primaryFocus,
+          authToken: auth.token,
         );
         if (mounted) fieldCtrl.onRealmCreated(realm);
       } else if (_isOrganization) {
@@ -232,11 +248,26 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
             if (_registration.text.trim().isNotEmpty)
               'registration': _registration.text.trim(),
           },
+          walletEnabled: true,
+          primaryTheme: _primaryTheme,
+          primaryFocus: _primaryFocus,
+          authToken: auth.token,
+        );
+        if (mounted) fieldCtrl.onRealmCreated(realm);
+      } else if (_isCommunity) {
+        final realm = await RealmService.instance.createRealm(
+          name: nameText, type: 'community',
+          handle: _handle.text.trim(),
+          description: _description.text.trim(),
+          purpose: _sharedPurpose.text.trim(),
+          visibility: _visibility,
+          primaryTheme: _primaryTheme,
+          primaryFocus: _primaryFocus,
           authToken: auth.token,
         );
         if (mounted) fieldCtrl.onRealmCreated(realm);
       } else {
-        // Other types (chapter, guild, cooperative, etc.) — local UI-only for now
+        // Other types (program, project, dyad, etc.) — local UI-only for now
         await fieldCtrl.createRealm(
           name: nameText, type: _type, purpose: _purpose.text.trim(),
         );
@@ -298,11 +329,13 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
                     label: _isAlliance ? l10n.allianceNameLabel
                         : _isInstitution ? l10n.institutionNameLabel
                         : _isOrganization ? l10n.organizationName
+                        : _isCommunity ? l10n.communityNameLabel
                         : l10n.realmName,
                     controller: _name,
                     hint: _isAlliance ? l10n.allianceNameHint
                         : _isInstitution ? l10n.institutionNameHint
                         : _isOrganization ? l10n.nameThisOrganization
+                        : _isCommunity ? l10n.communityNameHint
                         : l10n.nameThisRealm,
                   ),
                 ),
@@ -393,6 +426,19 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
             ],
 
             // ═════════════════════════════════════════════════════════════
+            // ── Community-specific fields ────────────────────────────────
+            // ═════════════════════════════════════════════════════════════
+            if (_isCommunity) ...[
+              FieldTextInput(label: l10n.descriptionLabel, controller: _description,
+                  hint: l10n.communityDescriptionHint, maxLines: 3),
+              const SizedBox(height: 12),
+              FieldTextInput(label: l10n.purposeProjectLabel, controller: _sharedPurpose,
+                  hint: l10n.communityPurposeHint),
+              const SizedBox(height: 12),
+              _VisibilitySelector(value: _visibility, onChanged: (v) => setState(() => _visibility = v)),
+            ],
+
+            // ═════════════════════════════════════════════════════════════
             // ── Organization-specific fields ─────────────────────────────
             // ═════════════════════════════════════════════════════════════
             if (_isOrganization) ...[
@@ -401,7 +447,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
             ],
 
             // ── Purpose (Organization + Other types) ──────────────────
-            if (!_isAlliance && !_isInstitution) ...[
+            if (!_isAlliance && !_isInstitution && !_isCommunity) ...[
               FieldTextInput(label: l10n.purpose, controller: _purpose,
                   hint: _isOrganization ? l10n.whatIsTheMissionYourMembersShare : l10n.whatShouldThisRealmBringIntoBeing,
                   maxLines: 3),
@@ -411,6 +457,26 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
             // ── Email (Organization only) ─────────────────────────────
             if (_isOrganization) ...[
               FieldTextInput(label: l10n.emailLabel, controller: _email, hint: l10n.emailHint),
+              const SizedBox(height: 12),
+            ],
+
+            // ═════════════════════════════════════════════════════════════
+            // ── Theme / Focus (all API-backed types) ────────────────────
+            // ═════════════════════════════════════════════════════════════
+            if (_requiresTheme) ...[
+              _ThemeFocusSelector(
+                theme: _primaryTheme,
+                focus: _primaryFocus,
+                onThemeChanged: (v) => setState(() {
+                  _primaryTheme = v;
+                  _primaryFocus = null;
+                  _error = null;
+                }),
+                onFocusChanged: (v) => setState(() {
+                  _primaryFocus = v;
+                  _error = null;
+                }),
+              ),
               const SizedBox(height: 12),
             ],
 
@@ -459,7 +525,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
                 builder: (context, _) {
                   final nameOk = _name.text.trim().isNotEmpty;
                   bool canCreate;
-                  if (_isAlliance || _isInstitution) {
+                  if (_isAlliance || _isInstitution || _isCommunity) {
                     final handleOk = _handle.text.trim().isNotEmpty && _handleAvailable != false;
                     canCreate = nameOk && handleOk && !_submitting;
                   } else if (_isOrganization) {
@@ -474,6 +540,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
                         : _isAlliance ? l10n.createAllianceAction
                         : _isInstitution ? l10n.createInstitutionAction
                         : _isOrganization ? l10n.createOrganizationAction
+                        : _isCommunity ? l10n.createCommunityAction
                         : l10n.createRealmAction,
                     onPressed: canCreate ? _handleCreate : null,
                   );
@@ -604,5 +671,151 @@ class _ReadOnlyField extends StatelessWidget {
       if (hint != null) ...[const SizedBox(height: 4),
         Text(hint!, style: textTheme.micro.copyWith(color: colors.quiet.withValues(alpha: 0.6)))],
     ]);
+  }
+}
+
+class _ThemeFocusSelector extends StatelessWidget {
+  const _ThemeFocusSelector({
+    required this.theme,
+    required this.focus,
+    required this.onThemeChanged,
+    required this.onFocusChanged,
+  });
+
+  final String? theme;
+  final String? focus;
+  final ValueChanged<String> onThemeChanged;
+  final ValueChanged<String> onFocusChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.kiduna;
+    final textTheme = context.kidunaText;
+    final l10n = context.l10n;
+    final inputStyle = textTheme.caption.copyWith(color: colors.text, height: 1.4);
+    final hintStyle = inputStyle.copyWith(color: colors.quiet);
+    final borderRadius = BorderRadius.circular(context.metrics.radiusMd);
+    final borderColor = colors.camel.withValues(alpha: 0.24);
+    final focuses = theme != null
+        ? (RealmThemes.focuses[theme!] ?? <String>[])
+        : <String>[];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        FieldLabel(text: l10n.primaryThemeLabel),
+        const SizedBox(height: 6),
+        _DropdownField<String>(
+          value: theme,
+          hint: l10n.primaryThemeHint,
+          items: RealmThemes.themes,
+          inputStyle: inputStyle,
+          hintStyle: hintStyle,
+          borderRadius: borderRadius,
+          borderColor: borderColor,
+          dropdownColor: colors.raised,
+          iconColor: colors.quiet,
+          skyColor: colors.sky,
+          onChanged: (v) {
+            if (v != null) {
+              onThemeChanged(v);
+            }
+          },
+        ),
+        const SizedBox(height: 12),
+        FieldLabel(text: l10n.primaryFocusLabel),
+        const SizedBox(height: 6),
+        _DropdownField<String>(
+          value: focus,
+          hint: theme == null ? l10n.selectThemeFirst : l10n.primaryFocusHint,
+          items: focuses,
+          inputStyle: inputStyle,
+          hintStyle: hintStyle,
+          borderRadius: borderRadius,
+          borderColor: borderColor,
+          dropdownColor: colors.raised,
+          iconColor: colors.quiet,
+          skyColor: colors.sky,
+          enabled: theme != null,
+          onChanged: (v) {
+            if (v != null) {
+              onFocusChanged(v);
+            }
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _DropdownField<T> extends StatelessWidget {
+  const _DropdownField({
+    required this.value,
+    required this.hint,
+    required this.items,
+    required this.inputStyle,
+    required this.hintStyle,
+    required this.borderRadius,
+    required this.borderColor,
+    required this.dropdownColor,
+    required this.iconColor,
+    required this.skyColor,
+    required this.onChanged,
+    this.enabled = true,
+  });
+
+  final T? value;
+  final String hint;
+  final List<T> items;
+  final TextStyle inputStyle;
+  final TextStyle hintStyle;
+  final BorderRadius borderRadius;
+  final Color borderColor;
+  final Color dropdownColor;
+  final Color iconColor;
+  final Color skyColor;
+  final ValueChanged<T?> onChanged;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    return InputDecorator(
+      decoration: InputDecoration(
+        isDense: true,
+        filled: true,
+        fillColor: const Color.fromRGBO(6, 3, 4, 0.66),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+        constraints: const BoxConstraints(minHeight: 37),
+        border: OutlineInputBorder(
+          borderRadius: borderRadius,
+          borderSide: BorderSide(color: borderColor),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: borderRadius,
+          borderSide: BorderSide(color: borderColor),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: borderRadius,
+          borderSide: BorderSide(color: skyColor),
+        ),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<T>(
+          value: value,
+          hint: Text(hint, style: hintStyle),
+          isExpanded: true,
+          style: inputStyle,
+          dropdownColor: dropdownColor,
+          icon: Icon(Icons.arrow_drop_down, color: iconColor, size: 20),
+          items: items
+              .map((item) => DropdownMenuItem<T>(
+                    value: item,
+                    child: Text('$item'),
+                  ))
+              .toList(),
+          onChanged: enabled ? onChanged : null,
+        ),
+      ),
+    );
   }
 }

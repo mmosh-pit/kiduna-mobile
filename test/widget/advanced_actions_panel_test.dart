@@ -14,7 +14,7 @@ final _placement = FieldPlacement(
   left: 45,
   top: 30,
   band: FieldBand.near,
-  cluster: FieldClusterId.formation,
+  cluster: FieldClusterId.knowledgeFrontier,
   mass: 3,
   reason: 'Alice is the Catalyst of Dunaversity.',
   rolePull: true,

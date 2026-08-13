@@ -57,6 +57,11 @@
   "approvalThresholdLabel": "Approval Threshold",
   "approvalThresholdHint": "Starts at 1 of 1 — raise it later under \"Approval Threshold\".",
   "createAllianceAction": "Create Alliance",
+  "communityNameLabel": "Community name",
+  "communityNameHint": "e.g. Tamil Health Collective",
+  "communityDescriptionHint": "What this Community is about.",
+  "communityPurposeHint": "Bringing people together around a shared interest",
+  "createCommunityAction": "Create Community",
   "institutionNameLabel": "Institution name",
   "institutionNameHint": "e.g. Acme Corporation",
   "entityTypeLabel": "Entity type",
@@ -540,5 +545,10 @@
       "chars": { "type": "int" },
       "words": { "type": "int" }
     }
-  }
+  },
+  "primaryThemeLabel": "Primary Theme",
+  "primaryThemeHint": "Select a theme",
+  "primaryFocusLabel": "Primary Focus",
+  "primaryFocusHint": "Select a focus",
+  "selectThemeFirst": "Select a theme first"
 }

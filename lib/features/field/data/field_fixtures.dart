@@ -97,11 +97,13 @@ abstract class FieldFixtures {
   static const List<String> realmTypes = [
     'Organization',
     'Alliance',
-    'Community',
     'Program',
     'Project',
-    'Relationship',
+    'Community',
     'Institution',
+    'Council',
+    'Concept',
+    'Cell',
   ];
 
   /// Fixture invitation link and code shown in the review.
