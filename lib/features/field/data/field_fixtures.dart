@@ -385,6 +385,35 @@ abstract class FieldFixtures {
     'solana': 'Check Balance',
   };
 
+  /// Multiple "then" suggestions per tool (shown when tool IS selected).
+  static const Map<String, List<String>> toolThenSuggestions = {
+    'bluesky': [
+      'Reply To Post',
+      'Create Post',
+      'Like Post',
+      'Follow User',
+      'Send Direct Message',
+    ],
+    'google': [
+      'Send Email',
+      'Create Calendar Event',
+      'Schedule Meeting',
+      'Reply to Email',
+    ],
+    'telegram': [
+      'Send Message',
+      'Send Reply',
+      'Forward Message',
+      'Send Photo',
+    ],
+    'solana': [
+      'Check Balance',
+      'Send SOL',
+      'Send Token',
+      'Get Transaction History',
+    ],
+  };
+
   // ── Tool Actions ─────────────────────────────────────────────
 
   /// Maps connected tool name (from GlobalToolAccount) → MCP service names.

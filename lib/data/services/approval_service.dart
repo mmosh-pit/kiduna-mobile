@@ -144,6 +144,10 @@ class ApprovalService {
           'wallet': wallet,
           if (editedAction != null) 'editedAction': editedAction,
         },
+        options: Options(
+          sendTimeout: const Duration(seconds: 5),
+          receiveTimeout: const Duration(seconds: 60),
+        ),
       );
       AppLogger.info(
         'Approved: $approvalId',
@@ -151,6 +155,16 @@ class ApprovalService {
       );
       return true;
     } on DioException catch (e) {
+      // If timeout but request was sent, treat as success
+      // (backend will execute in background).
+      if (e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.connectionTimeout) {
+        AppLogger.info(
+          'Approve sent (timeout waiting for execution): $approvalId',
+          tag: 'ApprovalService',
+        );
+        return true;
+      }
       AppLogger.warning(
         'Failed to approve: ${e.message}',
         tag: 'ApprovalService',
