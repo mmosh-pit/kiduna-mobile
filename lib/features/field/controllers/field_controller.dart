@@ -260,6 +260,7 @@ class FieldController extends Notifier<FieldState> {
             type: 'Ecosystem',
             emblemAsset: AppAssets.realmEmblem('organization'),
           ),
+          currentRealmId: genesis.id,
         );
       } else if (!next.isLoading) {
         // Loading finished but no genesis exists — show placeholder.
@@ -556,6 +557,7 @@ class FieldController extends Notifier<FieldState> {
         type: realm.typeLabel,
         emblemAsset: AppAssets.realmEmblem(realm.typeLabel),
       ),
+      currentRealmId: realm.id,
       openActions:
           state.openActions.where((item) => item != 'realm').toList(),
     );
@@ -722,6 +724,7 @@ class FieldController extends Notifier<FieldState> {
       thenText: thenText,
       tools: tools,
       requiresApproval: requiresApproval,
+      realmId: state.currentRealmId != 'kinship-duna' ? state.currentRealmId : null,
       skillFilePath: '$slug.md',
     );
 
@@ -1189,6 +1192,7 @@ class FieldController extends Notifier<FieldState> {
         wallet: wallet,
         toolName: toolName,
         credentials: enrichedCredentials,
+        realmId: state.currentRealmId != 'kinship-duna' ? state.currentRealmId : null,
       );
 
       if (!ref.mounted) {

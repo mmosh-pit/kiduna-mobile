@@ -18,10 +18,14 @@ class SkillService {
   Dio get _dio => ApiClient.instance.dio;
 
   /// Fetch all skills from the backend.
-  Future<List<SkillModel>> list() async {
+  /// Optionally filter by [realmId] for per-Realm skill listing.
+  Future<List<SkillModel>> list({String? realmId}) async {
     try {
+      final queryParams = <String, dynamic>{};
+      if (realmId != null) queryParams['realmId'] = realmId;
       final response = await _dio.get<Map<String, dynamic>>(
         ApiEndpoints.skills,
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
       );
 
       final body = response.data;
