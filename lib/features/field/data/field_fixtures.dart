@@ -104,6 +104,7 @@ abstract class FieldFixtures {
     'Council',
     'Concept',
     'Cell',
+    'Dyad',
   ];
 
   /// Fixture invitation link and code shown in the review.

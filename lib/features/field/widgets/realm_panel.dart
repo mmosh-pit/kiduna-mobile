@@ -83,8 +83,14 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
   bool get _isAlliance => _type == 'Alliance';
   bool get _isInstitution => _type == 'Institution';
   bool get _isCommunity => _type == 'Community';
-  bool get _hasHandle => _isAlliance || _isInstitution || _isCommunity;
-  bool get _requiresTheme => _isOrganization || _isAlliance || _isInstitution || _isCommunity;
+  bool get _isProgram => _type == 'Program';
+  bool get _isProject => _type == 'Project';
+  bool get _isConcept => _type == 'Concept';
+  bool get _isCell => _type == 'Cell';
+  bool get _isDyad => _type == 'Dyad';
+  bool get _isCouncil => _type == 'Council';
+  bool get _hasHandle => _isAlliance || _isInstitution || _isCommunity || _isProgram || _isProject || _isConcept || _isCell || _isDyad || _isCouncil;
+  bool get _requiresTheme => _isOrganization || _isAlliance || _isInstitution || _isCommunity || _isProgram || _isProject || _isConcept || _isCell || _isDyad || _isCouncil;
 
   void _autoSuggestHandle() {
     if (!_hasHandle) return;
@@ -196,10 +202,13 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
     try {
       final auth = ref.read(authControllerProvider);
       final fieldCtrl = ref.read(fieldControllerProvider.notifier);
+      final fieldState = ref.read(fieldControllerProvider);
+      final enteredParentId = fieldState.enteredRealmId;
 
       if (_isAlliance) {
         final realm = await RealmService.instance.createRealm(
           name: nameText, type: 'alliance',
+          parentId: enteredParentId,
           handle: _handle.text.trim(),
           description: _description.text.trim(),
           purpose: _sharedPurpose.text.trim(),
@@ -212,6 +221,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
       } else if (_isInstitution) {
         final realm = await RealmService.instance.createRealm(
           name: nameText, type: 'institution',
+          parentId: enteredParentId,
           handle: _handle.text.trim(),
           description: _description.text.trim(),
           purpose: _sharedPurpose.text.trim(),
@@ -235,9 +245,8 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
         );
         if (mounted) fieldCtrl.onRealmCreated(realm);
       } else if (_isOrganization) {
-        // Organization: parentId is the genesis Ecosystem
         final ecosystemState = ref.read(ecosystemControllerProvider);
-        final parentId = ecosystemState.genesis?.id;
+        final parentId = enteredParentId ?? ecosystemState.genesis?.id;
 
         final realm = await RealmService.instance.createRealm(
           name: nameText, type: 'organization',
@@ -257,6 +266,85 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
       } else if (_isCommunity) {
         final realm = await RealmService.instance.createRealm(
           name: nameText, type: 'community',
+          parentId: enteredParentId,
+          handle: _handle.text.trim(),
+          description: _description.text.trim(),
+          purpose: _sharedPurpose.text.trim(),
+          visibility: _visibility,
+          primaryTheme: _primaryTheme,
+          primaryFocus: _primaryFocus,
+          authToken: auth.token,
+        );
+        if (mounted) fieldCtrl.onRealmCreated(realm);
+      } else if (_isProgram) {
+        final realm = await RealmService.instance.createRealm(
+          name: nameText, type: 'program',
+          parentId: enteredParentId,
+          handle: _handle.text.trim(),
+          description: _description.text.trim(),
+          purpose: _sharedPurpose.text.trim(),
+          visibility: _visibility,
+          primaryTheme: _primaryTheme,
+          primaryFocus: _primaryFocus,
+          authToken: auth.token,
+        );
+        if (mounted) fieldCtrl.onRealmCreated(realm);
+      } else if (_isProject) {
+        final realm = await RealmService.instance.createRealm(
+          name: nameText, type: 'project',
+          parentId: enteredParentId,
+          handle: _handle.text.trim(),
+          description: _description.text.trim(),
+          purpose: _sharedPurpose.text.trim(),
+          visibility: _visibility,
+          primaryTheme: _primaryTheme,
+          primaryFocus: _primaryFocus,
+          authToken: auth.token,
+        );
+        if (mounted) fieldCtrl.onRealmCreated(realm);
+      } else if (_isConcept) {
+        final realm = await RealmService.instance.createRealm(
+          name: nameText, type: 'concept',
+          parentId: enteredParentId,
+          handle: _handle.text.trim(),
+          description: _description.text.trim(),
+          purpose: _sharedPurpose.text.trim(),
+          visibility: _visibility,
+          primaryTheme: _primaryTheme,
+          primaryFocus: _primaryFocus,
+          authToken: auth.token,
+        );
+        if (mounted) fieldCtrl.onRealmCreated(realm);
+      } else if (_isCell) {
+        final realm = await RealmService.instance.createRealm(
+          name: nameText, type: 'cell',
+          parentId: enteredParentId,
+          handle: _handle.text.trim(),
+          description: _description.text.trim(),
+          purpose: _sharedPurpose.text.trim(),
+          visibility: _visibility,
+          primaryTheme: _primaryTheme,
+          primaryFocus: _primaryFocus,
+          authToken: auth.token,
+        );
+        if (mounted) fieldCtrl.onRealmCreated(realm);
+      } else if (_isDyad) {
+        final realm = await RealmService.instance.createRealm(
+          name: nameText, type: 'dyad',
+          parentId: enteredParentId,
+          handle: _handle.text.trim(),
+          description: _description.text.trim(),
+          purpose: _sharedPurpose.text.trim(),
+          visibility: _visibility,
+          primaryTheme: _primaryTheme,
+          primaryFocus: _primaryFocus,
+          authToken: auth.token,
+        );
+        if (mounted) fieldCtrl.onRealmCreated(realm);
+      } else if (_isCouncil) {
+        final realm = await RealmService.instance.createRealm(
+          name: nameText, type: 'council',
+          parentId: enteredParentId,
           handle: _handle.text.trim(),
           description: _description.text.trim(),
           purpose: _sharedPurpose.text.trim(),
@@ -267,7 +355,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
         );
         if (mounted) fieldCtrl.onRealmCreated(realm);
       } else {
-        // Other types (program, project, dyad, etc.) — local UI-only for now
+        // Fallback — local UI-only
         await fieldCtrl.createRealm(
           name: nameText, type: _type, purpose: _purpose.text.trim(),
         );
@@ -330,12 +418,24 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
                         : _isInstitution ? l10n.institutionNameLabel
                         : _isOrganization ? l10n.organizationName
                         : _isCommunity ? l10n.communityNameLabel
+                        : _isProgram ? l10n.programNameLabel
+                        : _isProject ? l10n.projectNameLabel
+                        : _isConcept ? l10n.conceptNameLabel
+                        : _isCell ? l10n.cellNameLabel
+                        : _isDyad ? l10n.dyadNameLabel
+                        : _isCouncil ? l10n.councilNameLabel
                         : l10n.realmName,
                     controller: _name,
                     hint: _isAlliance ? l10n.allianceNameHint
                         : _isInstitution ? l10n.institutionNameHint
                         : _isOrganization ? l10n.nameThisOrganization
                         : _isCommunity ? l10n.communityNameHint
+                        : _isProgram ? l10n.programNameHint
+                        : _isProject ? l10n.projectNameHint
+                        : _isConcept ? l10n.conceptNameHint
+                        : _isCell ? l10n.cellNameHint
+                        : _isDyad ? l10n.dyadNameHint
+                        : _isCouncil ? l10n.councilNameHint
                         : l10n.nameThisRealm,
                   ),
                 ),
@@ -439,6 +539,84 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
             ],
 
             // ═════════════════════════════════════════════════════════════
+            // ── Program-specific fields ──────────────────────────────────
+            // ═════════════════════════════════════════════════════════════
+            if (_isProgram) ...[
+              FieldTextInput(label: l10n.descriptionLabel, controller: _description,
+                  hint: l10n.programDescriptionHint, maxLines: 3),
+              const SizedBox(height: 12),
+              FieldTextInput(label: l10n.purposeProjectLabel, controller: _sharedPurpose,
+                  hint: l10n.programPurposeHint),
+              const SizedBox(height: 12),
+              _VisibilitySelector(value: _visibility, onChanged: (v) => setState(() => _visibility = v)),
+            ],
+
+            // ═════════════════════════════════════════════════════════════
+            // ── Project-specific fields ─────────────────────────────────
+            // ═════════════════════════════════════════════════════════════
+            if (_isProject) ...[
+              FieldTextInput(label: l10n.descriptionLabel, controller: _description,
+                  hint: l10n.projectDescriptionHint, maxLines: 3),
+              const SizedBox(height: 12),
+              FieldTextInput(label: l10n.purposeProjectLabel, controller: _sharedPurpose,
+                  hint: l10n.projectPurposeHint),
+              const SizedBox(height: 12),
+              _VisibilitySelector(value: _visibility, onChanged: (v) => setState(() => _visibility = v)),
+            ],
+
+            // ═════════════════════════════════════════════════════════════
+            // ── Concept-specific fields ─────────────────────────────────
+            // ═════════════════════════════════════════════════════════════
+            if (_isConcept) ...[
+              FieldTextInput(label: l10n.descriptionLabel, controller: _description,
+                  hint: l10n.conceptDescriptionHint, maxLines: 3),
+              const SizedBox(height: 12),
+              FieldTextInput(label: l10n.purposeProjectLabel, controller: _sharedPurpose,
+                  hint: l10n.conceptPurposeHint),
+              const SizedBox(height: 12),
+              _VisibilitySelector(value: _visibility, onChanged: (v) => setState(() => _visibility = v)),
+            ],
+
+            // ═════════════════════════════════════════════════════════════
+            // ── Cell-specific fields ────────────────────────────────────
+            // ═════════════════════════════════════════════════════════════
+            if (_isCell) ...[
+              FieldTextInput(label: l10n.descriptionLabel, controller: _description,
+                  hint: l10n.cellDescriptionHint, maxLines: 3),
+              const SizedBox(height: 12),
+              FieldTextInput(label: l10n.purposeProjectLabel, controller: _sharedPurpose,
+                  hint: l10n.cellPurposeHint),
+              const SizedBox(height: 12),
+              _VisibilitySelector(value: _visibility, onChanged: (v) => setState(() => _visibility = v)),
+            ],
+
+            // ═════════════════════════════════════════════════════════════
+            // ── Dyad-specific fields ────────────────────────────────────
+            // ═════════════════════════════════════════════════════════════
+            if (_isDyad) ...[
+              FieldTextInput(label: l10n.descriptionLabel, controller: _description,
+                  hint: l10n.dyadDescriptionHint, maxLines: 3),
+              const SizedBox(height: 12),
+              FieldTextInput(label: l10n.purposeProjectLabel, controller: _sharedPurpose,
+                  hint: l10n.dyadPurposeHint),
+              const SizedBox(height: 12),
+              _VisibilitySelector(value: _visibility, onChanged: (v) => setState(() => _visibility = v)),
+            ],
+
+            // ═════════════════════════════════════════════════════════════
+            // ── Council-specific fields ─────────────────────────────────
+            // ═════════════════════════════════════════════════════════════
+            if (_isCouncil) ...[
+              FieldTextInput(label: l10n.descriptionLabel, controller: _description,
+                  hint: l10n.councilDescriptionHint, maxLines: 3),
+              const SizedBox(height: 12),
+              FieldTextInput(label: l10n.purposeProjectLabel, controller: _sharedPurpose,
+                  hint: l10n.councilPurposeHint),
+              const SizedBox(height: 12),
+              _VisibilitySelector(value: _visibility, onChanged: (v) => setState(() => _visibility = v)),
+            ],
+
+            // ═════════════════════════════════════════════════════════════
             // ── Organization-specific fields ─────────────────────────────
             // ═════════════════════════════════════════════════════════════
             if (_isOrganization) ...[
@@ -447,7 +625,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
             ],
 
             // ── Purpose (Organization + Other types) ──────────────────
-            if (!_isAlliance && !_isInstitution && !_isCommunity) ...[
+            if (!_isAlliance && !_isInstitution && !_isCommunity && !_isProgram && !_isProject && !_isConcept && !_isCell && !_isDyad && !_isCouncil) ...[
               FieldTextInput(label: l10n.purpose, controller: _purpose,
                   hint: _isOrganization ? l10n.whatIsTheMissionYourMembersShare : l10n.whatShouldThisRealmBringIntoBeing,
                   maxLines: 3),
@@ -525,7 +703,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
                 builder: (context, _) {
                   final nameOk = _name.text.trim().isNotEmpty;
                   bool canCreate;
-                  if (_isAlliance || _isInstitution || _isCommunity) {
+                  if (_isAlliance || _isInstitution || _isCommunity || _isProgram || _isProject || _isConcept || _isCell || _isDyad || _isCouncil) {
                     final handleOk = _handle.text.trim().isNotEmpty && _handleAvailable != false;
                     canCreate = nameOk && handleOk && !_submitting;
                   } else if (_isOrganization) {
@@ -541,6 +719,12 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
                         : _isInstitution ? l10n.createInstitutionAction
                         : _isOrganization ? l10n.createOrganizationAction
                         : _isCommunity ? l10n.createCommunityAction
+                        : _isProgram ? l10n.createProgramAction
+                        : _isProject ? l10n.createProjectAction
+                        : _isConcept ? l10n.createConceptAction
+                        : _isCell ? l10n.createCellAction
+                        : _isDyad ? l10n.createDyadAction
+                        : _isCouncil ? l10n.createCouncilAction
                         : l10n.createRealmAction,
                     onPressed: canCreate ? _handleCreate : null,
                   );

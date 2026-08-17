@@ -130,6 +130,23 @@ abstract class ApiEndpoints {
   /// `GET /realms/enrollments?wallet=...` — public enrollment disclosure.
   static const String realmEnrollments = '/realms/enrollments';
 
+  // ── Gravity (kinship-agent) ────────────────────────────────────────────
+
+  /// `GET /api/gravity/{wallet}` — per-realm gravity scores.
+  static String gravity(String wallet) => '/api/gravity/$wallet';
+
+  /// `POST /api/gravity/override` — upsert a gravity override.
+  static const String gravityOverride = '/api/gravity/override';
+
+  /// `GET /api/gravity/overrides/{wallet}` — list all overrides.
+  static String gravityOverrides(String wallet) =>
+      '/api/gravity/overrides/$wallet';
+
+  // ── Activity (kinship-agent) ─────────────────────────────────────────
+
+  /// `POST /api/activity` — log a user activity event.
+  static const String activity = '/api/activity';
+
   // ── Tools (kinship-agent) ─────────────────────────────────────────────
 
   /// `GET /api/tools/available` — discover tools from MCP servers.
