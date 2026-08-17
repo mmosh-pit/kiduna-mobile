@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/extensions/context_extensions.dart';
-import '../../../data/models/duna_model.dart';
+import '../../../data/models/realm_model.dart';
 import '../../../data/models/field_realm.dart';
 import '../../../data/models/ki_topic.dart';
 import '../controllers/ecosystem_controller.dart';
@@ -92,7 +92,7 @@ class InspectPanel extends ConsumerWidget {
 ///
 /// When genesis is null (no ecosystem created yet), all values show "–"
 /// instead of falling back to static fixture data.
-List<FieldFact> _buildFacts(DunaModel? genesis) {
+List<FieldFact> _buildFacts(RealmModel? genesis) {
   // Index the static fixtures by label for Ki topic lookup only.
   final fixtureMap = {for (final f in FieldFixtures.facts) f.label: f};
 
@@ -123,10 +123,10 @@ List<FieldFact> _buildFacts(DunaModel? genesis) {
     ),
     (
       label: 'Organizations',
-      value: genesis != null ? '${genesis.organizations}' : '0',
+      value: genesis != null ? '${genesis.members.length}' : '0',
       topic: topic('Organizations'),
     ),
-    (label: 'Members', value: val(genesis?.members), topic: topic('Members')),
+    (label: 'Members', value: genesis != null ? '${genesis.members.length}' : '0', topic: topic('Members')),
     (
       label: 'Treasury',
       value: genesis != null

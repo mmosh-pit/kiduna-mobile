@@ -39,6 +39,9 @@ abstract class Env {
   /// Google OAuth client ID for browser-based sign-in (Drive import).
   static String get googleClientId => _raw('GOOGLE_CLIENT_ID');
 
+  /// Google API key for Drive Picker.
+  static String get googleApiKey => _raw('GOOGLE_API_KEY');
+
   /// Base URL for kinship-studio API (Next.js), from `STUDIO_BASE_URL`.
   static String get studioBaseUrl => _raw('STUDIO_BASE_URL');
 

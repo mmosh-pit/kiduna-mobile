@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/extensions/context_extensions.dart';
 import '../../../data/models/chat_message_model.dart';
@@ -23,9 +26,11 @@ class KiRegion extends ConsumerStatefulWidget {
 class _KiRegionState extends ConsumerState<KiRegion> {
   final TextEditingController _composer = TextEditingController();
   bool _historyRequested = false;
+  Timer? _approvalPollTimer;
 
   @override
   void dispose() {
+    _approvalPollTimer?.cancel();
     _composer.dispose();
     super.dispose();
   }
@@ -48,6 +53,18 @@ class _KiRegionState extends ConsumerState<KiRegion> {
       _historyRequested = true;
       Future.microtask(
         () => ref.read(kiChatControllerProvider.notifier).loadHistory(),
+      );
+      // Fetch pending approval count once ally is available (wallet is ready).
+      Future.microtask(
+        () => ref.read(fieldControllerProvider.notifier)
+            .fetchPendingApprovalCount(),
+      );
+      // Poll approval count every 15 seconds.
+      _approvalPollTimer?.cancel();
+      _approvalPollTimer = Timer.periodic(
+        const Duration(seconds: 15),
+        (_) => ref.read(fieldControllerProvider.notifier)
+            .fetchPendingApprovalCount(),
       );
     }
 
@@ -100,14 +117,17 @@ class _KiRegionState extends ConsumerState<KiRegion> {
 }
 
 /// CSS `.ki header` — flex row, align-items center, gap 12px.
-class _KiHeader extends StatelessWidget {
+class _KiHeader extends ConsumerWidget {
   const _KiHeader({required this.focus, required this.onFocus});
 
   final double focus;
   final ValueChanged<double> onFocus;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final approvalCount = ref.watch(
+      fieldControllerProvider.select((s) => s.pendingApprovalCount),
+    );
     return Row(
       children: [
         // CSS `.ki header img` — 46×46, border-radius 50%, shadow
@@ -127,6 +147,17 @@ class _KiHeader extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
+              // Approval badge
+              if (approvalCount > 0)
+                Flexible(
+                  child: _PulsingBadge(
+                    count: approvalCount,
+                    onTap: () {
+                      ref.read(fieldControllerProvider.notifier).openApprovals();
+                    },
+                  ),
+                ),
+              if (approvalCount > 0) const SizedBox(width: 8),
               const Flexible(child: _AlliesButton(count: 2)),
               const SizedBox(width: 12),
               _FocusControl(focus: focus, onFocus: onFocus),
@@ -134,6 +165,98 @@ class _KiHeader extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Animated pulsing notification badge for pending approvals.
+class _PulsingBadge extends StatefulWidget {
+  const _PulsingBadge({required this.count, required this.onTap});
+
+  final int count;
+  final VoidCallback onTap;
+
+  @override
+  State<_PulsingBadge> createState() => _PulsingBadgeState();
+}
+
+class _PulsingBadgeState extends State<_PulsingBadge>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scale;
+  late final Animation<double> _glow;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+    _scale = Tween<double>(begin: 1.0, end: 1.08).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+    _glow = Tween<double>(begin: 0.3, end: 0.7).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: widget.onTap,
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _scale.value,
+            child: Container(
+              height: 26,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              decoration: BoxDecoration(
+                color: Color(0xFFF59E0B).withValues(alpha: 0.15),
+                border: Border.all(
+                  color: Color(0xFFF59E0B).withValues(alpha: _glow.value),
+                  width: 1.5,
+                ),
+                borderRadius: BorderRadius.circular(999),
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0xFFF59E0B).withValues(alpha: _glow.value * 0.3),
+                    blurRadius: 8,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.notifications_active,
+                    size: 12,
+                    color: Color(0xFFF59E0B),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${widget.count}',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFFF59E0B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }
@@ -338,7 +461,16 @@ class _KiChatThread extends StatelessWidget {
     }
 
     if (error != null && !isStreaming) {
-      items.add(_ErrorBanner(error: error!, onRetry: onRetry));
+      // If error is about missing conversation history, show welcome instead.
+      final isNoHistory = error!.contains('conversation') ||
+          error!.contains('404') ||
+          error!.contains('Not Found') ||
+          error!.contains('Unable to load');
+      if (isNoHistory && messages.isEmpty) {
+        return const Center(child: _WelcomeBanner());
+      } else {
+        items.add(_ErrorBanner(error: error!, onRetry: onRetry));
+      }
     }
 
     return ListView.builder(
@@ -435,7 +567,47 @@ class _DotState extends State<_Dot> with SingleTickerProviderStateMixin {
   }
 }
 
-/// Error banner shown at the bottom of the chat thread.
+/// Welcome banner shown when no conversation history exists.
+class _WelcomeBanner extends StatelessWidget {
+  const _WelcomeBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.kiduna;
+    final text = context.kidunaText;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 60),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.chat_bubble_outline,
+              size: 52,
+              color: colors.sky.withValues(alpha: 0.3),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              'Start a new conversation',
+              style: text.heading.copyWith(
+                color: colors.cream,
+                fontSize: 18,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Ask Ki anything or use the suggestions below',
+              style: text.caption.copyWith(
+                color: colors.muted,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 class _ErrorBanner extends StatelessWidget {
   const _ErrorBanner({required this.error, this.onRetry});
 
@@ -619,6 +791,11 @@ class _AssistantBubble extends StatelessWidget {
       child: MarkdownBody(
         data: text,
         selectable: true,
+        onTapLink: (text, href, title) {
+          if (href != null && href.isNotEmpty) {
+            launchUrl(Uri.parse(href), mode: LaunchMode.externalApplication);
+          }
+        },
         styleSheet: MarkdownStyleSheet(
           p: TextStyle(
             fontFamily: 'Avenir',

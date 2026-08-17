@@ -17,8 +17,8 @@ import '../../../data/models/invitation_response.dart';
 import '../../../data/models/ki_topic.dart';
 import '../../../data/models/saved_tool_model.dart';
 import '../../../data/models/skill_model.dart';
-import '../../../data/services/duna_service.dart';
 import '../../../data/services/invitation_service.dart';
+import '../../../data/services/approval_service.dart';
 import '../../../data/services/skill_service.dart';
 import '../../../data/services/tool_connection_service.dart';
 import '../../auth/controllers/auth_controller.dart';
@@ -28,6 +28,8 @@ import '../data/field_fixtures.dart';
 import '../data/realm_atlas.dart';
 import 'ally_controller.dart';
 import 'ecosystem_controller.dart';
+import '../../../data/services/realm_service.dart';
+import '../../../data/models/realm_model.dart';
 
 /// UI state for the Field.
 @immutable
@@ -62,6 +64,8 @@ class FieldState {
     this.availableTools = const [],
     this.toolsLoaded = false,
     this.skillFormOpen = false,
+    this.approvalsOpen = false,
+    this.pendingApprovalCount = 0,
     this.editingSkill,
     this.savedTools = const [],
     this.skillsLoading = false,
@@ -119,6 +123,8 @@ class FieldState {
 
   /// Whether the skill creation form panel is open.
   final bool skillFormOpen;
+  final bool approvalsOpen;
+  final int pendingApprovalCount;
 
   /// Skill being edited — null means creating new.
   final SkillModel? editingSkill;
@@ -171,6 +177,8 @@ class FieldState {
     List<AvailableToolModel>? availableTools,
     bool? toolsLoaded,
     bool? skillFormOpen,
+    bool? approvalsOpen,
+    int? pendingApprovalCount,
     SkillModel? editingSkill,
     bool clearEditingSkill = false,
     List<SavedToolModel>? savedTools,
@@ -215,6 +223,9 @@ class FieldState {
       availableTools: availableTools ?? this.availableTools,
       toolsLoaded: toolsLoaded ?? this.toolsLoaded,
       skillFormOpen: skillFormOpen ?? this.skillFormOpen,
+      approvalsOpen: approvalsOpen ?? this.approvalsOpen,
+      pendingApprovalCount:
+          pendingApprovalCount ?? this.pendingApprovalCount,
       editingSkill: clearEditingSkill
           ? null
           : (editingSkill ?? this.editingSkill),
@@ -249,6 +260,7 @@ class FieldController extends Notifier<FieldState> {
             type: 'Ecosystem',
             emblemAsset: AppAssets.realmEmblem('organization'),
           ),
+          currentRealmId: genesis.id,
         );
       } else if (!next.isLoading) {
         // Loading finished but no genesis exists — show placeholder.
@@ -276,6 +288,16 @@ class FieldController extends Notifier<FieldState> {
             type: 'Ecosystem',
             emblemAsset: '',
           );
+
+    // Fetch pending approval count when auth state changes (user logs in).
+    ref.listen(authControllerProvider, (prev, next) {
+      if (next.user != null && (prev?.user == null || prev?.user?.wallet != next.user?.wallet)) {
+        fetchPendingApprovalCount();
+      }
+    });
+
+    // Fetch pending approval count in the background.
+    Future.microtask(fetchPendingApprovalCount);
 
     return FieldState(
       kiTopic: FieldFixtures.defaultKi,
@@ -467,104 +489,99 @@ class FieldController extends Notifier<FieldState> {
     required String name,
     required String type,
     String? purpose,
-    String? registration,
-    String? email,
   }) async {
-    if (type == 'Organization') {
-      // Validate required fields for Organization creation.
-      final trimmedPurpose = (purpose ?? '').trim();
-      final trimmedEmail = (email ?? '').trim();
-      if (trimmedPurpose.length < 10 || trimmedEmail.isEmpty) {
-        askAbout(
-          const KiTopic(
-            title: 'Missing information',
-            body:
-                'An Organization needs a purpose (at least 10 characters) '
-                'and an email address. Please fill in the required fields.',
-          ),
-        );
-        return;
-      }
+    // Non-API types remain local (UI-only).
+    state = state.copyWith(
+      currentRealm: FieldRealm(
+        name: name,
+        type: type,
+        emblemAsset: AppAssets.realmEmblem(type),
+      ),
+      openActions: state.openActions
+          .where((item) => item != 'realm')
+          .toList(),
+    );
+    askAbout(
+      KiTopic(
+        title: '$name created',
+        body:
+            'Ki has created $name as a $type and brought Alice inside it. '
+            'Kinship Duna remains its containing Ecosystem and return path.',
+        invitation:
+            "Ki can help shape the new Realm's purpose, boundaries, "
+            'capacities, and people through dialogue.',
+      ),
+    );
+  }
 
-      state = state.copyWith(isLoading: true);
-      try {
-        final auth = ref.read(authControllerProvider);
-        final token = auth.token;
+  /// Called by [RealmPanel] after a successful Organization creation.
+  void onOrganizationCreated(String name) {
+    // Refresh ecosystem state so the genesis organizations count updates.
+    unawaited(ref.read(ecosystemControllerProvider.notifier).load());
 
-        await DunaService.instance.createOrganization(
-          name: name,
-          purpose: trimmedPurpose,
-          email: trimmedEmail,
-          registration: registration,
-          authToken: token,
-        );
+    state = state.copyWith(
+      currentRealm: FieldRealm(
+        name: name,
+        type: 'Organization',
+        emblemAsset: AppAssets.realmEmblem('Organization'),
+      ),
+      openActions: state.openActions
+          .where((item) => item != 'realm')
+          .toList(),
+    );
+    askAbout(
+      KiTopic(
+        title: '$name created',
+        body:
+            'Ki has created $name as an Organization under the Genesis '
+            'ecosystem and brought Alice inside it.',
+        invitation:
+            "Ki can help shape the new Organization's purpose, boundaries, "
+            'capacities, and people through dialogue.',
+      ),
+    );
+  }
 
-        // Refresh ecosystem state so the genesis organizations count updates.
-        unawaited(ref.read(ecosystemControllerProvider.notifier).load());
+  /// Called by [RealmPanel] after a successful Realm creation (any type).
+  /// Updates the field state and shows a Ki confirmation message.
+  /// The API call itself lives in the panel so errors display in-form.
+  void onRealmCreated(RealmModel realm) {
+    final pda = realm.vaultPda;
+    final walletInfo = pda != null
+        ? 'Team Wallet ${pda.substring(0, 4)}…${pda.substring(pda.length - 4)} ready.'
+        : '';
 
-        state = state.copyWith(
-          isLoading: false,
-          currentRealm: FieldRealm(
-            name: name,
-            type: type,
-            emblemAsset: AppAssets.realmEmblem(type),
-          ),
-          openActions: state.openActions
-              .where((item) => item != 'realm')
-              .toList(),
-        );
-        askAbout(
-          KiTopic(
-            title: '$name created',
-            body:
-                'Ki has created $name as an Organization under the Genesis '
-                'ecosystem and brought Alice inside it.',
-            invitation:
-                "Ki can help shape the new Organization's purpose, boundaries, "
-                'capacities, and people through dialogue.',
-          ),
-        );
-      } on AppException catch (e) {
-        state = state.copyWith(isLoading: false);
-        askAbout(
-          KiTopic(
-            title: 'Could not create $name',
-            body: e.message ?? 'Something went wrong. Please try again.',
-          ),
-        );
-      } catch (e) {
-        state = state.copyWith(isLoading: false);
-        askAbout(
-          KiTopic(
-            title: 'Could not create $name',
-            body: 'Something went wrong. Please try again.',
-          ),
-        );
-      }
-    } else {
-      // Non-Organization types remain local (UI-only).
-      state = state.copyWith(
-        currentRealm: FieldRealm(
-          name: name,
-          type: type,
-          emblemAsset: AppAssets.realmEmblem(type),
-        ),
-        openActions: state.openActions
-            .where((item) => item != 'realm')
-            .toList(),
-      );
-      askAbout(
-        KiTopic(
-          title: '$name created',
-          body:
-              'Ki has created $name as a $type and brought Alice inside it. '
-              'Kinship Duna remains its containing Ecosystem and return path.',
-          invitation:
-              "Ki can help shape the new Realm's purpose, boundaries, "
-              'capacities, and people through dialogue.',
-        ),
-      );
-    }
+    state = state.copyWith(
+      currentRealm: FieldRealm(
+        name: realm.name,
+        type: realm.typeLabel,
+        emblemAsset: AppAssets.realmEmblem(realm.typeLabel),
+      ),
+      currentRealmId: realm.id,
+      openActions:
+          state.openActions.where((item) => item != 'realm').toList(),
+    );
+
+    final statusNote = realm.type == 'institution'
+        ? ' Status: ${realm.status}.'
+        : '';
+
+    askAbout(
+      KiTopic(
+        title: '${realm.name} created',
+        body:
+            'Ki has created the ${realm.typeLabel} "${realm.name}" with handle '
+            '@${realm.handle}.$statusNote $walletInfo',
+        invitation:
+            'Ki can help add members, shape purpose and boundaries, or '
+            'configure the ${realm.typeLabel}.',
+      ),
+    );
+  }
+
+  /// Check if a handle is available for any Realm type (unified endpoint).
+  Future<bool> checkHandleAvailability(String handle) async {
+    return RealmService.instance.checkHandleAvailability(handle);
   }
 
   void savePresentation({required String name, required String type}) {
@@ -594,6 +611,33 @@ class FieldController extends Notifier<FieldState> {
   // ── Skills ───────────────────────────────────────────────────────────
 
   /// Open the skill creation form as a separate working panel.
+  void openApprovals() {
+    state = state.copyWith(approvalsOpen: true);
+  }
+
+  void closeApprovals() {
+    state = state.copyWith(approvalsOpen: false);
+    // Refresh count after panel closes (approvals may have been resolved).
+    fetchPendingApprovalCount();
+  }
+
+  /// Fetch the number of pending approvals for the current user.
+  Future<void> fetchPendingApprovalCount() async {
+    final auth = ref.read(authControllerProvider);
+    final wallet = auth.user?.wallet ?? '';
+    if (wallet.isEmpty) return;
+
+    try {
+      final approvals = await ApprovalService.instance.fetchPending(
+        wallet: wallet,
+      );
+      if (!ref.mounted) return;
+      state = state.copyWith(pendingApprovalCount: approvals.length);
+    } catch (_) {
+      // Silently ignore — badge just won't show.
+    }
+  }
+
   void openSkillForm() {
     state = state.copyWith(skillFormOpen: true, clearEditingSkill: true);
     fetchAvailableTools();
@@ -680,6 +724,7 @@ class FieldController extends Notifier<FieldState> {
       thenText: thenText,
       tools: tools,
       requiresApproval: requiresApproval,
+      realmId: state.currentRealmId != 'kinship-duna' ? state.currentRealmId : null,
       skillFilePath: '$slug.md',
     );
 
@@ -724,9 +769,64 @@ class FieldController extends Notifier<FieldState> {
 
       // Attach the skill to the Ki agent so the scheduler activates it.
       await _attachSkillToAlly(created.id);
+
+      // Generate AI SKILL.md content in the background.
+      // Use original skill data (has correct when/then text) with
+      // the backend-assigned ID from created.
+      _generateSkillContent(SkillModel(
+        id: created.id,
+        name: skill.name,
+        triggerType: skill.triggerType,
+        whenText: skill.whenText,
+        thenText: skill.thenText,
+        tools: skill.tools,
+      ));
     } on AppException catch (e) {
       AppLogger.warning(
         'Skill sync failed: ${e.message}',
+        tag: 'FieldController',
+      );
+    }
+  }
+
+  /// Generate AI SKILL.md content and update the skill.
+  Future<void> _generateSkillContent(SkillModel skill) async {
+    try {
+      final content = await SkillService.instance.generateContent(
+        name: skill.name,
+        triggerType: skill.triggerType.name,
+        whenText: skill.whenText,
+        thenText: skill.thenText,
+        tools: skill.tools,
+      );
+
+      if (content == null || content.isEmpty || !ref.mounted) {
+        return;
+      }
+
+      // Update skill with generated content.
+      final updated = await SkillService.instance.update(
+        skill.id,
+        skillContent: content,
+      );
+
+      if (!ref.mounted) {
+        return;
+      }
+
+      state = state.copyWith(
+        skills: [
+          for (final s in state.skills)
+            if (s.id == skill.id) updated else s,
+        ],
+      );
+      AppLogger.info(
+        'SKILL.md generated for ${skill.id}',
+        tag: 'FieldController',
+      );
+    } on AppException catch (e) {
+      AppLogger.warning(
+        'SKILL.md generation failed: ${e.message}',
         tag: 'FieldController',
       );
     }
@@ -1092,6 +1192,7 @@ class FieldController extends Notifier<FieldState> {
         wallet: wallet,
         toolName: toolName,
         credentials: enrichedCredentials,
+        realmId: state.currentRealmId != 'kinship-duna' ? state.currentRealmId : null,
       );
 
       if (!ref.mounted) {

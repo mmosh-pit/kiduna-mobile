@@ -89,13 +89,46 @@ abstract class ApiEndpoints {
   /// `PATCH /api/skills/{id}/status` — pause or resume a skill.
   static String skillStatus(String skillId) => '/api/skills/$skillId/status';
 
-  // ── Dunas (kinship-studio) ───────────────────────────────────────────
+  /// `POST /api/skills/generate-content` — AI-generate SKILL.md content.
+  static const String skillGenerateContent = '/api/skills/generate-content';
 
-  /// `GET /api/v1/dunas` — fetch genesis duna and user dunas.
-  static const String dunas = '/api/v1/dunas';
+  // ── Approvals ──────────────────────────────────────────────────
 
-  /// `POST /api/v1/dunas/organizations` — create an organization under genesis.
-  static const String dunasOrganizations = '/api/v1/dunas/organizations';
+  /// `GET /api/approvals` — list approval requests.
+  static const String approvals = '/api/approvals';
+
+  /// `GET /api/approvals/stats` — approval statistics.
+  static const String approvalStats = '/api/approvals/stats';
+
+  /// `PATCH /api/approvals/{id}/approve` — approve an action.
+  static String approvalApprove(String id) => '/api/approvals/$id/approve';
+
+  /// `PATCH /api/approvals/{id}/reject` — reject an action.
+  static String approvalReject(String id) => '/api/approvals/$id/reject';
+
+  // ── Realms (kinship-backend) ────────────────────────────────────────────
+
+  /// `POST /realms` — create any Realm type.
+  /// `GET /realms` — list caller's Realms (with optional type/parentId/tags filters).
+  static const String realms = '/realms';
+
+  /// `GET /realms/:id` — single Realm detail + members.
+  static String realmById(String id) => '/realms/$id';
+
+  /// `GET /realms/handle-availability?handle=...` — unified handle check.
+  static const String realmHandleAvailability = '/realms/handle-availability';
+
+  /// `GET /realms/ecosystem` — genesis Ecosystem check (no auth).
+  static const String realmsEcosystem = '/realms/ecosystem';
+
+  /// `GET /realms/by-tags?tags=...` — tag-based Realm discovery.
+  static const String realmsByTags = '/realms/by-tags';
+
+  /// `GET /realms/tree/:id` — Realm + one level of children.
+  static String realmTree(String id) => '/realms/tree/$id';
+
+  /// `GET /realms/enrollments?wallet=...` — public enrollment disclosure.
+  static const String realmEnrollments = '/realms/enrollments';
 
   // ── Tools (kinship-agent) ─────────────────────────────────────────────
 

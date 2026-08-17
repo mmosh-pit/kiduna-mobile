@@ -7,6 +7,7 @@ import '../../../data/models/knowledge_base_model.dart';
 import '../../../data/services/knowledge_service.dart';
 import '../../../features/auth/controllers/auth_controller.dart';
 import 'ally_controller.dart';
+import 'field_controller.dart';
 
 /// State for knowledge base management.
 @immutable
@@ -73,6 +74,9 @@ class KnowledgeState {
 ///
 /// Reads the agent from [allyControllerProvider] and the user wallet
 /// from [authControllerProvider].
+/// Maximum file size in bytes (5 MB — matches Studio + backend).
+const _kMaxFileSize = 5 * 1024 * 1024;
+
 class KnowledgeController extends Notifier<KnowledgeState> {
   KnowledgeService get _service => KnowledgeService.instance;
 
@@ -86,6 +90,8 @@ class KnowledgeController extends Notifier<KnowledgeState> {
   String? get _allyName => ref.read(allyControllerProvider).ally?.name;
 
   String? get _wallet => ref.read(authControllerProvider).user?.wallet;
+
+  String? get _currentRealmId => ref.read(fieldControllerProvider).currentRealmId;
 
   List<String> get _currentKbIds =>
       ref.read(allyControllerProvider).ally?.knowledgeBaseIds ?? const [];
@@ -117,6 +123,7 @@ class KnowledgeController extends Notifier<KnowledgeState> {
     final kb = await _service.createKnowledgeBase(
       name: name,
       wallet: wallet,
+      realmId: _currentRealmId,
       privacy: state.selectedPrivacy.name,
     );
     if (!ref.mounted) return null;
@@ -226,6 +233,7 @@ class KnowledgeController extends Notifier<KnowledgeState> {
       final kb = await _service.createKnowledgeBase(
         name: name,
         wallet: wallet,
+        realmId: _currentRealmId,
         privacy: privacy.name,
       );
       if (!ref.mounted) return;
@@ -275,7 +283,6 @@ class KnowledgeController extends Notifier<KnowledgeState> {
     state = state.copyWith(
       isLoading: true,
       clearError: true,
-      clearActiveKb: true,
     );
 
     try {
@@ -353,21 +360,25 @@ class KnowledgeController extends Notifier<KnowledgeState> {
     state = state.copyWith(clearError: true);
 
     try {
-      final updated = await _service.updateKnowledgeBase(
+      await _service.updateKnowledgeBase(
         activeKb.id,
         privacy: privacy.name,
       );
       if (!ref.mounted) return;
 
-      final updatedList = state.knowledgeBases.map((kb) {
-        return kb.id == activeKb.id ? updated : kb;
-      }).toList();
+      // Re-fetch full KB so items are preserved.
+      await selectKnowledgeBase(activeKb.id);
 
-      state = state.copyWith(
-        knowledgeBases: updatedList,
-        activeKb: updated,
-        selectedPrivacy: KbPrivacy.fromString(updated.privacy),
-      );
+      final refreshedKb = state.activeKb;
+      if (refreshedKb != null) {
+        final updatedList = state.knowledgeBases.map((kb) {
+          return kb.id == activeKb.id ? refreshedKb : kb;
+        }).toList();
+        state = state.copyWith(
+          knowledgeBases: updatedList,
+          selectedPrivacy: KbPrivacy.fromString(refreshedKb.privacy),
+        );
+      }
     } on AppException catch (e) {
       if (!ref.mounted) return;
       AppLogger.error(
@@ -503,9 +514,6 @@ class KnowledgeController extends Notifier<KnowledgeState> {
   ///
   /// This is a POST — never retry on failure. After upload, the
   /// active KB is refreshed to show new items.
-  /// Maximum file size in bytes (5 MB — matches Studio + backend).
-  static const _kMaxFileSize = 5 * 1024 * 1024;
-
   Future<void> uploadFiles(List<({String name, List<int> bytes})> files) async {
     state = state.copyWith(isUploading: true, clearError: true);
 
@@ -583,7 +591,9 @@ class KnowledgeController extends Notifier<KnowledgeState> {
       AppLogger.error('Upload files failed', tag: 'KnowledgeCtrl', error: e);
       state = state.copyWith(
         isUploading: false,
-        error: 'Upload failed. Please try again.',
+        error: e.message != null && e.message!.isNotEmpty
+            ? e.message!
+            : 'Upload failed. Please try again.',
       );
     }
   }
@@ -701,7 +711,9 @@ class KnowledgeController extends Notifier<KnowledgeState> {
       );
       state = state.copyWith(
         isImportingDrive: false,
-        error: 'Import failed. Please try again.',
+        error: e.message != null && e.message!.isNotEmpty
+            ? e.message!
+            : 'Import failed. Please try again.',
       );
     }
   }

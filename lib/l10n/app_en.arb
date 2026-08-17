@@ -44,6 +44,35 @@
   "whatIsTheMissionYourMembersShare": "What is the mission your members share?",
   "emailLabel": "Email",
   "emailHint": "you@example.com",
+  "allianceNameLabel": "Alliance name",
+  "allianceNameHint": "e.g. Conference Planning",
+  "handleLabel": "Handle",
+  "handleHint": "conference_planning",
+  "handleTaken": "Handle already taken",
+  "descriptionLabel": "Description",
+  "allianceDescriptionHint": "What this Alliance is for.",
+  "purposeProjectLabel": "Purpose / Project",
+  "alliancePurposeHint": "Plan and run Kiduna Live",
+  "visibilityLabel": "Visibility",
+  "approvalThresholdLabel": "Approval Threshold",
+  "approvalThresholdHint": "Starts at 1 of 1 — raise it later under \"Approval Threshold\".",
+  "createAllianceAction": "Create Alliance",
+  "institutionNameLabel": "Institution name",
+  "institutionNameHint": "e.g. Acme Corporation",
+  "entityTypeLabel": "Entity type",
+  "institutionDescriptionHint": "What this Institution does.",
+  "institutionPurposeHint": "Its mission or mandate",
+  "registrationDomainLabel": "Registration domain",
+  "registrationDomainHint": "e.g. acme.com",
+  "standingDocUrlLabel": "Standing document URL",
+  "standingDocUrlHint": "https://...",
+  "designateContactLabel": "Designate contact",
+  "designateContactHint": "Contact person name",
+  "designateEmailLabel": "Designate email",
+  "designateEmailHint": "contact@acme.com",
+  "addressLabel": "Address",
+  "addressHint": "Physical address",
+  "createInstitutionAction": "Create Institution",
   "open": "Open",
   "design": "Design",
   "refine": "Refine",
@@ -467,5 +496,49 @@
     }
   },
   "presenceSave": "Save Presence",
-  "presenceSaveFailed": "Unable to save presence. Please try again."
+  "presenceSaveFailed": "Unable to save presence. Please try again.",
+  "instructName": "Instruct Name",
+  "instructNameHint": "e.g. Professional Tone",
+  "instructGoal": "Goal",
+  "instructGoalHint": "What should this instruct accomplish?",
+  "instructStance": "Stance",
+  "instructInformKb": "Inform (Knowledge Base)",
+  "instructNone": "None",
+  "instructActive": "Active",
+  "instructEdit": "Edit",
+  "instructDelete": "Delete",
+  "instructDeleteTitle": "Delete Instruct",
+  "instructDeleteConfirm": "Delete \"{name}\"? This cannot be undone.",
+  "@instructDeleteConfirm": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "instructCreateNew": "Create New Instruct",
+  "instructCreateTitle": "Create Instruct",
+  "instructGenerateWithAi": "Generate with AI",
+  "instructSave": "Save",
+  "instructSaving": "Saving…",
+  "instructNoInstructs": "No instructs yet. Create one below.",
+  "instructHowRealmBehaves": "How {name} behaves",
+  "@instructHowRealmBehaves": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "instructCountStatus": "{count} instructs",
+  "@instructCountStatus": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "instructLoading": "Loading…",
+  "instructStanceHint": "System instruct content…",
+  "instructCharsWords": "{chars} chars · {words} words",
+  "@instructCharsWords": {
+    "placeholders": {
+      "chars": { "type": "int" },
+      "words": { "type": "int" }
+    }
+  }
 }

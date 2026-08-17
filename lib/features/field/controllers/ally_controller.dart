@@ -153,6 +153,26 @@ class AllyController extends Notifier<AllyState> {
       );
     }
   }
+
+  /// Link an existing prompt to the Ki agent by ID only.
+  Future<void> updatePromptId(String promptId) async {
+    final ally = state.ally;
+    if (ally == null) return;
+
+    try {
+      await AllyService.instance.patchAgent(ally.id, {'promptId': promptId});
+      if (!ref.mounted) return;
+      state = state.copyWith(
+        ally: ally.copyWith(promptId: promptId),
+      );
+      AppLogger.info(
+        'Prompt $promptId linked to Ki',
+        tag: 'AllyController',
+      );
+    } on AppException catch (e) {
+      AppLogger.error('Failed to link prompt', tag: 'AllyController', error: e);
+    }
+  }
 }
 
 /// Global ally state provider.
