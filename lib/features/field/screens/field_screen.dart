@@ -11,6 +11,7 @@ import '../../../shared/widgets/app_header.dart';
 import '../../../shared/widgets/section_bar.dart';
 import '../../../shared/widgets/section_placeholder.dart';
 import '../../exchange/screens/exchange_screen.dart';
+import '../../garden/screens/garden_screen.dart';
 import '../controllers/field_controller.dart';
 import '../widgets/field_background.dart';
 import '../widgets/field_chrome_panels.dart';
@@ -69,6 +70,12 @@ class _FieldScreenState extends State<FieldScreen> {
         return ResponsiveLayout(
           desktop: (_) => const _ContentKiWide(content: ExchangeScreen()),
           mobile: (_) => const _ContentKiNarrow(content: ExchangeScreen()),
+        );
+      case SectionIndex.garden:
+        // Scene listing with Ki chat.
+        return ResponsiveLayout(
+          desktop: (_) => const _ContentKiWide(content: GardenScreen()),
+          mobile: (_) => const _ContentKiNarrow(content: GardenScreen()),
         );
       default:
         // Other sections: placeholder with Ki chat.
