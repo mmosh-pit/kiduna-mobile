@@ -9,8 +9,8 @@ import '../models/realm_model.dart';
 /// Communicates with the kinship-backend Realms API.
 ///
 /// Unified service replacing [AllianceService], [InstitutionService], and
-/// [DunaService]. All 11 Realm types are created/fetched through the same
-/// `/realms` endpoints — the [type] field drives type-specific behavior.
+/// [DunaService]. All 12 Realm types (Taxonomy V0.09) are created/fetched
+/// through the same `/realms` endpoints — the [type] field drives behavior.
 class RealmService {
   RealmService._();
 
@@ -37,6 +37,8 @@ class RealmService {
     Map<String, dynamic>? config,
     String? email,
     bool walletEnabled = false,
+    String? primaryTheme,
+    String? primaryFocus,
     String? authToken,
   }) async {
     try {
@@ -56,6 +58,10 @@ class RealmService {
           if (config != null && config.isNotEmpty) 'config': config,
           if (email != null && email.isNotEmpty) 'email': email,
           'walletEnabled': walletEnabled,
+          if (primaryTheme != null && primaryTheme.isNotEmpty)
+            'primaryTheme': primaryTheme,
+          if (primaryFocus != null && primaryFocus.isNotEmpty)
+            'primaryFocus': primaryFocus,
         },
         options: authToken != null
             ? Options(headers: {'Authorization': 'Bearer $authToken'})

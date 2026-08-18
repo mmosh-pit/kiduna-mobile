@@ -3,9 +3,9 @@ import 'package:flutter/foundation.dart';
 /// A single Realm returned by `/realms` or `/realms/:id`.
 ///
 /// Replaces the old [AllianceModel], [InstitutionModel], and [DunaModel]
-/// with a single unified model. The [type] field distinguishes the 11 Realm
-/// types: ecosystem, organization, alliance, institution, chapter, guild,
-/// cooperative, studio, venture, cell, council.
+/// with a single unified model. The [type] field distinguishes the 12 Realm
+/// types (Taxonomy V0.09): ecosystem, organization, alliance, program,
+/// project, dyad, community, institution, council, concept, cell, clan.
 ///
 /// Type-specific data lives in [config] (a JSON map). For example, an
 /// Institution has `entityType`, `standingDocUrl`, etc. in its config.
@@ -17,6 +17,8 @@ class RealmModel {
     required this.handle,
     required this.type,
     this.parentId,
+    this.primaryTheme,
+    this.primaryFocus,
     this.description,
     this.purpose,
     this.tags = const [],
@@ -38,12 +40,18 @@ class RealmModel {
   final String name;
   final String handle;
 
-  /// One of: ecosystem, organization, alliance, institution, chapter, guild,
-  /// cooperative, studio, venture, cell, council.
+  /// One of the 12 Taxonomy V0.09 types: ecosystem, organization, alliance,
+  /// program, project, dyad, community, institution, council, concept, cell, clan.
   final String type;
 
   /// Parent Realm id. Null for ecosystem (root).
   final String? parentId;
+
+  /// One of 6 canonical Themes (Taxonomy V0.14). Null for ecosystem/clan/dyad/cell.
+  final String? primaryTheme;
+
+  /// One of 26 canonical Focuses within the chosen Theme.
+  final String? primaryFocus;
 
   final String? description;
   final String? purpose;
@@ -138,6 +146,8 @@ class RealmModel {
       handle: json['handle'] as String? ?? '',
       type: json['type'] as String? ?? 'organization',
       parentId: json['parentId'] as String? ?? json['parent_id'] as String?,
+      primaryTheme: json['primaryTheme'] as String? ?? json['primary_theme'] as String?,
+      primaryFocus: json['primaryFocus'] as String? ?? json['primary_focus'] as String?,
       description: json['description'] as String?,
       purpose: json['purpose'] as String?,
       tags: tagsJson.whereType<String>().toList(),
