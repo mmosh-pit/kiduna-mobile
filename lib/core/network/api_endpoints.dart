@@ -92,6 +92,13 @@ abstract class ApiEndpoints {
   /// `POST /api/skills/generate-content` — AI-generate SKILL.md content.
   static const String skillGenerateContent = '/api/skills/generate-content';
 
+  /// `POST /api/skills/upload-md` — parse an uploaded SKILL.md file.
+  static const String skillUploadMd = '/api/skills/upload-md';
+
+  /// `GET /api/tools/registry-search` — search public MCP registries.
+  static const String toolsRegistrySearch = '/api/tools/registry-search';
+
+  static String skillDownload(String skillId) => '/api/skills/$skillId/download';
   // ── Approvals ──────────────────────────────────────────────────
 
   /// `GET /api/approvals` — list approval requests.

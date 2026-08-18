@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -67,6 +68,9 @@ class FieldState {
     this.skillFormOpen = false,
     this.approvalsOpen = false,
     this.pendingApprovalCount = 0,
+    this.uploadedSkillData,
+    this.uploadedToolRegistry,
+    this.skillUploadLoading = false,
     this.editingSkill,
     this.savedTools = const [],
     this.skillsLoading = false,
@@ -128,6 +132,9 @@ class FieldState {
   final bool skillFormOpen;
   final bool approvalsOpen;
   final int pendingApprovalCount;
+  final Map<String, dynamic>? uploadedSkillData;
+  final Map<String, dynamic>? uploadedToolRegistry;
+  final bool skillUploadLoading;
 
   /// Skill being edited — null means creating new.
   final SkillModel? editingSkill;
@@ -187,6 +194,10 @@ class FieldState {
     bool? skillFormOpen,
     bool? approvalsOpen,
     int? pendingApprovalCount,
+    Map<String, dynamic>? uploadedSkillData,
+    Map<String, dynamic>? uploadedToolRegistry,
+    bool? skillUploadLoading,
+    bool clearUploadedSkill = false,
     SkillModel? editingSkill,
     bool clearEditingSkill = false,
     List<SavedToolModel>? savedTools,
@@ -237,6 +248,14 @@ class FieldState {
       approvalsOpen: approvalsOpen ?? this.approvalsOpen,
       pendingApprovalCount:
           pendingApprovalCount ?? this.pendingApprovalCount,
+      uploadedSkillData: clearUploadedSkill
+          ? null
+          : (uploadedSkillData ?? this.uploadedSkillData),
+      uploadedToolRegistry: clearUploadedSkill
+          ? null
+          : (uploadedToolRegistry ?? this.uploadedToolRegistry),
+      skillUploadLoading:
+          skillUploadLoading ?? this.skillUploadLoading,
       editingSkill: clearEditingSkill
           ? null
           : (editingSkill ?? this.editingSkill),
@@ -700,6 +719,10 @@ class FieldController extends Notifier<FieldState> {
   Future<void> fetchPendingApprovalCount() async {
     final auth = ref.read(authControllerProvider);
     final wallet = auth.user?.wallet ?? '';
+    AppLogger.info(
+      'fetchPendingApprovalCount: wallet=${wallet.isEmpty ? "EMPTY" : wallet.substring(0, 10)}...',
+      tag: 'FieldController',
+    );
     if (wallet.isEmpty) return;
 
     try {
@@ -707,9 +730,16 @@ class FieldController extends Notifier<FieldState> {
         wallet: wallet,
       );
       if (!ref.mounted) return;
+      AppLogger.info(
+        'Pending approvals: ${approvals.length}',
+        tag: 'FieldController',
+      );
       state = state.copyWith(pendingApprovalCount: approvals.length);
-    } catch (_) {
-      // Silently ignore — badge just won't show.
+    } catch (e) {
+      AppLogger.warning(
+        'fetchPendingApprovalCount failed: $e',
+        tag: 'FieldController',
+      );
     }
   }
 
@@ -718,9 +748,67 @@ class FieldController extends Notifier<FieldState> {
     fetchAvailableTools();
   }
 
+  /// Open skill form with pre-filled data from uploaded MD.
+  void openSkillUpload() async {
+    try {
+      final result = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['md'],
+        withData: true,
+      );
+      if (result == null || result.files.isEmpty) return;
+
+      final bytes = result.files.first.bytes;
+      if (bytes == null) return;
+
+      final content = String.fromCharCodes(bytes);
+      if (content.trim().isEmpty) return;
+
+      // Show loading on the upload button.
+      state = state.copyWith(skillUploadLoading: true);
+
+      // Parse the MD file via backend.
+      final parsed = await SkillService.instance.uploadSkillMd(content);
+      if (parsed == null || !ref.mounted) {
+        state = state.copyWith(skillUploadLoading: false);
+        return;
+      }
+
+      // Check if the detected tool is available.
+      final tool = (parsed['tool'] as String? ?? '').toLowerCase();
+      Map<String, dynamic>? registryInfo;
+      if (tool.isNotEmpty) {
+        registryInfo = await SkillService.instance.searchRegistry(tool);
+      }
+
+      if (!ref.mounted) return;
+
+      // Open form with parsed data.
+      state = state.copyWith(
+        skillFormOpen: true,
+        clearEditingSkill: true,
+        uploadedSkillData: parsed,
+        uploadedToolRegistry: registryInfo,
+        skillUploadLoading: false,
+      );
+    } catch (e) {
+      AppLogger.warning(
+        'Skill upload failed: $e',
+        tag: 'FieldController',
+      );
+      if (ref.mounted) {
+        state = state.copyWith(skillUploadLoading: false);
+      }
+    }
+  }
+
   /// Close the skill creation form panel.
   void closeSkillForm() {
-    state = state.copyWith(skillFormOpen: false, clearEditingSkill: true);
+    state = state.copyWith(
+      skillFormOpen: false,
+      clearEditingSkill: true,
+      clearUploadedSkill: true,
+    );
   }
 
   /// Fetch available tools from MCP servers.
