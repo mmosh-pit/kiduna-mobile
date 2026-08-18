@@ -1,21 +1,26 @@
+import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import '../../../app/routes.dart';
+
 import '../../../core/extensions/context_extensions.dart';
+import '../../../core/utils/logger.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../shared/widgets/app_header.dart';
+import '../../auth/controllers/auth_controller.dart';
 import '../controllers/field_controller.dart';
-import '../widgets/advanced_actions_panel.dart';
+import '../data/gravity_field_source.dart';
+import '../data/placement.dart';
+import '../game/field_game.dart';
 import '../widgets/compute_card.dart';
 import '../widgets/enamel_icon.dart';
-import '../widgets/field_background.dart';
 import '../widgets/field_panel.dart';
+import '../widgets/field_working_panels.dart';
 import '../widgets/inspect_panel.dart';
+import '../widgets/nav_mode.dart';
 import '../widgets/navigation_panel.dart';
 import '../widgets/possible_actions.dart';
-import '../widgets/realm_constellation.dart';
 import '../widgets/realm_context_pill.dart';
+import '../widgets/realm_detail_popup.dart';
 
 // One-off Ki-rail ground values from the prototype `.kiRegion`.
 const Color _kiGround = Color(0xFF100B08);
@@ -73,15 +78,127 @@ class _AevWorkspace extends StatelessWidget {
   }
 }
 
-/// The pannable Field: deep-field ground, the realm constellation, and the
-/// overlaid panels. The background stays static so star density is consistent;
-/// only the constellation zooms inside an [InteractiveViewer]. Panels sit
-/// outside the viewer at fixed position and width.
-class _AevField extends ConsumerWidget {
+class _AevField extends ConsumerStatefulWidget {
   const _AevField();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_AevField> createState() => _AevFieldState();
+}
+
+class _AevFieldState extends ConsumerState<_AevField> {
+  FieldGame? _game;
+  Key _gameKey = UniqueKey();
+  Placement? _selectedPlacement;
+  String? _starLabel;
+  Color? _starAccent;
+  int _starRealmCount = 0;
+  String? _currentRealmId;
+  String? _currentRealmName;
+  bool _showEmptyState = false;
+
+  bool get _inStarView => _starLabel != null;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    if (_game == null) {
+      _game = _createGame(reduceMotion);
+    } else {
+      _game!.reducedMotion = reduceMotion;
+    }
+  }
+
+  FieldGame _createGame(bool reduceMotion) {
+    final auth = ref.read(authControllerProvider);
+    final wallet = auth.user?.wallet ?? '';
+    final name = auth.user?.name ?? 'You';
+    AppLogger.debug(
+      'Creating FieldGame — wallet="${wallet.isEmpty ? "(empty)" : "${wallet.substring(0, 8)}…"}"',
+      tag: 'AevScreen',
+    );
+    final insideRealm = _currentRealmId != null;
+    return FieldGame(
+      palette: context.kiduna,
+      reduceMotion: reduceMotion,
+      source: GravityFieldSource(
+        walletAddress: wallet,
+        viewerName: name,
+        currentRealmId: _currentRealmId,
+      ),
+      nav: NavMode.traverse,
+      hideStars: true,
+      onInspect: (placement) {
+        setState(() {
+          _selectedPlacement = placement;
+        });
+      },
+      onDeselect: () {
+        setState(() {
+          _selectedPlacement = null;
+        });
+      },
+      onStarView: (label, accent, count) {
+        setState(() {
+          _starLabel = label;
+          _starAccent = accent;
+          _starRealmCount = count;
+        });
+      },
+      onReady: () {
+        if (insideRealm) {
+          final isEmpty = _game?.snapshot?.realms.isEmpty ?? true;
+          if (isEmpty) {
+            setState(() {
+              _showEmptyState = true;
+            });
+          }
+        }
+      },
+    );
+  }
+
+  void _rebuildGame() {
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    _gameKey = UniqueKey();
+    _game = _createGame(reduceMotion);
+  }
+
+  void _enterRealm(String realmId, String realmName) {
+    ref.read(fieldControllerProvider.notifier).enterRealm(realmId, realmName);
+    setState(() {
+      _currentRealmId = realmId;
+      _currentRealmName = realmName;
+      _selectedPlacement = null;
+      _showEmptyState = false;
+      _rebuildGame();
+    });
+  }
+
+  void _exitRealm() {
+    ref.read(fieldControllerProvider.notifier).exitEnteredRealm();
+    setState(() {
+      _currentRealmId = null;
+      _currentRealmName = null;
+      _selectedPlacement = null;
+      _starLabel = null;
+      _showEmptyState = false;
+      _rebuildGame();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen<FieldState>(fieldControllerProvider, (prev, next) {
+      final hadRealm = prev?.openActions.contains('realm') ?? false;
+      final hasRealm = next.openActions.contains('realm');
+      if (hadRealm && !hasRealm) {
+        _rebuildGame();
+      }
+    });
+
     final state = ref.watch(fieldControllerProvider);
     final controller = ref.read(fieldControllerProvider.notifier);
     final realm = state.currentRealm;
@@ -93,67 +210,85 @@ class _AevField extends ConsumerWidget {
         return Stack(
           clipBehavior: Clip.none,
           children: [
-            const Positioned.fill(child: FieldBackground()),
             Positioned.fill(
-              child: Padding(
-                padding: const EdgeInsets.only(
-                  top: 96,
-                  left: 26,
-                  right: 26,
-                  bottom: 28,
+              child: RepaintBoundary(
+                child: GameWidget(key: _gameKey, game: _game!),
+              ),
+            ),
+            if (_inStarView)
+              _StarViewHeader(
+                label: _starLabel!,
+                accent: _starAccent!,
+                realmCount: _starRealmCount,
+                onBack: () => _game?.returnToAtlas(),
+              )
+            else ...[
+              Positioned(
+                top: 22,
+                left: 22,
+                child: RealmContextPill(
+                  realm: realm,
+                  inspectOpen: state.inspectOpen,
+                  onInspect: controller.toggleInspect,
+                  width: 620,
+                  viewToggle: const _AtlasSceneToggle(),
                 ),
-                child: RealmConstellation(
-                  currentRealmId: state.currentRealmId,
-                  selectedRealmId: state.selectedRealmId,
-                  onSelect: controller.selectAtlasRealm,
-                  showHoverDetails: true,
+              ),
+              FieldPanel(
+                label: l10n.navigation,
+                bounds: bounds,
+                width: 360,
+                initialOffset: Offset(
+                  (constraints.maxWidth > 1020)
+                      ? 644
+                      : constraints.maxWidth - 382,
+                  16,
+                ),
+                child: NavigationPanel(
+                  realmPath: state.realmPath,
+                  onBreadcrumbTap: controller.navigateToBreadcrumb,
                 ),
               ),
-            ),
-            Positioned(
-              top: 22,
-              left: 22,
-              child: RealmContextPill(
-                realm: realm,
-                inspectOpen: state.inspectOpen,
-                onInspect: controller.toggleInspect,
-                width: 620,
-                viewToggle: const _AtlasSceneToggle(),
+              FieldPanel(
+                label: l10n.compute,
+                bounds: bounds,
+                width: 256,
+                initialOffset: Offset(
+                  constraints.maxWidth - 256 - 22,
+                  22,
+                ),
+                child: const ComputeCard(),
               ),
-            ),
-            FieldPanel(
-              label: l10n.navigation,
-              bounds: bounds,
-              width: 360,
-              initialOffset: Offset(
-                (constraints.maxWidth > 1020)
-                    ? 644
-                    : constraints.maxWidth - 382,
-                16,
+              FieldPanel(
+                label: l10n.possibleActions,
+                bounds: bounds,
+                width: 260,
+                accent: true,
+                initialMode: FieldPanelMode.collapsed,
+                initialOffset: const Offset(22, 100),
+                onClose: () {},
+                child: const PossibleActions(),
               ),
-              child: NavigationPanel(
-                realmPath: state.realmPath,
-                onBreadcrumbTap: controller.navigateToBreadcrumb,
+            ],
+            if (!_inStarView)
+              FieldWorkingPanels(
+                state: state,
+                controller: controller,
+                bounds: bounds,
+                opacity: 1.0,
               ),
-            ),
-            FieldPanel(
-              label: l10n.compute,
-              bounds: bounds,
-              width: 256,
-              initialOffset: Offset(constraints.maxWidth - 256 - 22, 22),
-              child: const ComputeCard(),
-            ),
-            FieldPanel(
-              label: l10n.possibleActions,
-              bounds: bounds,
-              width: 260,
-              accent: true,
-              initialMode: FieldPanelMode.collapsed,
-              initialOffset: const Offset(22, 100),
-              onClose: () {},
-              child: const PossibleActions(),
-            ),
-            if (state.inspectOpen)
+            if (!_inStarView && _currentRealmId != null)
+              Positioned(
+                top: 76,
+                left: 22,
+                child: _InsideRealmChip(
+                  name: _currentRealmName!,
+                  onExit: _exitRealm,
+                ),
+              ),
+            if (!_inStarView && _showEmptyState)
+              const Center(child: _EmptyRealmState()),
+            if (!_inStarView && state.inspectOpen)
               FieldPanel(
                 key: const ValueKey('panel-inspect'),
                 label: '${l10n.inspect} ${realm.name}',
@@ -163,29 +298,199 @@ class _AevField extends ConsumerWidget {
                 onClose: controller.toggleInspect,
                 child: InspectPanel(realm: realm),
               ),
-            if (state.selectedPlacement != null)
-              FieldPanel(
-                key: ValueKey('panel-advanced-${state.selectedRealmId}'),
-                label: state.selectedPlacement!.realm.name,
-                bounds: bounds,
-                width: 520,
-                initialOffset: Offset(
-                  (constraints.maxWidth > 1020)
-                      ? constraints.maxWidth * 0.35
-                      : 22,
-                  96,
-                ),
-                onClose: controller.clearSelection,
-                child: AdvancedActionsPanel(
-                  placement: state.selectedPlacement!,
-                  isCurrent: state.selectedRealmId == state.currentRealmId,
-                  onEnter: (realm) =>
-                      context.go(Routes.realmPath(realmId: realm.id)),
+            if (_selectedPlacement != null) ...[
+              Positioned.fill(
+                child: GestureDetector(
+                  onTap: () {
+                    _game?.clearSelection();
+                    setState(() {
+                      _selectedPlacement = null;
+                    });
+                  },
+                  child: const ColoredBox(
+                    color: Color(0x00000000),
+                  ),
                 ),
               ),
+              Positioned(
+                bottom: 24,
+                right: 24,
+                child: RealmDetailPopup(
+                  placement: _selectedPlacement!,
+                  onClose: () {
+                    _game?.clearSelection();
+                    setState(() {
+                      _selectedPlacement = null;
+                    });
+                  },
+                  onEnter: () {
+                    final p = _selectedPlacement!;
+                    _game?.clearSelection();
+                    _enterRealm(p.realm.id, p.realm.name);
+                  },
+                  onAtlasReload: _rebuildGame,
+                ),
+              ),
+            ],
           ],
         );
       },
+    );
+  }
+}
+
+class _StarViewHeader extends StatelessWidget {
+  const _StarViewHeader({
+    required this.label,
+    required this.accent,
+    required this.realmCount,
+    required this.onBack,
+  });
+
+  final String label;
+  final Color accent;
+  final int realmCount;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.kiduna;
+    return Positioned(
+      top: 22,
+      left: 22,
+      child: GestureDetector(
+        onTap: onBack,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 14,
+            ),
+            decoration: BoxDecoration(
+              color: colors.deep.withValues(alpha: 0.88),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: accent.withValues(alpha: 0.35),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '←  ${context.l10n.backToAtlas}',
+                  style: context.kidunaText.eyebrow.copyWith(
+                    color: accent,
+                    fontSize: 11,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  label.toUpperCase(),
+                  style: context.kidunaText.heading.copyWith(
+                    color: colors.cream,
+                    fontSize: 22,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '$realmCount Realms',
+                  style: context.kidunaText.bodySmall.copyWith(
+                    color: colors.muted,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: 40,
+                  height: 2,
+                  color: accent.withValues(alpha: 0.5),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _InsideRealmChip extends StatelessWidget {
+  const _InsideRealmChip({required this.name, required this.onExit});
+
+  final String name;
+  final VoidCallback onExit;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.kiduna;
+    return GestureDetector(
+      onTap: onExit,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: colors.deep.withValues(alpha: 0.92),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: colors.sky.withValues(alpha: 0.4)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.arrow_back, size: 14, color: colors.sky),
+              const SizedBox(width: 8),
+              Text(
+                name,
+                style: TextStyle(
+                  fontFamily: 'Avenir',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: colors.cream,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyRealmState extends StatelessWidget {
+  const _EmptyRealmState();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.kiduna;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+      decoration: BoxDecoration(
+        color: colors.deep.withValues(alpha: 0.88),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colors.sky.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.bubble_chart_outlined, size: 40, color: colors.quiet),
+          const SizedBox(height: 12),
+          Text(
+            context.l10n.noRealmsYet,
+            style: context.kidunaText.heading.copyWith(
+              color: colors.cream,
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            context.l10n.noRealmsYetDetail,
+            textAlign: TextAlign.center,
+            style: context.kidunaText.bodySmall.copyWith(color: colors.muted),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -14,10 +14,12 @@ class InstructService {
   Dio get _dio => ApiClient.instance.dio;
 
   /// List all instructs for a wallet.
-  Future<List<InstructModel>> listInstructs(String wallet) async {
+  Future<List<InstructModel>> listInstructs(String wallet, {String? realmId}) async {
+    final queryParams = <String, dynamic>{'wallet': wallet};
+    if (realmId != null) queryParams['realmId'] = realmId;
     final response = await _dio.get<Map<String, dynamic>>(
       ApiEndpoints.prompts,
-      queryParameters: {'wallet': wallet},
+      queryParameters: queryParams,
     );
     final list = response.data?['prompts'] as List<dynamic>? ?? [];
     return list
@@ -39,6 +41,7 @@ class InstructService {
     required String wallet,
     String content = '',
     String? goal,
+    String? realmId,
     String? connectedKbId,
     String? connectedKbName,
   }) async {
@@ -49,6 +52,7 @@ class InstructService {
         'content': content,
         'wallet': wallet,
         if (goal != null) 'goal': goal,
+        if (realmId != null) 'realmId': realmId,
         if (connectedKbId != null) 'connectedKBId': connectedKbId,
         if (connectedKbName != null) 'connectedKBName': connectedKbName,
       },

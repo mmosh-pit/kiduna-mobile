@@ -113,36 +113,46 @@ abstract class ApiEndpoints {
   /// `PATCH /api/approvals/{id}/reject` — reject an action.
   static String approvalReject(String id) => '/api/approvals/$id/reject';
 
-  // ── Dunas (kinship-backend) ───────────────────────────────────────────
+  // ── Realms (kinship-backend) ────────────────────────────────────────────
 
-  /// `GET /dunas` — fetch genesis duna and user dunas.
-  static const String dunas = '/dunas';
+  /// `POST /realms` — create any Realm type.
+  /// `GET /realms` — list caller's Realms (with optional type/parentId/tags filters).
+  static const String realms = '/realms';
 
-  /// `POST /dunas/organizations` — create an organization under genesis.
-  static const String dunasOrganizations = '/dunas/organizations';
+  /// `GET /realms/:id` — single Realm detail + members.
+  static String realmById(String id) => '/realms/$id';
 
-  // ── Alliances (kinship-backend) ─────────────────────────────────────
+  /// `GET /realms/handle-availability?handle=...` — unified handle check.
+  static const String realmHandleAvailability = '/realms/handle-availability';
 
-  /// `POST /alliances` — create a new alliance (+ Squads wallet if enabled).
-  /// `GET /alliances` — list caller's alliances.
-  static const String alliances = '/alliances';
+  /// `GET /realms/ecosystem` — genesis Ecosystem check (no auth).
+  static const String realmsEcosystem = '/realms/ecosystem';
 
-  /// `GET /alliances/:id` — single alliance detail.
-  static String allianceById(String id) => '/alliances/$id';
+  /// `GET /realms/by-tags?tags=...` — tag-based Realm discovery.
+  static const String realmsByTags = '/realms/by-tags';
 
-  /// `GET /alliances/handle-availability?handle=...`
-  static const String allianceHandleAvailability =
-      '/alliances/handle-availability';
+  /// `GET /realms/tree/:id` — Realm + one level of children.
+  static String realmTree(String id) => '/realms/tree/$id';
 
-  // ── Institutions (kinship-backend) ──────────────────────────────────
+  /// `GET /realms/enrollments?wallet=...` — public enrollment disclosure.
+  static const String realmEnrollments = '/realms/enrollments';
 
-  /// `POST /institutions` — create a new institution (+ Squads wallet).
-  /// `GET /institutions` — list caller's institutions.
-  static const String institutions = '/institutions';
+  // ── Gravity (kinship-agent) ────────────────────────────────────────────
 
-  /// `GET /institutions/handle-availability?handle=...`
-  static const String institutionHandleAvailability =
-      '/institutions/handle-availability';
+  /// `GET /api/gravity/{wallet}` — per-realm gravity scores.
+  static String gravity(String wallet) => '/api/gravity/$wallet';
+
+  /// `POST /api/gravity/override` — upsert a gravity override.
+  static const String gravityOverride = '/api/gravity/override';
+
+  /// `GET /api/gravity/overrides/{wallet}` — list all overrides.
+  static String gravityOverrides(String wallet) =>
+      '/api/gravity/overrides/$wallet';
+
+  // ── Activity (kinship-agent) ─────────────────────────────────────────
+
+  /// `POST /api/activity` — log a user activity event.
+  static const String activity = '/api/activity';
 
   // ── Tools (kinship-agent) ─────────────────────────────────────────────
 

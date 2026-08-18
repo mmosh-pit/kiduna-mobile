@@ -90,6 +90,7 @@ flutter:
     - assets/images/realm-emblems/
     - assets/images/allies/
     - assets/images/organization-crests/
+    - assets/fixtures/
     - assets/icons/
     - assets/animations/
 

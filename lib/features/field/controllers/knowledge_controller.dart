@@ -7,6 +7,7 @@ import '../../../data/models/knowledge_base_model.dart';
 import '../../../data/services/knowledge_service.dart';
 import '../../../features/auth/controllers/auth_controller.dart';
 import 'ally_controller.dart';
+import 'field_controller.dart';
 
 /// State for knowledge base management.
 @immutable
@@ -90,6 +91,8 @@ class KnowledgeController extends Notifier<KnowledgeState> {
 
   String? get _wallet => ref.read(authControllerProvider).user?.wallet;
 
+  String? get _currentRealmId => ref.read(fieldControllerProvider).currentRealmId;
+
   List<String> get _currentKbIds =>
       ref.read(allyControllerProvider).ally?.knowledgeBaseIds ?? const [];
 
@@ -120,6 +123,7 @@ class KnowledgeController extends Notifier<KnowledgeState> {
     final kb = await _service.createKnowledgeBase(
       name: name,
       wallet: wallet,
+      realmId: _currentRealmId,
       privacy: state.selectedPrivacy.name,
     );
     if (!ref.mounted) return null;
@@ -229,6 +233,7 @@ class KnowledgeController extends Notifier<KnowledgeState> {
       final kb = await _service.createKnowledgeBase(
         name: name,
         wallet: wallet,
+        realmId: _currentRealmId,
         privacy: privacy.name,
       );
       if (!ref.mounted) return;

@@ -98,14 +98,16 @@ class ApprovalService {
   final Dio _dio;
 
   /// Fetch pending approvals for a wallet.
-  Future<List<ApprovalModel>> fetchPending({required String wallet}) async {
+  Future<List<ApprovalModel>> fetchPending({required String wallet, String? realmId}) async {
     try {
+      final queryParams = <String, dynamic>{
+        'wallet': wallet,
+        'status': 'pending',
+      };
+      if (realmId != null) queryParams['realmId'] = realmId;
       final response = await _dio.get<Map<String, dynamic>>(
         ApiEndpoints.approvals,
-        queryParameters: {
-          'wallet': wallet,
-          'status': 'pending',
-        },
+        queryParameters: queryParams,
       );
 
       final body = response.data;

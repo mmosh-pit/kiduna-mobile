@@ -186,18 +186,20 @@ double _nodeWidth(FieldBand band) {
 
 Color _clusterColor(FieldClusterId id, KidunaColors colors) {
   switch (id) {
-    case FieldClusterId.formation:
-      return colors.sky;
-    case FieldClusterId.care:
-      return const Color(0xFFCF6F58);
-    case FieldClusterId.place:
-      return colors.mint;
-    case FieldClusterId.culture:
-      return const Color(0xFF9A7DE8);
-    case FieldClusterId.law:
-      return colors.gold;
+    case FieldClusterId.peopleCare:
+      return colors.clusterPeopleCare;
+    case FieldClusterId.societyJustice:
+      return colors.clusterSocietyJustice;
+    case FieldClusterId.culturePlay:
+      return colors.clusterCulturePlay;
+    case FieldClusterId.placePlanet:
+      return colors.clusterPlacePlanet;
+    case FieldClusterId.workWealth:
+      return colors.clusterWorkWealth;
+    case FieldClusterId.knowledgeFrontier:
+      return colors.clusterKnowledgeFrontier;
     case FieldClusterId.branch:
-      return const Color(0xFF62A8DF);
+      return colors.clusterBranch;
   }
 }
 

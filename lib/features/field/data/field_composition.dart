@@ -7,8 +7,17 @@ import 'realm_atlas.dart';
 /// `field-composition.ts`.
 enum FieldBand { near, middle, far }
 
-/// The thematic cluster a Realm belongs to.
-enum FieldClusterId { formation, care, place, culture, law, branch }
+/// The thematic cluster a Realm belongs to — maps to the 6 canonical Themes
+/// from Taxonomy V0.09 plus `branch` for nested child-realm views.
+enum FieldClusterId {
+  peopleCare,
+  societyJustice,
+  culturePlay,
+  placePlanet,
+  workWealth,
+  knowledgeFrontier,
+  branch,
+}
 
 /// A placed Realm: its position (`%` of the field box), band, cluster, and the
 /// plain-language reason it is where it is.
@@ -64,49 +73,56 @@ class FieldComposition {
 }
 
 const Map<FieldClusterId, String> _clusterLabels = {
-  FieldClusterId.formation: 'Formation · work · economy',
-  FieldClusterId.care: 'Care · family · relationship',
-  FieldClusterId.place: 'Place · ecology · mutual aid',
-  FieldClusterId.culture: 'Culture · play · public imagination',
-  FieldClusterId.law: 'Law · accountable institutions',
+  FieldClusterId.peopleCare: 'People & Care',
+  FieldClusterId.societyJustice: 'Society & Justice',
+  FieldClusterId.culturePlay: 'Culture & Play',
+  FieldClusterId.placePlanet: 'Place & Planet',
+  FieldClusterId.workWealth: 'Work & Wealth',
+  FieldClusterId.knowledgeFrontier: 'Knowledge & Frontier',
   FieldClusterId.branch: '',
 };
 
 const Map<String, FieldClusterId> _rootCluster = {
-  'dunaversity': FieldClusterId.formation,
-  'agency': FieldClusterId.formation,
-  'hyphal': FieldClusterId.formation,
-  'mapshifting': FieldClusterId.formation,
-  'freehold-finance': FieldClusterId.formation,
-  'tangential': FieldClusterId.formation,
-  'true-democracy': FieldClusterId.formation,
-  'kinship-underground': FieldClusterId.formation,
-  'kinship-commons': FieldClusterId.formation,
-  'ravensong-labs': FieldClusterId.formation,
-  'service-alliance': FieldClusterId.care,
-  'bihome': FieldClusterId.care,
-  'soul-kitchen': FieldClusterId.care,
-  'safeword': FieldClusterId.care,
-  'homeworld': FieldClusterId.care,
-  'black-love': FieldClusterId.care,
-  'non-toxic-masculinity': FieldClusterId.care,
-  'confluence-collective': FieldClusterId.place,
-  'mountain-river-trail': FieldClusterId.place,
-  'celebrity-solar': FieldClusterId.place,
-  'mycelial-aid': FieldClusterId.place,
-  'ansanm-ayiti': FieldClusterId.place,
-  'the-long-drum': FieldClusterId.place,
-  'indigenous-revival': FieldClusterId.place,
-  'ceremony-machine': FieldClusterId.culture,
-  'fellowship-of-play': FieldClusterId.culture,
-  'fanduna': FieldClusterId.culture,
-  'party-line': FieldClusterId.culture,
-  'cosmic-humanity': FieldClusterId.culture,
-  'vibe-coast': FieldClusterId.culture,
-  'wokelord': FieldClusterId.culture,
-  'global-peace': FieldClusterId.culture,
-  'jews-against-homelands': FieldClusterId.culture,
-  'contraction': FieldClusterId.law,
+  // ── People & Care ──
+  'service-alliance': FieldClusterId.peopleCare,
+  'bihome': FieldClusterId.peopleCare,
+  'soul-kitchen': FieldClusterId.peopleCare,
+  'safeword': FieldClusterId.peopleCare,
+  'homeworld': FieldClusterId.peopleCare,
+  'black-love': FieldClusterId.peopleCare,
+  'non-toxic-masculinity': FieldClusterId.peopleCare,
+  // ── Society & Justice ──
+  'true-democracy': FieldClusterId.societyJustice,
+  'contraction': FieldClusterId.societyJustice,
+  'global-peace': FieldClusterId.societyJustice,
+  'jews-against-homelands': FieldClusterId.societyJustice,
+  'mycelial-aid': FieldClusterId.societyJustice,
+  'ansanm-ayiti': FieldClusterId.societyJustice,
+  'the-long-drum': FieldClusterId.societyJustice,
+  // ── Culture & Play ──
+  'ceremony-machine': FieldClusterId.culturePlay,
+  'fellowship-of-play': FieldClusterId.culturePlay,
+  'fanduna': FieldClusterId.culturePlay,
+  'party-line': FieldClusterId.culturePlay,
+  'cosmic-humanity': FieldClusterId.culturePlay,
+  'vibe-coast': FieldClusterId.culturePlay,
+  'wokelord': FieldClusterId.culturePlay,
+  // ── Place & Planet ──
+  'confluence-collective': FieldClusterId.placePlanet,
+  'mountain-river-trail': FieldClusterId.placePlanet,
+  'celebrity-solar': FieldClusterId.placePlanet,
+  'indigenous-revival': FieldClusterId.placePlanet,
+  // ── Work & Wealth ──
+  'agency': FieldClusterId.workWealth,
+  'hyphal': FieldClusterId.workWealth,
+  'mapshifting': FieldClusterId.workWealth,
+  'freehold-finance': FieldClusterId.workWealth,
+  'tangential': FieldClusterId.workWealth,
+  'kinship-commons': FieldClusterId.workWealth,
+  // ── Knowledge & Frontier ──
+  'dunaversity': FieldClusterId.knowledgeFrontier,
+  'ravensong-labs': FieldClusterId.knowledgeFrontier,
+  'kinship-underground': FieldClusterId.knowledgeFrontier,
 };
 
 const Map<DesignPersona, List<String>> _foreground = {
@@ -236,15 +252,7 @@ class _ClusterGeometry {
 const Map<DesignPersona, Map<FieldClusterId, _ClusterGeometry>> _rootGeometry =
     {
       DesignPersona.alice: {
-        FieldClusterId.formation: _ClusterGeometry(
-          left: 41,
-          top: 38,
-          radiusX: 29,
-          radiusY: 22,
-          startAngle: -2.8,
-          arc: 5.25,
-        ),
-        FieldClusterId.care: _ClusterGeometry(
+        FieldClusterId.peopleCare: _ClusterGeometry(
           left: 18,
           top: 69,
           radiusX: 15,
@@ -252,15 +260,15 @@ const Map<DesignPersona, Map<FieldClusterId, _ClusterGeometry>> _rootGeometry =
           startAngle: -2.2,
           arc: 4.25,
         ),
-        FieldClusterId.place: _ClusterGeometry(
-          left: 48,
-          top: 76,
-          radiusX: 24,
-          radiusY: 13,
-          startAngle: -2.85,
-          arc: 4.8,
+        FieldClusterId.societyJustice: _ClusterGeometry(
+          left: 76,
+          top: 29,
+          radiusX: 14,
+          radiusY: 14,
+          startAngle: -2.6,
+          arc: 4.2,
         ),
-        FieldClusterId.culture: _ClusterGeometry(
+        FieldClusterId.culturePlay: _ClusterGeometry(
           left: 79,
           top: 63,
           radiusX: 15,
@@ -268,25 +276,33 @@ const Map<DesignPersona, Map<FieldClusterId, _ClusterGeometry>> _rootGeometry =
           startAngle: -2.35,
           arc: 4.45,
         ),
-        FieldClusterId.law: _ClusterGeometry(
-          left: 76,
-          top: 29,
-          radiusX: 7,
-          radiusY: 9,
-          startAngle: -1.4,
-          arc: 1.2,
+        FieldClusterId.placePlanet: _ClusterGeometry(
+          left: 48,
+          top: 76,
+          radiusX: 20,
+          radiusY: 13,
+          startAngle: -2.85,
+          arc: 4.8,
+        ),
+        FieldClusterId.workWealth: _ClusterGeometry(
+          left: 35,
+          top: 38,
+          radiusX: 22,
+          radiusY: 18,
+          startAngle: -2.8,
+          arc: 5.0,
+        ),
+        FieldClusterId.knowledgeFrontier: _ClusterGeometry(
+          left: 52,
+          top: 30,
+          radiusX: 14,
+          radiusY: 12,
+          startAngle: -2.5,
+          arc: 4.0,
         ),
       },
       DesignPersona.bob: {
-        FieldClusterId.formation: _ClusterGeometry(
-          left: 20,
-          top: 30,
-          radiusX: 12,
-          radiusY: 10,
-          startAngle: -2.6,
-          arc: 4.2,
-        ),
-        FieldClusterId.care: _ClusterGeometry(
+        FieldClusterId.peopleCare: _ClusterGeometry(
           left: 38,
           top: 51,
           radiusX: 27,
@@ -294,7 +310,7 @@ const Map<DesignPersona, Map<FieldClusterId, _ClusterGeometry>> _rootGeometry =
           startAngle: -2.7,
           arc: 5.1,
         ),
-        FieldClusterId.place: _ClusterGeometry(
+        FieldClusterId.societyJustice: _ClusterGeometry(
           left: 70,
           top: 63,
           radiusX: 20,
@@ -302,7 +318,7 @@ const Map<DesignPersona, Map<FieldClusterId, _ClusterGeometry>> _rootGeometry =
           startAngle: -2.35,
           arc: 4.5,
         ),
-        FieldClusterId.culture: _ClusterGeometry(
+        FieldClusterId.culturePlay: _ClusterGeometry(
           left: 78,
           top: 31,
           radiusX: 11,
@@ -310,25 +326,33 @@ const Map<DesignPersona, Map<FieldClusterId, _ClusterGeometry>> _rootGeometry =
           startAngle: -2.2,
           arc: 3.8,
         ),
-        FieldClusterId.law: _ClusterGeometry(
+        FieldClusterId.placePlanet: _ClusterGeometry(
           left: 84,
           top: 78,
-          radiusX: 6,
-          radiusY: 7,
-          startAngle: -1.4,
-          arc: 1.2,
+          radiusX: 10,
+          radiusY: 9,
+          startAngle: -2.4,
+          arc: 3.6,
+        ),
+        FieldClusterId.workWealth: _ClusterGeometry(
+          left: 20,
+          top: 30,
+          radiusX: 12,
+          radiusY: 10,
+          startAngle: -2.6,
+          arc: 4.2,
+        ),
+        FieldClusterId.knowledgeFrontier: _ClusterGeometry(
+          left: 22,
+          top: 78,
+          radiusX: 10,
+          radiusY: 8,
+          startAngle: -2.3,
+          arc: 3.5,
         ),
       },
       DesignPersona.carol: {
-        FieldClusterId.formation: _ClusterGeometry(
-          left: 77,
-          top: 27,
-          radiusX: 14,
-          radiusY: 12,
-          startAngle: -2.4,
-          arc: 4.1,
-        ),
-        FieldClusterId.care: _ClusterGeometry(
+        FieldClusterId.peopleCare: _ClusterGeometry(
           left: 20,
           top: 70,
           radiusX: 15,
@@ -336,15 +360,15 @@ const Map<DesignPersona, Map<FieldClusterId, _ClusterGeometry>> _rootGeometry =
           startAngle: -2.5,
           arc: 4.4,
         ),
-        FieldClusterId.place: _ClusterGeometry(
-          left: 80,
-          top: 76,
-          radiusX: 9,
-          radiusY: 9,
-          startAngle: -2.4,
-          arc: 3.7,
+        FieldClusterId.societyJustice: _ClusterGeometry(
+          left: 88,
+          top: 49,
+          radiusX: 8,
+          radiusY: 10,
+          startAngle: -2.2,
+          arc: 3.5,
         ),
-        FieldClusterId.culture: _ClusterGeometry(
+        FieldClusterId.culturePlay: _ClusterGeometry(
           left: 49,
           top: 51,
           radiusX: 34,
@@ -352,25 +376,33 @@ const Map<DesignPersona, Map<FieldClusterId, _ClusterGeometry>> _rootGeometry =
           startAngle: -2.85,
           arc: 5.55,
         ),
-        FieldClusterId.law: _ClusterGeometry(
-          left: 88,
-          top: 49,
-          radiusX: 6,
-          radiusY: 8,
-          startAngle: -1.4,
-          arc: 1.2,
+        FieldClusterId.placePlanet: _ClusterGeometry(
+          left: 80,
+          top: 76,
+          radiusX: 9,
+          radiusY: 9,
+          startAngle: -2.4,
+          arc: 3.7,
+        ),
+        FieldClusterId.workWealth: _ClusterGeometry(
+          left: 77,
+          top: 27,
+          radiusX: 12,
+          radiusY: 10,
+          startAngle: -2.4,
+          arc: 4.1,
+        ),
+        FieldClusterId.knowledgeFrontier: _ClusterGeometry(
+          left: 82,
+          top: 36,
+          radiusX: 10,
+          radiusY: 9,
+          startAngle: -2.3,
+          arc: 3.5,
         ),
       },
       DesignPersona.danny: {
-        FieldClusterId.formation: _ClusterGeometry(
-          left: 72,
-          top: 38,
-          radiusX: 21,
-          radiusY: 19,
-          startAngle: -2.65,
-          arc: 4.6,
-        ),
-        FieldClusterId.care: _ClusterGeometry(
+        FieldClusterId.peopleCare: _ClusterGeometry(
           left: 87,
           top: 78,
           radiusX: 7,
@@ -378,15 +410,15 @@ const Map<DesignPersona, Map<FieldClusterId, _ClusterGeometry>> _rootGeometry =
           startAngle: -1.4,
           arc: 1.2,
         ),
-        FieldClusterId.place: _ClusterGeometry(
+        FieldClusterId.societyJustice: _ClusterGeometry(
           left: 40,
-          top: 54,
-          radiusX: 31,
-          radiusY: 27,
-          startAngle: -2.8,
-          arc: 5.2,
+          top: 72,
+          radiusX: 16,
+          radiusY: 14,
+          startAngle: -2.5,
+          arc: 4.2,
         ),
-        FieldClusterId.culture: _ClusterGeometry(
+        FieldClusterId.culturePlay: _ClusterGeometry(
           left: 75,
           top: 76,
           radiusX: 8,
@@ -394,13 +426,29 @@ const Map<DesignPersona, Map<FieldClusterId, _ClusterGeometry>> _rootGeometry =
           startAngle: -1.4,
           arc: 1.2,
         ),
-        FieldClusterId.law: _ClusterGeometry(
-          left: 90,
-          top: 54,
-          radiusX: 6,
-          radiusY: 8,
-          startAngle: -1.4,
-          arc: 1.2,
+        FieldClusterId.placePlanet: _ClusterGeometry(
+          left: 40,
+          top: 48,
+          radiusX: 28,
+          radiusY: 22,
+          startAngle: -2.8,
+          arc: 5.2,
+        ),
+        FieldClusterId.workWealth: _ClusterGeometry(
+          left: 78,
+          top: 38,
+          radiusX: 14,
+          radiusY: 12,
+          startAngle: -2.5,
+          arc: 4.0,
+        ),
+        FieldClusterId.knowledgeFrontier: _ClusterGeometry(
+          left: 68,
+          top: 30,
+          radiusX: 16,
+          radiusY: 14,
+          startAngle: -2.65,
+          arc: 4.6,
         ),
       },
     };
@@ -554,7 +602,7 @@ FieldComposition _rootComposition(
 ) {
   final grouped = <FieldClusterId, List<AtlasRealm>>{};
   for (final realm in realms) {
-    final cluster = _rootCluster[realm.id] ?? FieldClusterId.formation;
+    final cluster = _rootCluster[realm.id] ?? FieldClusterId.workWealth;
     grouped.putIfAbsent(cluster, () => []).add(realm);
   }
 
