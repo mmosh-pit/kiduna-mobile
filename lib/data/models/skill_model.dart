@@ -18,6 +18,7 @@ class SkillModel {
     this.skillContent,
     this.skillFilePath,
     this.requiresApproval = false,
+    this.realmId,
     this.status = 'active',
     this.createdAt,
     this.updatedAt,
@@ -32,6 +33,7 @@ class SkillModel {
   final String? skillContent;
   final String? skillFilePath;
   final bool requiresApproval;
+  final String? realmId;
   final String status;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -54,6 +56,7 @@ class SkillModel {
       requiresApproval:
           (json['requiresApproval'] ?? json['requires_approval'] ?? false)
               as bool,
+      realmId: (json['realmId'] ?? json['realm_id']) as String?,
       status: (json['status'] ?? 'active') as String,
       createdAt: _tryParseDate(json['createdAt'] ?? json['created_at']),
       updatedAt: _tryParseDate(json['updatedAt'] ?? json['updated_at']),
@@ -93,6 +96,7 @@ class SkillModel {
     if (skillContent != null) 'skill_content': skillContent,
     'wallet': wallet,
     'requires_approval': requiresApproval,
+    if (realmId != null) 'realmId': realmId,
   };
 
   @override

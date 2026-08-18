@@ -92,36 +92,67 @@ abstract class ApiEndpoints {
   /// `POST /api/skills/generate-content` — AI-generate SKILL.md content.
   static const String skillGenerateContent = '/api/skills/generate-content';
 
-  // ── Dunas (kinship-backend) ───────────────────────────────────────────
+  /// `POST /api/skills/upload-md` — parse an uploaded SKILL.md file.
+  static const String skillUploadMd = '/api/skills/upload-md';
 
-  /// `GET /dunas` — fetch genesis duna and user dunas.
-  static const String dunas = '/dunas';
+  /// `GET /api/tools/registry-search` — search public MCP registries.
+  static const String toolsRegistrySearch = '/api/tools/registry-search';
 
-  /// `POST /dunas/organizations` — create an organization under genesis.
-  static const String dunasOrganizations = '/dunas/organizations';
+  static String skillDownload(String skillId) => '/api/skills/$skillId/download';
+  // ── Approvals ──────────────────────────────────────────────────
 
-  // ── Alliances (kinship-backend) ─────────────────────────────────────
+  /// `GET /api/approvals` — list approval requests.
+  static const String approvals = '/api/approvals';
 
-  /// `POST /alliances` — create a new alliance (+ Squads wallet if enabled).
-  /// `GET /alliances` — list caller's alliances.
-  static const String alliances = '/alliances';
+  /// `GET /api/approvals/stats` — approval statistics.
+  static const String approvalStats = '/api/approvals/stats';
 
-  /// `GET /alliances/:id` — single alliance detail.
-  static String allianceById(String id) => '/alliances/$id';
+  /// `PATCH /api/approvals/{id}/approve` — approve an action.
+  static String approvalApprove(String id) => '/api/approvals/$id/approve';
 
-  /// `GET /alliances/handle-availability?handle=...`
-  static const String allianceHandleAvailability =
-      '/alliances/handle-availability';
+  /// `PATCH /api/approvals/{id}/reject` — reject an action.
+  static String approvalReject(String id) => '/api/approvals/$id/reject';
 
-  // ── Institutions (kinship-backend) ──────────────────────────────────
+  // ── Realms (kinship-backend) ────────────────────────────────────────────
 
-  /// `POST /institutions` — create a new institution (+ Squads wallet).
-  /// `GET /institutions` — list caller's institutions.
-  static const String institutions = '/institutions';
+  /// `POST /realms` — create any Realm type.
+  /// `GET /realms` — list caller's Realms (with optional type/parentId/tags filters).
+  static const String realms = '/realms';
 
-  /// `GET /institutions/handle-availability?handle=...`
-  static const String institutionHandleAvailability =
-      '/institutions/handle-availability';
+  /// `GET /realms/:id` — single Realm detail + members.
+  static String realmById(String id) => '/realms/$id';
+
+  /// `GET /realms/handle-availability?handle=...` — unified handle check.
+  static const String realmHandleAvailability = '/realms/handle-availability';
+
+  /// `GET /realms/ecosystem` — genesis Ecosystem check (no auth).
+  static const String realmsEcosystem = '/realms/ecosystem';
+
+  /// `GET /realms/by-tags?tags=...` — tag-based Realm discovery.
+  static const String realmsByTags = '/realms/by-tags';
+
+  /// `GET /realms/tree/:id` — Realm + one level of children.
+  static String realmTree(String id) => '/realms/tree/$id';
+
+  /// `GET /realms/enrollments?wallet=...` — public enrollment disclosure.
+  static const String realmEnrollments = '/realms/enrollments';
+
+  // ── Gravity (kinship-agent) ────────────────────────────────────────────
+
+  /// `GET /api/gravity/{wallet}` — per-realm gravity scores.
+  static String gravity(String wallet) => '/api/gravity/$wallet';
+
+  /// `POST /api/gravity/override` — upsert a gravity override.
+  static const String gravityOverride = '/api/gravity/override';
+
+  /// `GET /api/gravity/overrides/{wallet}` — list all overrides.
+  static String gravityOverrides(String wallet) =>
+      '/api/gravity/overrides/$wallet';
+
+  // ── Activity (kinship-agent) ─────────────────────────────────────────
+
+  /// `POST /api/activity` — log a user activity event.
+  static const String activity = '/api/activity';
 
   // ── Tools (kinship-agent) ─────────────────────────────────────────────
 

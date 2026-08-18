@@ -158,9 +158,67 @@ class _SkillsPanelState extends ConsumerState<SkillsPanel> {
               const SizedBox(height: 7),
             ],
           const SizedBox(height: 14),
-          FieldPrimaryButton(
-            label: l10n.createNewSkillWithKi,
-            onPressed: controller.openSkillForm,
+          Row(
+            children: [
+              Expanded(
+                child: FieldPrimaryButton(
+                  label: l10n.createNewSkillWithKi,
+                  onPressed: controller.openSkillForm,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Builder(builder: (context) {
+                  final isUploading = ref.watch(
+                    fieldControllerProvider
+                        .select((s) => s.skillUploadLoading),
+                  );
+                  return GestureDetector(
+                    onTap:
+                        isUploading ? null : () => controller.openSkillUpload(),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: context.kiduna.camel.withValues(alpha: 0.22),
+                        ),
+                        borderRadius: BorderRadius.circular(
+                          context.metrics.radiusMd,
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: isUploading
+                          ? SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 1.5,
+                                color: context.kiduna.sky,
+                              ),
+                            )
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.upload_file,
+                                  size: 14,
+                                  color: context.kiduna.muted,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Upload Skill (.md)',
+                                  style: context.kidunaText.caption.copyWith(
+                                    color: context.kiduna.muted,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                    ),
+                  );
+                }),
+              ),
+            ],
           ),
         ],
       ),

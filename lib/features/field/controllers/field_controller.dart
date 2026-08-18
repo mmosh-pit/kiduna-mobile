@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -15,9 +16,13 @@ import '../../../data/models/field_realm.dart';
 import '../../../data/models/invitation_request.dart';
 import '../../../data/models/invitation_response.dart';
 import '../../../data/models/ki_topic.dart';
+import '../../../data/models/realm_model.dart';
 import '../../../data/models/saved_tool_model.dart';
 import '../../../data/models/skill_model.dart';
+import '../../../data/services/approval_service.dart';
+import '../../../data/services/gravity_service.dart';
 import '../../../data/services/invitation_service.dart';
+import '../../../data/services/realm_service.dart';
 import '../../../data/services/skill_service.dart';
 import '../../../data/services/tool_connection_service.dart';
 import '../../auth/controllers/auth_controller.dart';
@@ -27,9 +32,6 @@ import '../data/field_fixtures.dart';
 import '../data/realm_atlas.dart';
 import 'ally_controller.dart';
 import 'ecosystem_controller.dart';
-import '../../../data/services/alliance_service.dart';
-import '../../../data/models/alliance_model.dart';
-import '../../../data/models/institution_model.dart';
 
 /// UI state for the Field.
 @immutable
@@ -64,12 +66,19 @@ class FieldState {
     this.availableTools = const [],
     this.toolsLoaded = false,
     this.skillFormOpen = false,
+    this.approvalsOpen = false,
+    this.pendingApprovalCount = 0,
+    this.uploadedSkillData,
+    this.uploadedToolRegistry,
+    this.skillUploadLoading = false,
     this.editingSkill,
     this.savedTools = const [],
     this.skillsLoading = false,
     this.connectingTool,
     this.toolVerifyError,
     this.toolVerifying = false,
+    this.enteredRealmId,
+    this.enteredRealmName,
   });
 
   final KiTopic kiTopic;
@@ -121,6 +130,11 @@ class FieldState {
 
   /// Whether the skill creation form panel is open.
   final bool skillFormOpen;
+  final bool approvalsOpen;
+  final int pendingApprovalCount;
+  final Map<String, dynamic>? uploadedSkillData;
+  final Map<String, dynamic>? uploadedToolRegistry;
+  final bool skillUploadLoading;
 
   /// Skill being edited — null means creating new.
   final SkillModel? editingSkill;
@@ -139,6 +153,11 @@ class FieldState {
 
   /// Whether a tool verification is in progress.
   final bool toolVerifying;
+
+  /// The Realm the user is currently "inside" on the Atlas (Enter button).
+  /// null means viewing the root ecosystem.
+  final String? enteredRealmId;
+  final String? enteredRealmName;
 
   String? get selectedRealmId => selectedPlacement?.realm.id;
 
@@ -173,6 +192,12 @@ class FieldState {
     List<AvailableToolModel>? availableTools,
     bool? toolsLoaded,
     bool? skillFormOpen,
+    bool? approvalsOpen,
+    int? pendingApprovalCount,
+    Map<String, dynamic>? uploadedSkillData,
+    Map<String, dynamic>? uploadedToolRegistry,
+    bool? skillUploadLoading,
+    bool clearUploadedSkill = false,
     SkillModel? editingSkill,
     bool clearEditingSkill = false,
     List<SavedToolModel>? savedTools,
@@ -182,6 +207,9 @@ class FieldState {
     String? toolVerifyError,
     bool clearToolVerifyError = false,
     bool? toolVerifying,
+    String? enteredRealmId,
+    bool clearEnteredRealm = false,
+    String? enteredRealmName,
   }) {
     return FieldState(
       kiTopic: kiTopic ?? this.kiTopic,
@@ -217,6 +245,17 @@ class FieldState {
       availableTools: availableTools ?? this.availableTools,
       toolsLoaded: toolsLoaded ?? this.toolsLoaded,
       skillFormOpen: skillFormOpen ?? this.skillFormOpen,
+      approvalsOpen: approvalsOpen ?? this.approvalsOpen,
+      pendingApprovalCount:
+          pendingApprovalCount ?? this.pendingApprovalCount,
+      uploadedSkillData: clearUploadedSkill
+          ? null
+          : (uploadedSkillData ?? this.uploadedSkillData),
+      uploadedToolRegistry: clearUploadedSkill
+          ? null
+          : (uploadedToolRegistry ?? this.uploadedToolRegistry),
+      skillUploadLoading:
+          skillUploadLoading ?? this.skillUploadLoading,
       editingSkill: clearEditingSkill
           ? null
           : (editingSkill ?? this.editingSkill),
@@ -229,6 +268,12 @@ class FieldState {
           ? null
           : (toolVerifyError ?? this.toolVerifyError),
       toolVerifying: toolVerifying ?? this.toolVerifying,
+      enteredRealmId: clearEnteredRealm
+          ? null
+          : (enteredRealmId ?? this.enteredRealmId),
+      enteredRealmName: clearEnteredRealm
+          ? null
+          : (enteredRealmName ?? this.enteredRealmName),
     );
   }
 }
@@ -251,6 +296,7 @@ class FieldController extends Notifier<FieldState> {
             type: 'Ecosystem',
             emblemAsset: AppAssets.realmEmblem('organization'),
           ),
+          currentRealmId: genesis.id,
         );
       } else if (!next.isLoading) {
         // Loading finished but no genesis exists — show placeholder.
@@ -279,6 +325,23 @@ class FieldController extends Notifier<FieldState> {
             emblemAsset: '',
           );
 
+    // Fetch pending approval count and gravity when auth state changes.
+    ref.listen(authControllerProvider, (prev, next) {
+      if (next.user != null && (prev?.user == null || prev?.user?.wallet != next.user?.wallet)) {
+        fetchPendingApprovalCount();
+        _loadGravityFromApi(next.user!.wallet);
+      }
+    });
+
+    // Fetch pending approval count in the background.
+    Future.microtask(fetchPendingApprovalCount);
+
+    // Load gravity from API if wallet is already available.
+    final authWallet = ref.read(authControllerProvider).user?.wallet;
+    if (authWallet != null && authWallet.isNotEmpty) {
+      Future.microtask(() => _loadGravityFromApi(authWallet));
+    }
+
     return FieldState(
       kiTopic: FieldFixtures.defaultKi,
       currentRealm: initialRealm,
@@ -306,6 +369,17 @@ class FieldController extends Notifier<FieldState> {
       preservedMessage: trimmed,
       kiTopic: FieldFixtures.messagePreserved,
     );
+  }
+
+  void enterRealm(String realmId, String realmName) {
+    state = state.copyWith(
+      enteredRealmId: realmId,
+      enteredRealmName: realmName,
+    );
+  }
+
+  void exitEnteredRealm() {
+    state = state.copyWith(clearEnteredRealm: true);
   }
 
   /// Opens the working panel for [action] and lets Ki speak to it.
@@ -409,15 +483,55 @@ class FieldController extends Notifier<FieldState> {
     );
   }
 
-  /// Sets the gravity level (1–5) for a realm.
+  /// Sets the gravity level (1–5) for a realm and persists the override
+  /// to the backend API.
   void setGravity(String realmId, int level) {
     final clamped = level.clamp(1, 5);
     state = state.copyWith(
       realmGravity: {...state.realmGravity, realmId: clamped},
     );
+
+    final wallet = ref.read(authControllerProvider).user?.wallet;
+    if (wallet != null && wallet.isNotEmpty) {
+      const levelNames = {1: 'quiet', 2: 'available', 3: 'relevant', 4: 'central', 5: 'vital'};
+      final levelName = levelNames[clamped] ?? 'relevant';
+      GravityService.instance
+          .setLevelOverride(wallet: wallet, realmId: realmId, level: levelName)
+          .catchError((Object e) {
+        AppLogger.warning(
+          'Failed to persist gravity override',
+          tag: 'FieldController',
+        );
+      });
+    }
   }
 
   int gravityFor(String realmId) => state.realmGravity[realmId] ?? 3;
+
+  /// Loads gravity scores from the backend API and populates [realmGravity].
+  Future<void> _loadGravityFromApi(String wallet) async {
+    try {
+      final response = await GravityService.instance.fetchGravity(wallet);
+      if (!ref.mounted) return;
+
+      const levelToInt = {'vital': 5, 'central': 4, 'relevant': 3, 'available': 2, 'quiet': 1};
+      final map = <String, int>{};
+      for (final realm in response.realms) {
+        map[realm.id] = levelToInt[realm.level] ?? 3;
+      }
+
+      state = state.copyWith(realmGravity: {...state.realmGravity, ...map});
+      AppLogger.info(
+        'Gravity loaded: ${response.realms.length} realms',
+        tag: 'FieldController',
+      );
+    } catch (e) {
+      AppLogger.warning(
+        'Gravity API load failed, using local defaults',
+        tag: 'FieldController',
+      );
+    }
+  }
 
   /// Enters the selected realm: it becomes the new current realm, the
   /// constellation re-renders to show its children, and Ki updates.
@@ -522,69 +636,46 @@ class FieldController extends Notifier<FieldState> {
     );
   }
 
-  /// Called by [RealmPanel] after a successful Alliance creation.
+  /// Called by [RealmPanel] after a successful Realm creation (any type).
   /// Updates the field state and shows a Ki confirmation message.
   /// The API call itself lives in the panel so errors display in-form.
-  void onAllianceCreated(AllianceModel alliance) {
-    final pda = alliance.vaultPda;
+  void onRealmCreated(RealmModel realm) {
+    final pda = realm.vaultPda;
     final walletInfo = pda != null
         ? 'Team Wallet ${pda.substring(0, 4)}…${pda.substring(pda.length - 4)} ready.'
         : '';
 
     state = state.copyWith(
       currentRealm: FieldRealm(
-        name: alliance.name,
-        type: 'Alliance',
-        emblemAsset: AppAssets.realmEmblem('Alliance'),
+        name: realm.name,
+        type: realm.typeLabel,
+        emblemAsset: AppAssets.realmEmblem(realm.typeLabel),
       ),
+      currentRealmId: realm.id,
       openActions:
           state.openActions.where((item) => item != 'realm').toList(),
     );
+
+    final statusNote = realm.type == 'institution'
+        ? ' Status: ${realm.status}.'
+        : '';
+
     askAbout(
       KiTopic(
-        title: '${alliance.name} created',
+        title: '${realm.name} created',
         body:
-            'Ki has created the Alliance "${alliance.name}" with handle '
-            '@${alliance.handle}. You are its first Wizard. $walletInfo',
+            'Ki has created the ${realm.typeLabel} "${realm.name}" with handle '
+            '@${realm.handle}.$statusNote $walletInfo',
         invitation:
-            'Ki can help add members, set the spending rule, or '
-            'shape the Alliance\'s purpose and boundaries.',
+            'Ki can help add members, shape purpose and boundaries, or '
+            'configure the ${realm.typeLabel}.',
       ),
     );
   }
 
-  /// Check if a handle is available for an Alliance.
+  /// Check if a handle is available for any Realm type (unified endpoint).
   Future<bool> checkHandleAvailability(String handle) async {
-    return AllianceService.instance.checkHandleAvailability(handle);
-  }
-
-  /// Called by [RealmPanel] after a successful Institution creation.
-  void onInstitutionCreated(InstitutionModel institution) {
-    final pda = institution.vaultPda;
-    final walletInfo = pda != null
-        ? 'Team Wallet ${pda.substring(0, 4)}…${pda.substring(pda.length - 4)} ready.'
-        : '';
-
-    state = state.copyWith(
-      currentRealm: FieldRealm(
-        name: institution.name,
-        type: 'Institution',
-        emblemAsset: AppAssets.realmEmblem('Institution'),
-      ),
-      openActions:
-          state.openActions.where((item) => item != 'realm').toList(),
-    );
-    askAbout(
-      KiTopic(
-        title: '${institution.name} created',
-        body:
-            'Ki has created the Institution "${institution.name}" with handle '
-            '@${institution.handle}. Status: Draft. $walletInfo',
-        invitation:
-            'Ki can help add members, upload standing documentation, or '
-            'publish the Institution when ready.',
-      ),
-    );
+    return RealmService.instance.checkHandleAvailability(handle);
   }
 
   void savePresentation({required String name, required String type}) {
@@ -614,14 +705,110 @@ class FieldController extends Notifier<FieldState> {
   // ── Skills ───────────────────────────────────────────────────────────
 
   /// Open the skill creation form as a separate working panel.
+  void openApprovals() {
+    state = state.copyWith(approvalsOpen: true);
+  }
+
+  void closeApprovals() {
+    state = state.copyWith(approvalsOpen: false);
+    // Refresh count after panel closes (approvals may have been resolved).
+    fetchPendingApprovalCount();
+  }
+
+  /// Fetch the number of pending approvals for the current user.
+  Future<void> fetchPendingApprovalCount() async {
+    final auth = ref.read(authControllerProvider);
+    final wallet = auth.user?.wallet ?? '';
+    AppLogger.info(
+      'fetchPendingApprovalCount: wallet=${wallet.isEmpty ? "EMPTY" : wallet.substring(0, 10)}...',
+      tag: 'FieldController',
+    );
+    if (wallet.isEmpty) return;
+
+    try {
+      final approvals = await ApprovalService.instance.fetchPending(
+        wallet: wallet,
+      );
+      if (!ref.mounted) return;
+      AppLogger.info(
+        'Pending approvals: ${approvals.length}',
+        tag: 'FieldController',
+      );
+      state = state.copyWith(pendingApprovalCount: approvals.length);
+    } catch (e) {
+      AppLogger.warning(
+        'fetchPendingApprovalCount failed: $e',
+        tag: 'FieldController',
+      );
+    }
+  }
+
   void openSkillForm() {
     state = state.copyWith(skillFormOpen: true, clearEditingSkill: true);
     fetchAvailableTools();
   }
 
+  /// Open skill form with pre-filled data from uploaded MD.
+  void openSkillUpload() async {
+    try {
+      final result = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['md'],
+        withData: true,
+      );
+      if (result == null || result.files.isEmpty) return;
+
+      final bytes = result.files.first.bytes;
+      if (bytes == null) return;
+
+      final content = String.fromCharCodes(bytes);
+      if (content.trim().isEmpty) return;
+
+      // Show loading on the upload button.
+      state = state.copyWith(skillUploadLoading: true);
+
+      // Parse the MD file via backend.
+      final parsed = await SkillService.instance.uploadSkillMd(content);
+      if (parsed == null || !ref.mounted) {
+        state = state.copyWith(skillUploadLoading: false);
+        return;
+      }
+
+      // Check if the detected tool is available.
+      final tool = (parsed['tool'] as String? ?? '').toLowerCase();
+      Map<String, dynamic>? registryInfo;
+      if (tool.isNotEmpty) {
+        registryInfo = await SkillService.instance.searchRegistry(tool);
+      }
+
+      if (!ref.mounted) return;
+
+      // Open form with parsed data.
+      state = state.copyWith(
+        skillFormOpen: true,
+        clearEditingSkill: true,
+        uploadedSkillData: parsed,
+        uploadedToolRegistry: registryInfo,
+        skillUploadLoading: false,
+      );
+    } catch (e) {
+      AppLogger.warning(
+        'Skill upload failed: $e',
+        tag: 'FieldController',
+      );
+      if (ref.mounted) {
+        state = state.copyWith(skillUploadLoading: false);
+      }
+    }
+  }
+
   /// Close the skill creation form panel.
   void closeSkillForm() {
-    state = state.copyWith(skillFormOpen: false, clearEditingSkill: true);
+    state = state.copyWith(
+      skillFormOpen: false,
+      clearEditingSkill: true,
+      clearUploadedSkill: true,
+    );
   }
 
   /// Fetch available tools from MCP servers.
@@ -700,6 +887,7 @@ class FieldController extends Notifier<FieldState> {
       thenText: thenText,
       tools: tools,
       requiresApproval: requiresApproval,
+      realmId: state.currentRealmId != 'kinship-duna' ? state.currentRealmId : null,
       skillFilePath: '$slug.md',
     );
 
@@ -1167,6 +1355,7 @@ class FieldController extends Notifier<FieldState> {
         wallet: wallet,
         toolName: toolName,
         credentials: enrichedCredentials,
+        realmId: state.currentRealmId != 'kinship-duna' ? state.currentRealmId : null,
       );
 
       if (!ref.mounted) {

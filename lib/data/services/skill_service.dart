@@ -18,10 +18,14 @@ class SkillService {
   Dio get _dio => ApiClient.instance.dio;
 
   /// Fetch all skills from the backend.
-  Future<List<SkillModel>> list() async {
+  /// Optionally filter by [realmId] for per-Realm skill listing.
+  Future<List<SkillModel>> list({String? realmId}) async {
     try {
+      final queryParams = <String, dynamic>{};
+      if (realmId != null) queryParams['realmId'] = realmId;
       final response = await _dio.get<Map<String, dynamic>>(
         ApiEndpoints.skills,
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
       );
 
       final body = response.data;
@@ -193,6 +197,101 @@ class SkillService {
         tag: 'SkillService',
       );
       return null;
+    }
+  }
+
+  /// Download fresh SKILL.md — generates content using current skill data.
+  Future<String?> downloadSkillMd(String skillId) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.skillDownload(skillId),
+      );
+      final body = response.data;
+      return body?['content'] as String?;
+    } on DioException catch (e) {
+      AppLogger.warning(
+        'Failed to download skill MD: ${e.message}',
+        tag: 'SkillService',
+      );
+      return null;
+    }
+  }
+
+  /// Upload and parse a SKILL.md file.
+  ///
+  /// Returns a map with: name, tool, triggerType, whenText, thenText,
+  /// description, skillContent. Returns null on failure.
+  Future<Map<String, dynamic>?> uploadSkillMd(String content) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.skillUploadMd,
+        data: {'content': content},
+      );
+      final body = response.data;
+      if (body == null) return null;
+
+      AppLogger.info(
+        'Parsed skill MD: name=${body['name']}, tool=${body['tool']}',
+        tag: 'SkillService',
+      );
+      return body;
+    } on DioException catch (e) {
+      AppLogger.warning(
+        'Failed to parse skill MD: ${e.message}',
+        tag: 'SkillService',
+      );
+      return null;
+    }
+  }
+
+  /// Search public MCP registry for a tool.
+  ///
+  /// Returns registry info: found, name, url, auth, configured.
+  /// Returns null on failure.
+  Future<Map<String, dynamic>?> searchRegistry(String query) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.toolsRegistrySearch,
+        queryParameters: {'query': query},
+      );
+      return response.data;
+    } on DioException catch (e) {
+      AppLogger.warning(
+        'Registry search failed: ${e.message}',
+        tag: 'SkillService',
+      );
+      return null;
+    }
+  }
+
+  /// Connect a tool from registry by saving credentials.
+  Future<bool> connectRegistryTool({
+    required String toolName,
+    required String wallet,
+    required Map<String, String> credentials,
+    required String authType,
+  }) async {
+    try {
+      await _dio.post<Map<String, dynamic>>(
+        '/api/tools/connect-registry',
+        data: {
+          'toolName': toolName,
+          'wallet': wallet,
+          'credentials': credentials,
+          'authType': authType,
+        },
+      );
+      AppLogger.info(
+        'Connected registry tool: $toolName',
+        tag: 'SkillService',
+      );
+      return true;
+    } on DioException catch (e) {
+      AppLogger.warning(
+        'Failed to connect registry tool: ${e.message}',
+        tag: 'SkillService',
+      );
+      return false;
     }
   }
 

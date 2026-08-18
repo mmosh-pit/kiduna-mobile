@@ -5,10 +5,15 @@ enum AtlasRealmType {
   ecosystem,
   organization,
   alliance,
-  community,
   program,
   project,
-  institution;
+  dyad,
+  community,
+  institution,
+  council,
+  concept,
+  cell,
+  clan;
 
   /// Human-readable label (e.g. `Organization`) used for the type eyebrow.
   String get label {
@@ -19,19 +24,29 @@ enum AtlasRealmType {
         return 'Organization';
       case AtlasRealmType.alliance:
         return 'Alliance';
-      case AtlasRealmType.community:
-        return 'Community';
       case AtlasRealmType.program:
         return 'Program';
       case AtlasRealmType.project:
         return 'Project';
+      case AtlasRealmType.dyad:
+        return 'Dyad';
+      case AtlasRealmType.community:
+        return 'Community';
       case AtlasRealmType.institution:
         return 'Institution';
+      case AtlasRealmType.council:
+        return 'Council';
+      case AtlasRealmType.concept:
+        return 'Concept';
+      case AtlasRealmType.cell:
+        return 'Cell';
+      case AtlasRealmType.clan:
+        return 'Clan';
     }
   }
 
-  /// The realm-emblem asset key for this type. The Ecosystem and Institutions
-  /// fall back to the generic `conceptual` emblem, matching the prototype.
+  /// The realm-emblem asset key for this type. Types without a dedicated emblem
+  /// fall back to the generic `conceptual` emblem.
   String get emblemKey {
     switch (this) {
       case AtlasRealmType.organization:
@@ -46,6 +61,11 @@ enum AtlasRealmType {
         return 'project';
       case AtlasRealmType.ecosystem:
       case AtlasRealmType.institution:
+      case AtlasRealmType.dyad:
+      case AtlasRealmType.council:
+      case AtlasRealmType.concept:
+      case AtlasRealmType.cell:
+      case AtlasRealmType.clan:
         return 'conceptual';
     }
   }

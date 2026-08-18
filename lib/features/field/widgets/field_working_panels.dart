@@ -7,6 +7,7 @@ import '../controllers/field_controller.dart';
 import '../controllers/knowledge_controller.dart';
 import '../controllers/presence_controller.dart';
 import '../data/field_fixtures.dart';
+import 'approvals_panel.dart';
 import 'automations_panel.dart';
 import 'capacity_choices.dart';
 import 'connections_panel.dart';
@@ -116,17 +117,37 @@ class FieldWorkingPanels extends ConsumerWidget {
               ? 'Edit ${state.editingSkill!.name}'
               : l10n.createNewSkillWithKi,
           bounds: bounds,
-          width: 620,
+          width: 560,
           opacity: opacity,
           initialOffset: Offset(
-            _clampLeft(bounds.width * 0.5 - 620 / 2 + stagger * 26),
-            (bounds.height * 0.12).clamp(8.0, double.infinity),
+            _clampLeft(bounds.width * 0.5 - 560 / 2 + stagger * 26),
+            (bounds.height * 0.05).clamp(8.0, double.infinity),
           ),
           onClose: controller.closeSkillForm,
-          child: SkillCreateForm(onClose: controller.closeSkillForm),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: bounds.height * 0.85,
+            ),
+            child: SkillCreateForm(onClose: controller.closeSkillForm),
+          ),
         ),
       );
       stagger++;
+    }
+
+    if (state.approvalsOpen) {
+      children.add(
+        FieldPanel(
+          key: const ValueKey('approvals'),
+          label: 'Pending Approvals',
+          bounds: bounds,
+          width: 480,
+          opacity: opacity,
+          initialOffset: _staggeredOffset(480, stagger++),
+          onClose: controller.closeApprovals,
+          child: const ApprovalsPanel(),
+        ),
+      );
     }
 
     if (state.connectingTool != null) {

@@ -72,11 +72,12 @@ class KidunaColors extends ThemeExtension<KidunaColors> {
     required this.elementAlly,
     required this.elementResource,
     required this.elementAction,
-    required this.clusterFormation,
-    required this.clusterCare,
-    required this.clusterPlace,
-    required this.clusterCulture,
-    required this.clusterLaw,
+    required this.clusterPeopleCare,
+    required this.clusterSocietyJustice,
+    required this.clusterCulturePlay,
+    required this.clusterPlacePlanet,
+    required this.clusterWorkWealth,
+    required this.clusterKnowledgeFrontier,
     required this.clusterBranch,
   });
 
@@ -257,22 +258,25 @@ class KidunaColors extends ThemeExtension<KidunaColors> {
   /// Action element identity (`--element-action`).
   final Color elementAction;
 
-  /// Formation cluster accent.
-  final Color clusterFormation;
+  /// People & Care theme accent.
+  final Color clusterPeopleCare;
 
-  /// Care cluster accent.
-  final Color clusterCare;
+  /// Society & Justice theme accent.
+  final Color clusterSocietyJustice;
 
-  /// Place cluster accent.
-  final Color clusterPlace;
+  /// Culture & Play theme accent.
+  final Color clusterCulturePlay;
 
-  /// Culture cluster accent.
-  final Color clusterCulture;
+  /// Place & Planet theme accent.
+  final Color clusterPlacePlanet;
 
-  /// Law cluster accent.
-  final Color clusterLaw;
+  /// Work & Wealth theme accent.
+  final Color clusterWorkWealth;
 
-  /// Branch cluster accent.
+  /// Knowledge & Frontier theme accent.
+  final Color clusterKnowledgeFrontier;
+
+  /// Branch cluster accent (nested child-realm views).
   final Color clusterBranch;
 
   /// Canonical Field palette — matches the prototype token values exactly.
@@ -335,11 +339,12 @@ class KidunaColors extends ThemeExtension<KidunaColors> {
     elementAlly: Color(0xFFC19A6B),
     elementResource: Color(0xFFEAAA00),
     elementAction: Color(0xFF03CCD9),
-    clusterFormation: Color(0xFF03CCD9),
-    clusterCare: Color(0xFFD97B2E),
-    clusterPlace: Color(0xFF8FE6C6),
-    clusterCulture: Color(0xFFB99AE8),
-    clusterLaw: Color(0xFFEAAA00),
+    clusterPeopleCare: Color(0xFFD97B2E),
+    clusterSocietyJustice: Color(0xFFEAAA00),
+    clusterCulturePlay: Color(0xFFB99AE8),
+    clusterPlacePlanet: Color(0xFF8FE6C6),
+    clusterWorkWealth: Color(0xFF03CCD9),
+    clusterKnowledgeFrontier: Color(0xFF62A8DF),
     clusterBranch: Color(0xFF62A8DF),
   );
 
@@ -403,11 +408,12 @@ class KidunaColors extends ThemeExtension<KidunaColors> {
     Color? elementAlly,
     Color? elementResource,
     Color? elementAction,
-    Color? clusterFormation,
-    Color? clusterCare,
-    Color? clusterPlace,
-    Color? clusterCulture,
-    Color? clusterLaw,
+    Color? clusterPeopleCare,
+    Color? clusterSocietyJustice,
+    Color? clusterCulturePlay,
+    Color? clusterPlacePlanet,
+    Color? clusterWorkWealth,
+    Color? clusterKnowledgeFrontier,
     Color? clusterBranch,
   }) {
     return KidunaColors(
@@ -469,11 +475,14 @@ class KidunaColors extends ThemeExtension<KidunaColors> {
       elementAlly: elementAlly ?? this.elementAlly,
       elementResource: elementResource ?? this.elementResource,
       elementAction: elementAction ?? this.elementAction,
-      clusterFormation: clusterFormation ?? this.clusterFormation,
-      clusterCare: clusterCare ?? this.clusterCare,
-      clusterPlace: clusterPlace ?? this.clusterPlace,
-      clusterCulture: clusterCulture ?? this.clusterCulture,
-      clusterLaw: clusterLaw ?? this.clusterLaw,
+      clusterPeopleCare: clusterPeopleCare ?? this.clusterPeopleCare,
+      clusterSocietyJustice:
+          clusterSocietyJustice ?? this.clusterSocietyJustice,
+      clusterCulturePlay: clusterCulturePlay ?? this.clusterCulturePlay,
+      clusterPlacePlanet: clusterPlacePlanet ?? this.clusterPlacePlanet,
+      clusterWorkWealth: clusterWorkWealth ?? this.clusterWorkWealth,
+      clusterKnowledgeFrontier:
+          clusterKnowledgeFrontier ?? this.clusterKnowledgeFrontier,
       clusterBranch: clusterBranch ?? this.clusterBranch,
     );
   }
@@ -562,15 +571,36 @@ class KidunaColors extends ThemeExtension<KidunaColors> {
       elementAlly: Color.lerp(elementAlly, other.elementAlly, t)!,
       elementResource: Color.lerp(elementResource, other.elementResource, t)!,
       elementAction: Color.lerp(elementAction, other.elementAction, t)!,
-      clusterFormation: Color.lerp(
-        clusterFormation,
-        other.clusterFormation,
+      clusterPeopleCare: Color.lerp(
+        clusterPeopleCare,
+        other.clusterPeopleCare,
         t,
       )!,
-      clusterCare: Color.lerp(clusterCare, other.clusterCare, t)!,
-      clusterPlace: Color.lerp(clusterPlace, other.clusterPlace, t)!,
-      clusterCulture: Color.lerp(clusterCulture, other.clusterCulture, t)!,
-      clusterLaw: Color.lerp(clusterLaw, other.clusterLaw, t)!,
+      clusterSocietyJustice: Color.lerp(
+        clusterSocietyJustice,
+        other.clusterSocietyJustice,
+        t,
+      )!,
+      clusterCulturePlay: Color.lerp(
+        clusterCulturePlay,
+        other.clusterCulturePlay,
+        t,
+      )!,
+      clusterPlacePlanet: Color.lerp(
+        clusterPlacePlanet,
+        other.clusterPlacePlanet,
+        t,
+      )!,
+      clusterWorkWealth: Color.lerp(
+        clusterWorkWealth,
+        other.clusterWorkWealth,
+        t,
+      )!,
+      clusterKnowledgeFrontier: Color.lerp(
+        clusterKnowledgeFrontier,
+        other.clusterKnowledgeFrontier,
+        t,
+      )!,
       clusterBranch: Color.lerp(clusterBranch, other.clusterBranch, t)!,
     );
   }
