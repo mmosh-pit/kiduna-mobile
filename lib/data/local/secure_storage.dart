@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -73,9 +73,6 @@ class SecureStorage {
   Future<void> saveToken(String token) async {
     try {
       await _write(_Keys.token, token);
-      if (kDebugMode) {
-        debugPrint('🔑 [Storage] Token saved (${token.length} chars)');
-      }
     } catch (e, st) {
       AppLogger.error('Failed to save token', tag: 'Storage', error: e, stackTrace: st);
       throw const CacheException('Failed to save authentication token');
@@ -84,13 +81,7 @@ class SecureStorage {
 
   Future<String?> getToken() async {
     try {
-      final token = await _read(_Keys.token);
-      if (kDebugMode) {
-        debugPrint(
-          '🔑 [Storage] Token read: ${token != null ? "${token.length} chars" : "null"}',
-        );
-      }
-      return token;
+      return await _read(_Keys.token);
     } catch (e, st) {
       AppLogger.error('Failed to read token', tag: 'Storage', error: e, stackTrace: st);
       return null;
@@ -100,9 +91,6 @@ class SecureStorage {
   Future<void> deleteToken() async {
     try {
       await _delete(_Keys.token);
-      if (kDebugMode) {
-        debugPrint('🔑 [Storage] Token deleted');
-      }
     } catch (e, st) {
       AppLogger.error('Failed to delete token', tag: 'Storage', error: e, stackTrace: st);
     }
@@ -143,8 +131,5 @@ class SecureStorage {
   Future<void> clearAll() async {
     await deleteToken();
     await deleteUser();
-    if (kDebugMode) {
-      debugPrint('🔑 [Storage] All auth data cleared');
-    }
   }
 }

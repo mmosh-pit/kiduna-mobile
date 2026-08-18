@@ -20,7 +20,7 @@ const List<SectionItem> kSections = [
   SectionItem(label: 'Studio'),
   SectionItem(label: 'Commons'),
   SectionItem(label: 'Viewport'),
-  SectionItem(label: 'Enjoy'),
+  SectionItem(label: 'Garden'),
   SectionItem(label: 'Act'),
   SectionItem(label: 'Store'),
 ];
@@ -33,7 +33,7 @@ abstract class SectionIndex {
   static const int studio = 3;
   static const int commons = 4;
   static const int viewport = 5;
-  static const int enjoy = 6;
+  static const int garden = 6;
   static const int act = 7;
   static const int store = 8;
 }
