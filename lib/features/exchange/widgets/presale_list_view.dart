@@ -1,76 +1,41 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/extensions/context_extensions.dart';
-import '../models/presale_mock_data.dart';
+import '../../../data/models/presale_model.dart';
 import 'presale_card.dart';
 
 /// Scrollable list of presale cards with status filter chips.
 ///
-/// Cards are sorted by nearest closing time:
-///   1. Live presales — nearest endDate first
-///   2. Upcoming presales — nearest startDate first
-///   3. Completed presales — most recently ended first
-///
-/// [onPresaleTap] is called when a card is tapped.
-class PresaleListView extends StatefulWidget {
-  const PresaleListView({super.key, required this.onPresaleTap});
+/// Receives data from [ExchangeController] — no internal state for data,
+/// only UI filter selection is handled locally.
+class PresaleListView extends StatelessWidget {
+  const PresaleListView({
+    super.key,
+    required this.presales,
+    required this.isLoading,
+    required this.activeFilter,
+    required this.onPresaleTap,
+    required this.onFilterChanged,
+    required this.onRefresh,
+    this.error,
+    this.loggedInEmail,
+    this.onLogout,
+  });
 
-  final ValueChanged<PresaleMockItem> onPresaleTap;
-
-  @override
-  State<PresaleListView> createState() => _PresaleListViewState();
-}
-
-class _PresaleListViewState extends State<PresaleListView> {
-  String _filter = 'all';
-
-  List<PresaleMockItem> get _filtered {
-    var list = _filter == 'all'
-        ? List<PresaleMockItem>.from(kMockPresales)
-        : kMockPresales.where((p) => p.status == _filter).toList();
-
-    // Sort: live first (nearest end), then upcoming (nearest start),
-    // then completed (most recent end).
-    list.sort((a, b) {
-      final aPriority = _statusPriority(a.status);
-      final bPriority = _statusPriority(b.status);
-      if (aPriority != bPriority) return aPriority.compareTo(bPriority);
-
-      // Within same status, sort by relevant date
-      final aDate = a.status == 'upcoming'
-          ? DateTime.tryParse(a.startDate)
-          : DateTime.tryParse(a.endDate);
-      final bDate = b.status == 'upcoming'
-          ? DateTime.tryParse(b.startDate)
-          : DateTime.tryParse(b.endDate);
-      if (aDate == null || bDate == null) return 0;
-
-      // Live/upcoming: nearest first. Completed: most recent first.
-      return a.status == 'completed'
-          ? bDate.compareTo(aDate)
-          : aDate.compareTo(bDate);
-    });
-
-    return list;
-  }
-
-  static int _statusPriority(String status) {
-    switch (status.toLowerCase()) {
-      case 'live':
-        return 0;
-      case 'upcoming':
-        return 1;
-      case 'completed':
-        return 2;
-      default:
-        return 3;
-    }
-  }
+  final List<PresaleModel> presales;
+  final bool isLoading;
+  final String? error;
+  final String activeFilter;
+  final ValueChanged<PresaleModel> onPresaleTap;
+  final ValueChanged<String> onFilterChanged;
+  final Future<void> Function() onRefresh;
+  final String? loggedInEmail;
+  final VoidCallback? onLogout;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.kiduna;
-    final filtered = _filtered;
+    final liveCount = presales.where((p) => p.isLive).length;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -90,41 +55,135 @@ class _PresaleListViewState extends State<PresaleListView> {
                     ),
                   ),
                   const Spacer(),
-                  // Live count badge
-                  _LiveCountBadge(
-                    count: kMockPresales
-                        .where((p) => p.status == 'live')
-                        .length,
-                  ),
+                  if (liveCount > 0) _LiveCountBadge(count: liveCount),
                 ],
               ),
+              if (loggedInEmail != null) ...[
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Icon(Icons.person_outline, size: 13, color: colors.quiet),
+                    const SizedBox(width: 4),
+                    Text(
+                      loggedInEmail!,
+                      style: context.kidunaText.micro.copyWith(
+                        color: colors.quiet,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    if (onLogout != null)
+                      GestureDetector(
+                        onTap: onLogout,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                              color: colors.error.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Text(
+                            'Logout',
+                            style: context.kidunaText.micro.copyWith(
+                              color: colors.error.withValues(alpha: 0.7),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 14),
               _FilterChips(
-                active: _filter,
-                onChanged: (f) => setState(() => _filter = f),
+                active: activeFilter,
+                onChanged: onFilterChanged,
               ),
             ],
           ),
         ),
         const SizedBox(height: 14),
-        // ── List ──
-        Expanded(
-          child: filtered.isEmpty
-              ? const _EmptyState()
-              : ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                  itemCount: filtered.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 14),
-                  itemBuilder: (context, index) {
-                    final presale = filtered[index];
-                    return PresaleCard(
-                      presale: presale,
-                      onTap: () => widget.onPresaleTap(presale),
-                    );
-                  },
-                ),
-        ),
+        // ── Content ──
+        Expanded(child: _buildContent(context)),
       ],
+    );
+  }
+
+  Widget _buildContent(BuildContext context) {
+    final colors = context.kiduna;
+
+    // Error state
+    if (error != null && presales.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.error_outline, size: 48,
+                color: colors.error.withValues(alpha: 0.5)),
+            const SizedBox(height: 12),
+            Text(
+              error!,
+              style: context.kidunaText.bodySm.copyWith(color: colors.error),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            TextButton(
+              onPressed: onRefresh,
+              child: Text('Retry',
+                  style: TextStyle(color: colors.sky)),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Loading state
+    if (isLoading && presales.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 28,
+              height: 28,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: colors.sky,
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              'Loading presales...',
+              style: context.kidunaText.bodySm.copyWith(color: colors.quiet),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Empty state
+    if (presales.isEmpty) {
+      return const _EmptyState();
+    }
+
+    // List
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      color: colors.sky,
+      child: ListView.separated(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+        itemCount: presales.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 14),
+        itemBuilder: (context, index) {
+          final presale = presales[index];
+          return PresaleCard(
+            presale: presale,
+            onTap: () => onPresaleTap(presale),
+          );
+        },
+      ),
     );
   }
 }
@@ -137,7 +196,6 @@ class _LiveCountBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (count == 0) return const SizedBox.shrink();
     final colors = context.kiduna;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

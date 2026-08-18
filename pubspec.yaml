@@ -53,6 +53,10 @@ dependencies:
 
   # Encrypted token + user persistence (see data/local/secure_storage.dart).
   flutter_secure_storage: ^9.2.4
+
+  # Reliable cross-platform key-value storage (web fallback for auth tokens).
+  shared_preferences: ^2.3.0
+
   flutter_markdown: ^0.7.7+1
 
   # Google Sign-In for Drive integration (kinship-shared approach).

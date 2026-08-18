@@ -1,40 +1,53 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../models/presale_mock_data.dart';
+import '../../auth/controllers/auth_controller.dart';
+import '../controllers/exchange_controller.dart';
 import '../widgets/presale_detail_view.dart';
 import '../widgets/presale_list_view.dart';
 
 /// Root screen for the Exchange section.
 ///
-/// Manages internal navigation between the presale list and detail views
-/// using a [ValueNotifier]. No GoRouter routes — this is a section-internal
-/// view stack:
-///
-///   null            → PresaleListView (list of presale cards)
-///   PresaleMockItem → PresaleDetailView (full details + buy)
-class ExchangeScreen extends StatefulWidget {
+/// Watches [exchangeControllerProvider] and switches between list and detail
+/// views based on [ExchangeState.selectedPresale].
+class ExchangeScreen extends ConsumerWidget {
   const ExchangeScreen({super.key});
 
   @override
-  State<ExchangeScreen> createState() => _ExchangeScreenState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(exchangeControllerProvider);
+    final controller = ref.read(exchangeControllerProvider.notifier);
+    final auth = ref.watch(authControllerProvider);
 
-class _ExchangeScreenState extends State<ExchangeScreen> {
-  PresaleMockItem? _selected;
-
-  @override
-  Widget build(BuildContext context) {
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 200),
-      child: _selected == null
+      child: state.selectedPresale == null
           ? PresaleListView(
               key: const ValueKey('presale-list'),
-              onPresaleTap: (presale) => setState(() => _selected = presale),
+              presales: state.presales,
+              isLoading: state.isLoading,
+              error: state.error,
+              activeFilter: state.filter,
+              loggedInEmail: auth.user?.email,
+              onPresaleTap: (presale) => controller.selectPresale(presale.id),
+              onFilterChanged: controller.setFilter,
+              onRefresh: controller.refresh,
+              onLogout: () =>
+                  ref.read(authControllerProvider.notifier).logout(),
             )
           : PresaleDetailView(
-              key: ValueKey('presale-detail-${_selected!.id}'),
-              presale: _selected!,
-              onBack: () => setState(() => _selected = null),
+              key: ValueKey('presale-detail-${state.selectedPresale!.id}'),
+              presale: state.selectedPresale!,
+              purchases: state.purchases,
+              isBuying: state.isBuying,
+              buySuccess: state.buySuccess,
+              buyError: state.buyError,
+              onBack: controller.clearSelection,
+              onBuy: (usdcAmount) => controller.buyTokens(
+                state.selectedPresale!.id,
+                usdcAmount,
+              ),
+              onClearBuyResult: controller.clearBuyResult,
             ),
     );
   }

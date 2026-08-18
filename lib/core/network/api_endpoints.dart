@@ -154,4 +154,19 @@ abstract class ApiEndpoints {
   /// `GET /api/tools/saved/by-wallet?wallet={wallet}&tool_name={tool}` — get tool credentials.
   static String toolsSavedByWallet(String wallet, String toolName) =>
       '/api/tools/saved/by-wallet?wallet=${Uri.encodeComponent(wallet)}&tool_name=$toolName';
+
+  // ── Presales (kinship-backend) ──────────────────────────────────────────
+
+  /// `GET /tokens/presales` — list presales (public, filterable by status/symbol).
+  static const String presales = '/tokens/presales';
+
+  /// `GET /tokens/presales/{id}` — single presale details (public).
+  static String presaleById(String id) => '/tokens/presales/$id';
+
+  /// `POST /tokens/presales/{id}/buy` — purchase tokens (auth required).
+  static String presaleBuy(String id) => '/tokens/presales/$id/buy';
+
+  /// `GET /tokens/presales/{id}/purchases` — purchase history (auth required).
+  static String presalePurchases(String id) =>
+      '/tokens/presales/$id/purchases';
 }

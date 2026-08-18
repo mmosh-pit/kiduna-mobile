@@ -20,9 +20,10 @@ class ApiClient {
   static final ApiClient instance = ApiClient._();
 
   late final Dio dio;
+  late final Dio authDio;
   bool _initialized = false;
 
-  /// Initialise the shared Dio instance.
+  /// Initialise the shared Dio instances.
   ///
   /// Must be called exactly once — typically in `main()` right after
   /// `dotenv.load()`. [tokenProvider] is the async callback that reads the
@@ -32,6 +33,7 @@ class ApiClient {
       return;
     }
 
+    // ── Agent Dio (kinship-agent) ──
     dio = Dio(
       BaseOptions(
         baseUrl: Env.apiBaseUrl,
@@ -50,23 +52,27 @@ class ApiClient {
       AppLogInterceptor(),
     ]);
 
+    // ── Auth Dio (kinship-backend) — now includes AuthInterceptor ──
+    authDio = Dio(
+      BaseOptions(
+        baseUrl: Env.authApiUrl,
+        connectTimeout: AppConstants.connectTimeout,
+        receiveTimeout: AppConstants.receiveTimeout,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      ),
+    );
+
+    authDio.interceptors.addAll([
+      AuthInterceptor(tokenProvider: tokenProvider),
+      ErrorInterceptor(),
+      AppLogInterceptor(),
+    ]);
+
     _initialized = true;
   }
-
-  /// A second Dio instance pointed at the **auth** backend
-  /// (`Env.authApiUrl`).  Shares the same interceptor stack so logging and
-  /// error mapping are consistent.
-  late final Dio authDio = Dio(
-    BaseOptions(
-      baseUrl: Env.authApiUrl,
-      connectTimeout: AppConstants.connectTimeout,
-      receiveTimeout: AppConstants.receiveTimeout,
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-    ),
-  )..interceptors.addAll([ErrorInterceptor(), AppLogInterceptor()]);
 
   /// A third Dio instance pointed at the **studio** backend
   /// (`Env.studioBaseUrl` — kinship-studio Next.js).  Used for dunas, markets,

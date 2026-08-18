@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/extensions/context_extensions.dart';
-import '../models/presale_mock_data.dart';
+import '../../../data/models/presale_model.dart';
+import '../../../data/models/purchase_model.dart';
 import 'presale_buy_sheet.dart';
 import 'presale_countdown.dart';
 import 'presale_formatters.dart';
@@ -15,32 +16,38 @@ class PresaleDetailView extends StatelessWidget {
   const PresaleDetailView({
     super.key,
     required this.presale,
+    this.purchases = const [],
+    this.isBuying = false,
+    this.buySuccess,
+    this.buyError,
+    required this.onBuy,
+    required this.onClearBuyResult,
     required this.onBack,
   });
 
-  final PresaleMockItem presale;
+  final PresaleModel presale;
+  final List<PurchaseModel> purchases;
+  final bool isBuying;
+  final PurchaseModel? buySuccess;
+  final String? buyError;
+  final Future<PurchaseModel?> Function(double usdcAmount) onBuy;
+  final VoidCallback onClearBuyResult;
   final VoidCallback onBack;
 
-  bool get _isLive => presale.status.toLowerCase() == 'live';
-  bool get _isUpcoming => presale.status.toLowerCase() == 'upcoming';
+  bool get _isLive => presale.isLive;
+  bool get _isUpcoming => presale.isUpcoming;
 
   void _openBuySheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
       backgroundColor: Colors.transparent,
       builder: (_) => PresaleBuySheet(
         presale: presale,
-        onConfirm: (usdcAmount) {
-          Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Purchase confirmed: \$${usdcAmount.toStringAsFixed(2)} USDC',
-              ),
-              backgroundColor: context.kiduna.mint,
-            ),
-          );
+        onConfirm: (usdcAmount) async {
+          return await onBuy(usdcAmount);
         },
       ),
     );
@@ -240,7 +247,7 @@ class _HeroCard extends StatelessWidget {
     required this.onCopyMint,
   });
 
-  final PresaleMockItem presale;
+  final PresaleModel presale;
   final bool isLive;
   final bool isUpcoming;
   final VoidCallback onCopyMint;

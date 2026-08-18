@@ -6,6 +6,8 @@ library;
 
 export '../features/auth/controllers/auth_controller.dart'
     show authControllerProvider;
+export '../features/exchange/controllers/exchange_controller.dart'
+    show exchangeControllerProvider;
 export '../features/field/controllers/ally_controller.dart'
     show allyControllerProvider;
 export '../features/field/controllers/ecosystem_controller.dart'
