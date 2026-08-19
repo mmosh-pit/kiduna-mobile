@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Kiduna
+Comment=The Genesis Ecosystem
+Exec=kiduna_mobile
+Icon=kiduna-icon
+Type=Application
+Categories=Utility;
+StartupWMClass=kiduna_mobile
