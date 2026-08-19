@@ -540,5 +540,27 @@
       "chars": { "type": "int" },
       "words": { "type": "int" }
     }
-  }
+  },
+
+  "apiaryReady": "Ready",
+  "apiaryBuild": "Build",
+  "apiaryTest": "Test",
+  "apiaryRelease": "Release",
+  "apiaryLive": "Live",
+  "apiaryNoTasks": "No tasks",
+  "apiaryUnassigned": "Unassigned",
+  "apiaryTaskCount": "{count} tasks",
+  "@apiaryTaskCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "apiaryMoveToStage": "Move to {stage}",
+  "@apiaryMoveToStage": {
+    "placeholders": {
+      "stage": { "type": "String" }
+    }
+  },
+  "apiaryRetry": "Retry",
+  "apiaryUnableToLoadTasks": "Unable to load tasks."
 }

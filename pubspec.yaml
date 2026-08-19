@@ -95,6 +95,7 @@ flutter:
     - assets/images/allies/
     - assets/images/organization-crests/
     - assets/icons/
+    - assets/images/sprites/ 
     - assets/animations/
 
   fonts:

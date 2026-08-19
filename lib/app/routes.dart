@@ -60,10 +60,14 @@ GoRouter createAppRouter(Ref ref) {
         return null;
       }
 
+      // ── Demo mode: skip auth, go straight to Apiary board ──
+      // TODO: re-enable auth for production.
+      return null;
+
       // Not authenticated → force login (unless already there).
-      if (!auth.isAuthenticated) {
-        return onLogin ? null : Routes.login;
-      }
+      // if (!auth.isAuthenticated) {
+      //   return onLogin ? null : Routes.login;
+      // }
 
       // Authenticated but on the login page → go to Field.
       if (onLogin) {

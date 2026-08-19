@@ -155,6 +155,14 @@ abstract class ApiEndpoints {
   static String toolsSavedByWallet(String wallet, String toolName) =>
       '/api/tools/saved/by-wallet?wallet=${Uri.encodeComponent(wallet)}&tool_name=$toolName';
 
+  // ── Tasks (kinship-agent) ────────────────────────────────────────────
+
+  /// `GET /api/tasks` — list all tasks for the current context.
+  static const String tasks = '/api/tasks';
+
+  /// `GET /api/tasks/{id}` — single task detail.
+  static String taskById(String id) => '/api/tasks/$id';
+
   // ── Presales (kinship-backend) ──────────────────────────────────────────
 
   /// `GET /tokens/presales` — list presales (public, filterable by status/symbol).

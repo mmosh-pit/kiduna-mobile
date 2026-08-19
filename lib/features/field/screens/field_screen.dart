@@ -7,11 +7,9 @@ import '../../../core/extensions/context_extensions.dart';
 import '../../../data/models/field_realm.dart';
 import '../../../shared/layouts/responsive_layout.dart';
 import '../../../shared/models/section_item.dart';
-import '../../../shared/widgets/app_header.dart';
-import '../../../shared/widgets/section_bar.dart';
 import '../../../shared/widgets/section_placeholder.dart';
 import '../../exchange/screens/exchange_screen.dart';
-import '../../garden/screens/garden_screen.dart';
+import '../../garden/screens/apiary_screen.dart';
 import '../controllers/field_controller.dart';
 import '../widgets/field_background.dart';
 import '../widgets/field_chrome_panels.dart';
@@ -36,8 +34,9 @@ class FieldScreen extends StatefulWidget {
 }
 
 class _FieldScreenState extends State<FieldScreen> {
-  /// Active section index. Exchange (0) is the default.
-  int _activeSection = SectionIndex.exchange;
+  /// Active section index. Garden/Apiary is the default — David's directive
+  /// to show only the scene and Ki, no section switching for v1.
+  int _activeSection = SectionIndex.garden;
 
   @override
   Widget build(BuildContext context) {
@@ -45,12 +44,9 @@ class _FieldScreenState extends State<FieldScreen> {
       backgroundColor: context.kiduna.field,
       body: Column(
         children: [
-          const AppHeader(),
-          SectionBar(
-            sections: kSections,
-            activeIndex: _activeSection,
-            onChanged: (i) => setState(() => _activeSection = i),
-          ),
+          // AppHeader hidden for demo — David: "get rid of everything
+          // except the scenes and Kai."
+          // const AppHeader(),
           Expanded(child: _buildSectionContent()),
         ],
       ),
@@ -72,10 +68,12 @@ class _FieldScreenState extends State<FieldScreen> {
           mobile: (_) => const _ContentKiNarrow(content: ExchangeScreen()),
         );
       case SectionIndex.garden:
-        // Scene listing with Ki chat.
+        // Apiary task board with Ki chat.
         return ResponsiveLayout(
-          desktop: (_) => const _ContentKiWide(content: GardenScreen()),
-          mobile: (_) => const _ContentKiNarrow(content: GardenScreen()),
+          desktop: (_) =>
+              const _ContentKiWide(content: ApiaryScreen()),
+          mobile: (_) =>
+              const _ContentKiNarrow(content: ApiaryScreen()),
         );
       default:
         // Other sections: placeholder with Ki chat.
