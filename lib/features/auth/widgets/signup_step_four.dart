@@ -6,7 +6,7 @@ import '../../../shared/widgets/kiduna_primary_button.dart';
 import '../../../shared/widgets/kiduna_secondary_button.dart';
 import '../../../shared/widgets/kiduna_text_field.dart';
 
-class SignupStepFour extends StatelessWidget {
+class SignupStepFour extends StatefulWidget {
   const SignupStepFour({
     super.key,
     required this.onComplete,
@@ -24,17 +24,30 @@ class SignupStepFour extends StatelessWidget {
   final TextEditingController handshakeController;
   final bool isLoading;
 
-  void _validate() {
-    if (isLoading) return;
+  @override
+  State<SignupStepFour> createState() => _SignupStepFourState();
+}
 
-    final code = kinshipCodeController.text.trim();
+class _SignupStepFourState extends State<SignupStepFour> {
+  final _handshakeFocus = FocusNode();
+
+  @override
+  void dispose() {
+    _handshakeFocus.dispose();
+    super.dispose();
+  }
+
+  void _validate() {
+    if (widget.isLoading) return;
+
+    final code = widget.kinshipCodeController.text.trim();
 
     if (code.isEmpty) {
-      onError('Please enter a Kinship Code.');
+      widget.onError('Please enter a Kinship Code.');
       return;
     }
 
-    onComplete();
+    widget.onComplete();
   }
 
   @override
@@ -46,7 +59,7 @@ class SignupStepFour extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _BackButton(onPressed: onBack),
+          _BackButton(onPressed: widget.onBack),
           const SizedBox(height: 4),
           RichText(
             text: TextSpan(
@@ -80,21 +93,28 @@ class SignupStepFour extends StatelessWidget {
           KidunaTextField(
             label: 'Enter a Kinship Code',
             placeholder: 'XXX—XXX—XXX',
-            controller: kinshipCodeController,
+            controller: widget.kinshipCodeController,
             required: true,
             maxLength: 20,
+            textInputAction: TextInputAction.next,
+            onSubmitted: (_) => _handshakeFocus.requestFocus(),
           ),
           const SizedBox(height: 20),
           KidunaTextField(
             label: 'Enter a Private Handshake',
-            controller: handshakeController,
+            controller: widget.handshakeController,
+            focusNode: _handshakeFocus,
             maxLength: 120,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _validate(),
           ),
           const SizedBox(height: 24),
           KidunaPrimaryButton(
-            label: isLoading ? 'Creating your account...' : 'Enter Kiduna!',
+            label: widget.isLoading
+                ? 'Creating your account...'
+                : 'Enter Kiduna!',
             onPressed: _validate,
-            isLoading: isLoading,
+            isLoading: widget.isLoading,
           ),
           const SizedBox(height: 24),
           Container(

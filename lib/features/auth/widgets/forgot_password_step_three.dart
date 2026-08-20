@@ -5,10 +5,10 @@ import '../../../shared/animations/slide_in_animation.dart';
 import '../../../shared/widgets/kiduna_primary_button.dart';
 import '../../../shared/widgets/kiduna_text_field.dart';
 
-class SignupStepThree extends StatefulWidget {
-  const SignupStepThree({
+class ForgotPasswordStepThree extends StatefulWidget {
+  const ForgotPasswordStepThree({
     super.key,
-    required this.onNext,
+    required this.onSubmit,
     required this.onBack,
     required this.onError,
     required this.passwordController,
@@ -16,7 +16,7 @@ class SignupStepThree extends StatefulWidget {
     this.isLoading = false,
   });
 
-  final VoidCallback onNext;
+  final VoidCallback onSubmit;
   final VoidCallback onBack;
   final ValueChanged<String> onError;
   final TextEditingController passwordController;
@@ -24,10 +24,11 @@ class SignupStepThree extends StatefulWidget {
   final bool isLoading;
 
   @override
-  State<SignupStepThree> createState() => _SignupStepThreeState();
+  State<ForgotPasswordStepThree> createState() =>
+      _ForgotPasswordStepThreeState();
 }
 
-class _SignupStepThreeState extends State<SignupStepThree> {
+class _ForgotPasswordStepThreeState extends State<ForgotPasswordStepThree> {
   final _confirmFocus = FocusNode();
   bool _showPassword = false;
   bool _showConfirmPassword = false;
@@ -45,7 +46,7 @@ class _SignupStepThreeState extends State<SignupStepThree> {
     final confirm = widget.confirmPasswordController.text;
 
     if (password.isEmpty) {
-      widget.onError('Please enter a password.');
+      widget.onError('Please enter a new password.');
       return;
     }
     if (password.length < 12) {
@@ -53,7 +54,7 @@ class _SignupStepThreeState extends State<SignupStepThree> {
       return;
     }
     if (confirm.isEmpty) {
-      widget.onError('Please confirm your password.');
+      widget.onError('Please confirm your new password.');
       return;
     }
     if (password != confirm) {
@@ -61,7 +62,7 @@ class _SignupStepThreeState extends State<SignupStepThree> {
       return;
     }
 
-    widget.onNext();
+    widget.onSubmit();
   }
 
   @override
@@ -75,30 +76,19 @@ class _SignupStepThreeState extends State<SignupStepThree> {
         children: [
           _BackButton(onPressed: widget.onBack),
           const SizedBox(height: 4),
-          RichText(
-            text: TextSpan(
-              style: text.body.copyWith(
-                color: colors.muted,
-                fontSize: 13,
-                height: 1.5,
-              ),
-              children: [
-                TextSpan(
-                  text: 'Step 3 of 4',
-                  style: TextStyle(
-                    color: colors.text,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const TextSpan(
-                  text: ' · Set your password. Use at least 12 characters. Longer is stronger. You can use letters, numbers, symbols, or a passphrase.',
-                ),
-              ],
+          Text('Set new password', style: text.h2.copyWith(color: colors.text)),
+          const SizedBox(height: 8),
+          Text(
+            'Use at least 12 characters. Longer is stronger. You can use letters, numbers, symbols, or a passphrase.',
+            style: text.body.copyWith(
+              color: colors.muted,
+              fontSize: 15,
+              height: 1.6,
             ),
           ),
           const SizedBox(height: 20),
           KidunaTextField(
-            label: 'Set password',
+            label: 'New password',
             placeholder: 'At least 12 characters',
             controller: widget.passwordController,
             required: true,
@@ -115,8 +105,8 @@ class _SignupStepThreeState extends State<SignupStepThree> {
           ),
           const SizedBox(height: 18),
           KidunaTextField(
-            label: 'Confirm password',
-            placeholder: 'Re-enter your password',
+            label: 'Confirm new password',
+            placeholder: 'Re-enter your new password',
             controller: widget.confirmPasswordController,
             focusNode: _confirmFocus,
             required: true,
@@ -134,8 +124,8 @@ class _SignupStepThreeState extends State<SignupStepThree> {
           const SizedBox(height: 24),
           KidunaPrimaryButton(
             label: widget.isLoading
-                ? 'Creating your account...'
-                : 'Set your password and continue',
+                ? 'Resetting password...'
+                : 'Reset password',
             onPressed: _validate,
             isLoading: widget.isLoading,
           ),

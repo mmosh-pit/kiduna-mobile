@@ -13,12 +13,14 @@ class LoginForm extends StatefulWidget {
     super.key,
     required this.onLogin,
     required this.onCreateAccount,
+    required this.onForgotPassword,
     this.isLoading = false,
     this.apiError,
   });
 
   final LoginCallback onLogin;
   final VoidCallback onCreateAccount;
+  final VoidCallback onForgotPassword;
   final bool isLoading;
   final String? apiError;
 
@@ -29,6 +31,7 @@ class LoginForm extends StatefulWidget {
 class _LoginFormState extends State<LoginForm> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _passwordFocus = FocusNode();
   bool _showPassword = false;
   String? _validationError;
 
@@ -36,6 +39,7 @@ class _LoginFormState extends State<LoginForm> {
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _passwordFocus.dispose();
     super.dispose();
   }
 
@@ -102,6 +106,8 @@ class _LoginFormState extends State<LoginForm> {
             required: true,
             maxLength: 254,
             keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.next,
+            onSubmitted: (_) => _passwordFocus.requestFocus(),
           ),
         ),
         const SizedBox(height: 18),
@@ -111,9 +117,12 @@ class _LoginFormState extends State<LoginForm> {
             label: 'Password',
             placeholder: 'Enter your password',
             controller: _passwordController,
+            focusNode: _passwordFocus,
             required: true,
             obscureText: !_showPassword,
             maxLength: 32,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _validate(),
             suffix: IconButton(
               onPressed: () {
                 setState(() => _showPassword = !_showPassword);
@@ -134,7 +143,7 @@ class _LoginFormState extends State<LoginForm> {
           child: Align(
             alignment: Alignment.centerRight,
             child: TextButton(
-              onPressed: () {},
+              onPressed: widget.isLoading ? null : widget.onForgotPassword,
               style: TextButton.styleFrom(
                 padding: EdgeInsets.zero,
                 minimumSize: Size.zero,

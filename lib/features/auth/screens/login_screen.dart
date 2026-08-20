@@ -8,6 +8,7 @@ import '../controllers/auth_controller.dart';
 import '../enums/auth_status.dart';
 import '../widgets/login_form.dart';
 import '../widgets/signup_left_panel.dart';
+import 'forgot_password_screen.dart';
 import 'signup_screen.dart';
 
 const _loginLeftPanel = SignupLeftPanel(
@@ -25,6 +26,19 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
+  void _navigateToForgotPassword() {
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder<void>(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            const ForgotPasswordScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
+    );
+  }
+
   void _navigateToSignup() {
     Navigator.of(context).pushReplacement(
       PageRouteBuilder<void>(
@@ -120,6 +134,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   child: LoginForm(
                     onLogin: _login,
                     onCreateAccount: _navigateToSignup,
+                    onForgotPassword: _navigateToForgotPassword,
                     isLoading: isLoading,
                     apiError: apiError,
                   ),

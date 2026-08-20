@@ -14,7 +14,10 @@ class KidunaTextField extends StatelessWidget {
     this.required = false,
     this.suffix,
     this.onChanged,
+    this.onSubmitted,
     this.autofocus = false,
+    this.textInputAction,
+    this.focusNode,
   });
 
   final String label;
@@ -26,7 +29,10 @@ class KidunaTextField extends StatelessWidget {
   final bool required;
   final Widget? suffix;
   final ValueChanged<String>? onChanged;
+  final ValueChanged<String>? onSubmitted;
   final bool autofocus;
+  final TextInputAction? textInputAction;
+  final FocusNode? focusNode;
 
   @override
   Widget build(BuildContext context) {
@@ -61,11 +67,14 @@ class KidunaTextField extends StatelessWidget {
         const SizedBox(height: 8),
         TextField(
           controller: controller,
+          focusNode: focusNode,
           obscureText: obscureText,
           keyboardType: keyboardType,
+          textInputAction: textInputAction,
           maxLength: maxLength,
           autofocus: autofocus,
           onChanged: onChanged,
+          onSubmitted: onSubmitted,
           style: text.body.copyWith(color: colors.text, fontSize: 15),
           cursorColor: colors.sky,
           decoration: InputDecoration(

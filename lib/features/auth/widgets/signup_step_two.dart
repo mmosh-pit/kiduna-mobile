@@ -90,7 +90,10 @@ class _SignupStepTwoState extends State<SignupStepTwo> {
             ),
           ),
           const SizedBox(height: 10),
-          KidunaOtpField(onChanged: (code) => setState(() => _otpCode = code)),
+          KidunaOtpField(
+            onChanged: (code) => setState(() => _otpCode = code),
+            onCompleted: (_) => _validate(),
+          ),
           const SizedBox(height: 16),
           Text(
             'The code expires in 15 minutes. Didn\'t get it? Check your spam folder or request a new code.',
