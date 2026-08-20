@@ -15,6 +15,10 @@ abstract class ApiEndpoints {
   static const String upsertEarlyAccess = '/visitors/upsert-early-access';
   static const String hasCodeExist = '/visitors/has-code-exist';
 
+  // ── Forgot password (kinship-backend, uses authDio) ─────────────────
+  static const String forgotPasswordVerification =
+      '/forgot-password-verification';
+
   // ── Agents (kinship-agent, uses dio) ─────────────────────────────────
 
   static const String allyAgent = '/api/agents/ally';
@@ -35,4 +39,8 @@ abstract class ApiEndpoints {
   // ── Agent CRUD (kinship-agent, uses dio) ─────────────────────────────
 
   static String agentUpdate(String agentId) => '/api/agents/$agentId';
+
+  // ── Realms (kinship-backend, uses authDio) ──────────────────────────
+
+  static const String realmsEcosystem = '/realms/ecosystem';
 }

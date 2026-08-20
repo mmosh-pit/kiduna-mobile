@@ -28,7 +28,14 @@ class SignupStepOne extends StatefulWidget {
 }
 
 class _SignupStepOneState extends State<SignupStepOne> {
+  final _emailFocus = FocusNode();
   bool _consentChecked = false;
+
+  @override
+  void dispose() {
+    _emailFocus.dispose();
+    super.dispose();
+  }
 
   void _validate() {
     if (widget.isLoading) return;
@@ -93,15 +100,20 @@ class _SignupStepOneState extends State<SignupStepOne> {
             controller: widget.nameController,
             required: true,
             maxLength: 20,
+            textInputAction: TextInputAction.next,
+            onSubmitted: (_) => _emailFocus.requestFocus(),
           ),
           const SizedBox(height: 18),
           KidunaTextField(
             label: 'Email address',
             placeholder: 'name@example.com',
             controller: widget.emailController,
+            focusNode: _emailFocus,
             required: true,
             maxLength: 254,
             keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _validate(),
           ),
           const SizedBox(height: 12),
           _ConsentCheckbox(

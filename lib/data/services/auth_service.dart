@@ -133,6 +133,42 @@ class AuthService {
     }
   }
 
+  // ─── Forgot password ─────────────────────────────────────────────
+
+  Future<void> requestPasswordReset({required String email}) async {
+    try {
+      final response = await _authDio.post(
+        ApiEndpoints.forgotPasswordVerification,
+        data: {'email': email},
+      );
+      final body = response.data as Map<String, dynamic>;
+      if (body['ok'] != true) {
+        throw const ServerException('Failed to send reset code.');
+      }
+    } on DioException catch (e, st) {
+      _handleDioError(e, st, 'requestPasswordReset');
+    }
+  }
+
+  Future<void> resetPassword({
+    required String email,
+    required int code,
+    required String newPassword,
+  }) async {
+    try {
+      final response = await _authDio.post(
+        ApiEndpoints.forgotPasswordVerification,
+        data: {'email': email, 'code': code, 'newPassword': newPassword},
+      );
+      final body = response.data as Map<String, dynamic>;
+      if (body['ok'] != true) {
+        throw const ServerException('Failed to reset password.');
+      }
+    } on DioException catch (e, st) {
+      _handleDioError(e, st, 'resetPassword');
+    }
+  }
+
   // ─── Login ──────────────────────────────────────────────────────
 
   Future<({String token, UserModel user})> login({
@@ -216,7 +252,6 @@ class AuthService {
 
       final user = UserModel.fromJson(userJson);
 
-      AppLogger.debug('Auth check passed', tag: 'AuthService');
       return user;
     } on DioException catch (e) {
       if (e.error is AppException) {

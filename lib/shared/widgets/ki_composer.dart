@@ -7,11 +7,13 @@ class KiComposer extends StatefulWidget {
     super.key,
     required this.controller,
     required this.onSend,
+    this.onMic,
     this.enabled = true,
   });
 
   final TextEditingController controller;
   final VoidCallback onSend;
+  final VoidCallback? onMic;
   final bool enabled;
 
   @override
@@ -61,12 +63,51 @@ class _KiComposerState extends State<KiComposer> {
             ),
           ),
           const SizedBox(width: 5),
+          _MicButton(
+            onTap: widget.onMic,
+            enabled: widget.enabled,
+          ),
+          const SizedBox(width: 5),
           _SendButton(
             controller: widget.controller,
             onSend: widget.onSend,
             enabled: widget.enabled,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _MicButton extends StatelessWidget {
+  const _MicButton({required this.onTap, required this.enabled});
+
+  final VoidCallback? onTap;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.kiduna;
+    final active = enabled && onTap != null;
+
+    return GestureDetector(
+      onTap: active ? onTap : null,
+      child: MouseRegion(
+        cursor: active ? SystemMouseCursors.click : SystemMouseCursors.basic,
+        child: Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: colors.sky.withValues(alpha: 0.09),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          alignment: Alignment.center,
+          child: Icon(
+            Icons.mic,
+            size: 16,
+            color: active ? colors.sky : colors.quiet,
+          ),
+        ),
       ),
     );
   }
