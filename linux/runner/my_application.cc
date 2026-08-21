@@ -54,6 +54,8 @@ static void my_application_activate(GApplication* application) {
 
   // Set the window and default icon from the bundled PNG so both the
   // title bar and the taskbar/dock pick it up.
+  // Also register a .desktop file in ~/.local/share/applications/ so
+  // every desktop environment maps the running window to the Kiduna icon.
   {
     g_autofree gchar* exe_path = g_file_read_link("/proc/self/exe", nullptr);
     if (exe_path != nullptr) {
@@ -68,6 +70,27 @@ static void my_application_activate(GApplication* application) {
         gtk_window_set_default_icon_list(icon_list);
         g_list_free(icon_list);
         g_object_unref(icon);
+
+        const gchar* data_home = g_get_user_data_dir();
+        g_autofree gchar* apps_dir =
+            g_build_filename(data_home, "applications", nullptr);
+        g_mkdir_with_parents(apps_dir, 0755);
+        g_autofree gchar* desktop_path =
+            g_build_filename(apps_dir, "kiduna.desktop", nullptr);
+        g_autofree gchar* desktop_content = g_strdup_printf(
+            "[Desktop Entry]\n"
+            "Name=Kiduna\n"
+            "Comment=The Genesis Ecosystem\n"
+            "Exec=\"%s\"\n"
+            "Icon=%s\n"
+            "Type=Application\n"
+            "Categories=Utility;\n"
+            "StartupWMClass=%s\n",
+            exe_path, icon_path, APPLICATION_ID);
+        g_file_set_contents(desktop_path, desktop_content, -1, nullptr);
+        g_autofree gchar* update_cmd = g_strdup_printf(
+            "update-desktop-database %s", apps_dir);
+        g_spawn_command_line_async(update_cmd, nullptr);
       }
     }
   }
