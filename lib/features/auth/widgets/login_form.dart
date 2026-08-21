@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../../../core/extensions/context_extensions.dart';
@@ -169,35 +170,36 @@ class _LoginFormState extends State<LoginForm> {
           ),
         ),
         const SizedBox(height: 24),
-        FadeUpAnimation(
-          delay: const Duration(milliseconds: 450),
-          child: Center(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Don\'t have an account? ',
-                  style: text.body.copyWith(color: colors.muted, fontSize: 13),
-                ),
-                TextButton(
-                  onPressed: widget.isLoading ? null : widget.onCreateAccount,
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    foregroundColor: colors.sky,
-                    textStyle: const TextStyle(
-                      fontFamily: 'Avenir',
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                    ),
+        if (kIsWeb)
+          FadeUpAnimation(
+            delay: const Duration(milliseconds: 450),
+            child: Center(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Don\'t have an account? ',
+                    style: text.body.copyWith(color: colors.muted, fontSize: 13),
                   ),
-                  child: const Text('Create account →'),
-                ),
-              ],
+                  TextButton(
+                    onPressed: widget.isLoading ? null : widget.onCreateAccount,
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      foregroundColor: colors.sky,
+                      textStyle: const TextStyle(
+                        fontFamily: 'Avenir',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    child: const Text('Create account →'),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
       ],
     );
   }
