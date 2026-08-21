@@ -46,7 +46,7 @@ class FieldWorkingPanels extends ConsumerWidget {
   Offset _staggeredOffset(double width, int index) {
     return Offset(
       _clampLeft(bounds.width * 0.5 - width / 2 + index * 26),
-      (bounds.height * 0.2 + index * 26).clamp(8.0, double.infinity),
+      (bounds.height * 0.3 + index * 26).clamp(8.0, double.infinity),
     );
   }
 

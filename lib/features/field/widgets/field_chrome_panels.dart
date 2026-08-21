@@ -30,35 +30,40 @@ class FieldChromePanels extends StatelessWidget {
     final l10n = context.l10n;
     final realm = state.currentRealm;
 
+    final navWidth = (bounds.width - 840).clamp(220.0, 620.0);
+
     return Stack(
       children: [
         FieldPanel(
           key: const ValueKey('panel-navigation'),
           label: l10n.navigation,
           bounds: bounds,
-          width: (bounds.width - 840).clamp(220.0, 620.0),
+          width: navWidth,
           opacity: opacity,
-          initialOffset: Offset(_clampLeft(540), 22),
+          initialOffset: Offset(
+            _clampLeft((bounds.width - navWidth) / 2),
+            (bounds.height * 0.3).clamp(8.0, double.infinity),
+          ),
           child: NavigationPanel(
             realmPath: state.realmPath,
             onBreadcrumbTap: controller.navigateToBreadcrumb,
           ),
         ),
-        if (state.actionsVisible)
-          FieldPanel(
-            key: const ValueKey('panel-actions'),
-            label: l10n.possibleActions,
-            bounds: bounds,
-            width: 540,
-            opacity: opacity,
-            accent: true,
-            initialOffset: Offset(
-              _clampLeft((bounds.width - 540) / 2),
-              bounds.height * 0.28,
-            ),
-            onClose: controller.closeActions,
-            child: const PossibleActions(),
+        FieldPanel(
+          key: const ValueKey('panel-actions'),
+          label: l10n.possibleActions,
+          bounds: bounds,
+          width: 540,
+          opacity: opacity,
+          accent: true,
+          initialMode: FieldPanelMode.collapsed,
+          initialOffset: Offset(
+            _clampLeft((bounds.width - 540) / 2),
+            (bounds.height * 0.3).clamp(8.0, double.infinity),
           ),
+          minimizedOffset: const Offset(22, 110),
+          child: const PossibleActions(),
+        ),
         if (state.inspectOpen)
           FieldPanel(
             key: const ValueKey('panel-inspect'),
@@ -67,7 +72,10 @@ class FieldChromePanels extends StatelessWidget {
             bounds: bounds,
             width: 430,
             opacity: opacity,
-            initialOffset: const Offset(22, 96),
+            initialOffset: Offset(
+              _clampLeft((bounds.width - 430) / 2),
+              (bounds.height * 0.3).clamp(8.0, double.infinity),
+            ),
             onClose: controller.toggleInspect,
             child: InspectPanel(realm: realm),
           ),

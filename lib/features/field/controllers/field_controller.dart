@@ -46,7 +46,7 @@ class FieldState {
     this.error,
     this.currentRealmId = 'kinship-duna',
     this.inspectOpen = false,
-    this.actionsVisible = false,
+    this.actionsVisible = true,
     this.fieldFocus = 100,
     this.kiFraction = 0.30,
     this.openActions = const [],

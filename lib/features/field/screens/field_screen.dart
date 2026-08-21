@@ -155,10 +155,8 @@ class FieldStack extends ConsumerWidget {
                   width: 520,
                   opacity: opacity,
                   initialOffset: Offset(
-                    (bounds.width > 1020)
-                        ? bounds.width * 0.35
-                        : 22,
-                    96,
+                    ((bounds.width - 520) / 2).clamp(8.0, double.infinity),
+                    (bounds.height * 0.3).clamp(8.0, double.infinity),
                   ),
                   onClose: controller.clearSelection,
                   child: AdvancedActionsPanel(
