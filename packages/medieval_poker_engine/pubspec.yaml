@@ -1,0 +1,14 @@
+name: medieval_poker_engine
+description: >-
+  Pure-Dart, UI-agnostic rules engine for Medieval Poker (cards, hand
+  evaluation, power/class/court cards, items/tokens, AI, and the authoritative
+  game state machine). Shared by the Flutter client (offline + online) and the
+  server-side game-service. No Flutter dependency.
+publish_to: "none"
+version: 0.1.0
+
+environment:
+  sdk: ">=3.8.0 <4.0.0"
+
+# Intentionally has NO dependencies (pure Dart core only) so it can run in a
+# Flutter app, a headless Dart game-service, or plain `dart test`.
