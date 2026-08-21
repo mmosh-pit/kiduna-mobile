@@ -3,7 +3,7 @@ name: Flutter Multi Platform Build
 on:
   push:
     branches:
-      - feat/build-application-gitactions
+      - feat/feature-build-worflow
   workflow_dispatch:
 
 jobs:
