@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../config/env.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../shared/animations/slide_in_animation.dart';
 import '../../../shared/widgets/kiduna_otp_field.dart';
@@ -60,7 +61,7 @@ class _SignupStepTwoState extends State<SignupStepTwo> {
               ),
               children: [
                 TextSpan(
-                  text: 'Step 2 of 4',
+                  text: 'Step 2 of 6',
                   style: TextStyle(
                     color: colors.text,
                     fontWeight: FontWeight.w700,
@@ -94,6 +95,25 @@ class _SignupStepTwoState extends State<SignupStepTwo> {
             onChanged: (code) => setState(() => _otpCode = code),
             onCompleted: (_) => _validate(),
           ),
+          if (!Env.isProduction) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: colors.gold.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: colors.gold.withValues(alpha: 0.3)),
+              ),
+              child: Text(
+                '🔑 Skip email — enter 000000 to continue',
+                style: text.caption.copyWith(
+                  color: colors.gold,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           Text(
             'The code expires in 15 minutes. Didn\'t get it? Check your spam folder or request a new code.',

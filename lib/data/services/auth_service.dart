@@ -4,6 +4,7 @@ import '../../core/errors/exceptions.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/api_endpoints.dart';
 import '../../core/utils/logger.dart';
+import '../../data/local/secure_storage.dart';
 import '../../data/models/user_model.dart';
 
 class AuthService {
@@ -64,6 +65,82 @@ class AuthService {
       }
     } on DioException catch (e, st) {
       _handleDioError(e, st, 'resendOtp');
+    }
+  }
+
+  // ── SMS OTP ──────────────────────────────────────────────────────────────
+
+  Future<void> generateSmsOtp({
+    required String mobile,
+    required String countryCode,
+    String? email,
+  }) async {
+    try {
+      final response = await _authDio.post(
+        ApiEndpoints.generateOtp,
+        data: {
+          'type': 'sms',
+          'mobile': mobile,
+          'countryCode': countryCode,
+          if (email != null && email.isNotEmpty) 'email': email,
+        },
+      );
+      final body = response.data as Map<String, dynamic>;
+      if (body['status'] != true) {
+        final message =
+            body['message'] as String? ?? 'Failed to send SMS code.';
+        if (message.contains('already exists')) {
+          throw ConflictException(message);
+        }
+        throw ValidationException(message);
+      }
+    } on DioException catch (e, st) {
+      _handleDioError(e, st, 'generateSmsOtp');
+    }
+  }
+
+  Future<void> verifySmsOtp({
+    required String mobile,
+    required String otp,
+  }) async {
+    try {
+      final response = await _authDio.post(
+        ApiEndpoints.verifyOtp,
+        data: {'mobile': mobile, 'otp': otp, 'type': 'sms'},
+      );
+      final body = response.data as Map<String, dynamic>;
+      if (body['status'] != true) {
+        final message = body['message'] as String? ?? 'Invalid code.';
+        throw ValidationException(message);
+      }
+    } on DioException catch (e, st) {
+      _handleDioError(e, st, 'verifySmsOtp');
+    }
+  }
+
+  Future<void> resendSmsOtp({
+    required String mobile,
+    required String countryCode,
+    String? email,
+  }) async {
+    try {
+      final response = await _authDio.post(
+        ApiEndpoints.resendOtp,
+        data: {
+          'type': 'sms',
+          'mobile': mobile,
+          'countryCode': countryCode,
+          if (email != null && email.isNotEmpty) 'email': email,
+        },
+      );
+      final body = response.data as Map<String, dynamic>;
+      if (body['status'] != true) {
+        throw ValidationException(
+          body['message'] as String? ?? 'Failed to resend SMS code.',
+        );
+      }
+    } on DioException catch (e, st) {
+      _handleDioError(e, st, 'resendSmsOtp');
     }
   }
 
@@ -130,6 +207,61 @@ class AuthService {
       );
     } on DioException catch (e, st) {
       _handleDioError(e, st, 'updateKinshipCode');
+    }
+  }
+
+  /// Join a realm using an invitation code (RLM-XXXXXX).
+  ///
+  /// Backend internally:
+  ///   1. Validates the invite code
+  ///   2. Adds user to realm_members
+  ///   3. Resolves inviter's kinship code
+  ///   4. Builds lineage automatically
+  ///
+  /// Returns a map with: success, realmId, realmName, role, lineageBuilt
+  Future<Map<String, dynamic>> joinRealmViaInvite({
+    required String code,
+  }) async {
+    try {
+      // Auth token must be manually attached — authDio has no AuthInterceptor.
+      // Token was saved in Step 3 (createAccount).
+      final token = await SecureStorage.instance.getToken();
+      final response = await _authDio.post(
+        '/realm-invites/join/${code.trim().toUpperCase()}',
+        data: {},
+        options: token != null && token.isNotEmpty
+            ? Options(headers: {'Authorization': 'Bearer $token'})
+            : null,
+      );
+      final body = response.data as Map<String, dynamic>;
+
+      if (body.containsKey('error')) {
+        throw ValidationException(
+          body['error'] as String? ?? 'Failed to join.',
+        );
+      }
+
+      final data = body['data'] as Map<String, dynamic>? ?? {};
+      return data;
+    } on DioException catch (e, st) {
+      _handleDioError(e, st, 'joinRealmViaInvite');
+      return {};
+    }
+  }
+
+  /// Preview an invitation code (no auth required).
+  /// Returns realm name, type, role, validity.
+  Future<Map<String, dynamic>> previewInvite({
+    required String code,
+  }) async {
+    try {
+      final response = await _authDio.get(
+        '/realm-invites/join/${code.trim().toUpperCase()}',
+      );
+      return response.data as Map<String, dynamic>? ?? {};
+    } on DioException catch (e, st) {
+      _handleDioError(e, st, 'previewInvite');
+      return {'valid': false, 'reason': 'Network error'};
     }
   }
 
