@@ -1,0 +1,6 @@
+# Pure-Dart (dart:io) game-service package — analyzed on its own terms rather
+# than inheriting the Flutter app's flutter_lints. The smoke scripts under
+# tool/ are CLI entrypoints where `print` is the intended output.
+linter:
+  rules:
+    avoid_print: false

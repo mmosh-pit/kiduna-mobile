@@ -5,32 +5,238 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../features/auth/controllers/auth_controller.dart';
 import '../../../features/auth/screens/login_screen.dart';
+import '../../../features/game/screens/game_screen.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/layouts/responsive_layout.dart';
 import '../../../shared/widgets/app_header.dart';
 import '../../../shared/widgets/ki_agent.dart';
-import '../widgets/dashboard_left_panel.dart';
 
-class DashboardScreen extends ConsumerWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  int _activeTab = 0;
+
+  @override
+  Widget build(BuildContext context) {
     final colors = context.kiduna;
 
     return Scaffold(
       backgroundColor: colors.field,
       body: Column(
         children: [
-          AppHeader(
-            trailing: _HeaderActions(ref: ref),
-          ),
+          AppHeader(trailing: _HeaderActions(ref: ref)),
           Expanded(
             child: ResponsiveLayout(
-              desktop: (_) => const _DashboardWide(),
-              mobile: (_) => const _DashboardNarrow(),
+              desktop: (_) => _ContentWide(activeTab: _activeTab),
+              mobile: (_) => _ContentNarrow(activeTab: _activeTab),
             ),
           ),
         ],
+      ),
+      bottomNavigationBar: _BottomTabBar(
+        activeTab: _activeTab,
+        onTabChanged: (index) => setState(() => _activeTab = index),
+      ),
+    );
+  }
+}
+
+/// Bottom navigation bar with 4 tabs.
+class _BottomTabBar extends StatelessWidget {
+  const _BottomTabBar({
+    required this.activeTab,
+    required this.onTabChanged,
+  });
+
+  final int activeTab;
+  final ValueChanged<int> onTabChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.kiduna;
+    final l10n = AppLocalizations.of(context)!;
+
+    return Container(
+      height: 56,
+      decoration: BoxDecoration(
+        color: colors.deep,
+        border: Border(
+          top: BorderSide(color: colors.camel.withValues(alpha: 0.12)),
+        ),
+      ),
+      child: Row(
+        children: [
+          _TabItem(
+            icon: Icons.people_outline,
+            activeIcon: Icons.people,
+            label: l10n.tabMatching,
+            isActive: activeTab == 0,
+            onTap: () => onTabChanged(0),
+          ),
+          _TabItem(
+            icon: Icons.casino_outlined,
+            activeIcon: Icons.casino,
+            label: l10n.tabCards,
+            isActive: activeTab == 1,
+            onTap: () => onTabChanged(1),
+          ),
+          _TabItem(
+            icon: Icons.emoji_events_outlined,
+            activeIcon: Icons.emoji_events,
+            label: l10n.tabStandings,
+            isActive: activeTab == 2,
+            onTap: () => onTabChanged(2),
+          ),
+          _TabItem(
+            icon: Icons.shield_outlined,
+            activeIcon: Icons.shield,
+            label: l10n.tabGuilds,
+            isActive: activeTab == 3,
+            onTap: () => onTabChanged(3),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TabItem extends StatelessWidget {
+  const _TabItem({
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.kiduna;
+    final color = isActive ? colors.gold : colors.quiet;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(isActive ? activeIcon : icon, size: 22, color: color),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: context.kidunaText.eyebrowSmall.copyWith(
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Desktop layout — left panel (based on tab) + Ki chat right.
+class _ContentWide extends StatelessWidget {
+  const _ContentWide({required this.activeTab});
+
+  final int activeTab;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.kiduna;
+
+    return Row(
+      children: [
+        Expanded(flex: 6, child: _buildLeftPanel(context, activeTab)),
+        Container(width: 1, color: colors.camel.withValues(alpha: 0.18)),
+        const Expanded(flex: 4, child: KiAgent()),
+      ],
+    );
+  }
+}
+
+/// Mobile layout — left panel top + Ki chat bottom.
+class _ContentNarrow extends StatelessWidget {
+  const _ContentNarrow({required this.activeTab});
+
+  final int activeTab;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Expanded(flex: 5, child: _buildLeftPanel(context, activeTab)),
+        const Expanded(flex: 5, child: KiAgent()),
+      ],
+    );
+  }
+}
+
+/// Returns the left panel widget based on active tab.
+Widget _buildLeftPanel(BuildContext context, int activeTab) {
+  final l10n = AppLocalizations.of(context)!;
+
+  return switch (activeTab) {
+    1 => const GameScreen(),
+    _ => _ComingSoonPanel(
+        title: switch (activeTab) {
+          0 => l10n.tabMatching,
+          2 => l10n.tabStandings,
+          3 => l10n.tabGuilds,
+          _ => '',
+        },
+        icon: switch (activeTab) {
+          0 => Icons.people,
+          2 => Icons.emoji_events,
+          3 => Icons.shield,
+          _ => Icons.hourglass_empty,
+        },
+      ),
+  };
+}
+
+/// Placeholder screen for features not yet built.
+class _ComingSoonPanel extends StatelessWidget {
+  const _ComingSoonPanel({required this.title, required this.icon});
+
+  final String title;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.kiduna;
+    final text = context.kidunaText;
+    final l10n = AppLocalizations.of(context)!;
+
+    return Container(
+      color: colors.field,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 48, color: colors.gold.withValues(alpha: 0.3)),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              style: text.h4.copyWith(color: colors.gold.withValues(alpha: 0.6)),
+            ),
+            const SizedBox(height: 8),
+            Text(l10n.comingSoon, style: text.body.copyWith(color: colors.quiet)),
+          ],
+        ),
       ),
     );
   }
@@ -45,9 +251,7 @@ class _HeaderActions extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
-      children: [
-        _UserAvatarPopup(ref: ref),
-      ],
+      children: [_UserAvatarPopup(ref: ref)],
     );
   }
 }
@@ -141,12 +345,7 @@ class _UserAvatarPopup extends StatelessWidget {
                     backgroundColor: colors.gold.withValues(alpha: 0.15),
                     child: Text(
                       initial,
-                      style: TextStyle(
-                        fontFamily: 'GoudyHeavyface',
-                        fontSize: 24,
-                        color: colors.gold,
-                        height: 1,
-                      ),
+                      style: text.h4.copyWith(color: colors.gold, height: 1),
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -243,10 +442,7 @@ class _UserAvatarPopup extends StatelessWidget {
               children: [
                 Icon(Icons.logout_rounded, size: 18, color: colors.error),
                 const SizedBox(width: 12),
-                Text(
-                  'Sign Out',
-                  style: text.body.copyWith(color: colors.error),
-                ),
+                Text('Sign Out', style: text.body.copyWith(color: colors.error)),
               ],
             ),
           ),
@@ -263,9 +459,7 @@ class _UserAvatarPopup extends StatelessWidget {
         child: Center(
           child: Text(
             initial,
-            style: TextStyle(
-              fontFamily: 'GoudyHeavyface',
-              fontSize: 16,
+            style: text.eyebrow.copyWith(
               color: colors.gold.withValues(alpha: 0.75),
               height: 1,
             ),
@@ -279,35 +473,4 @@ class _UserAvatarPopup extends StatelessWidget {
 String _truncateWallet(String wallet) {
   if (wallet.length <= 14) return wallet;
   return '${wallet.substring(0, 6)}...${wallet.substring(wallet.length - 5)}';
-}
-
-class _DashboardWide extends StatelessWidget {
-  const _DashboardWide();
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.kiduna;
-
-    return Row(
-      children: [
-        const Expanded(flex: 6, child: DashboardLeftPanel()),
-        Container(width: 1, color: colors.camel.withValues(alpha: 0.18)),
-        const Expanded(flex: 4, child: KiAgent()),
-      ],
-    );
-  }
-}
-
-class _DashboardNarrow extends StatelessWidget {
-  const _DashboardNarrow();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Column(
-      children: [
-        Expanded(flex: 5, child: DashboardLeftPanel()),
-        Expanded(flex: 5, child: KiAgent()),
-      ],
-    );
-  }
 }
