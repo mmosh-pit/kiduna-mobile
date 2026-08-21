@@ -1,0 +1,219 @@
+name: Flutter Multi Platform Build
+
+on:
+  push:
+    branches:
+      - feat/build-application-gitactions
+  workflow_dispatch:
+
+jobs:
+  linux-android-web:
+    runs-on: ubuntu-latest
+    environment: dev
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Create .env
+        shell: bash
+        run: |
+          cat > .env <<EOF
+          ENV=${{ vars.APP_ENV || 'dev' }}
+          API_BASE_URL=${{ secrets.API_BASE_URL }}
+          AUTH_API_URL=${{ secrets.AUTH_API_URL }}
+          STUDIO_BASE_URL=${{ secrets.STUDIO_BASE_URL }}
+          GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+          EOF
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang \
+            cmake \
+            ninja-build \
+            pkg-config \
+            libgtk-3-dev \
+            liblzma-dev \
+            libstdc++-12-dev
+
+      - run: flutter pub get
+
+      - run: flutter doctor -v
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      - name: Build AAB
+        run: flutter build appbundle --release
+
+      - name: Build Linux
+        run: flutter build linux --release
+
+      - name: Build Web
+        run: flutter build web --release
+
+      - name: Package Linux bundle
+        run: |
+          cd build/linux/x64/release/bundle
+          zip -r "$GITHUB_WORKSPACE/linux-bundle.zip" .
+
+      - name: Package Web bundle
+        run: |
+          cd build/web
+          zip -r "$GITHUB_WORKSPACE/web-bundle.zip" .
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Upload AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-aab
+          path: build/app/outputs/bundle/release/app-release.aab
+
+      - name: Upload Linux
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: linux-bundle.zip
+
+      - name: Upload Web
+        uses: actions/upload-artifact@v4
+        with:
+          name: web
+          path: web-bundle.zip
+
+  windows:
+    runs-on: windows-latest
+    environment: dev
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Create .env
+        shell: bash
+        run: |
+          cat > .env <<EOF
+          ENV=${{ vars.APP_ENV || 'dev' }}
+          API_BASE_URL=${{ secrets.API_BASE_URL }}
+          AUTH_API_URL=${{ secrets.AUTH_API_URL }}
+          STUDIO_BASE_URL=${{ secrets.STUDIO_BASE_URL }}
+          GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+          EOF
+
+      - run: flutter pub get
+
+      - run: flutter build windows --release
+
+      - name: Package Windows bundle
+        shell: pwsh
+        run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath windows-bundle.zip
+
+      - name: Upload Windows
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: windows-bundle.zip
+
+  macos:
+    runs-on: macos-latest
+    environment: dev
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Create .env
+        shell: bash
+        run: |
+          cat > .env <<EOF
+          ENV=${{ vars.APP_ENV || 'dev' }}
+          API_BASE_URL=${{ secrets.API_BASE_URL }}
+          AUTH_API_URL=${{ secrets.AUTH_API_URL }}
+          STUDIO_BASE_URL=${{ secrets.STUDIO_BASE_URL }}
+          GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+          EOF
+
+      - run: flutter pub get
+
+      - name: Build macOS
+        run: flutter build macos --release
+
+      - name: Build iOS
+        run: flutter build ios --release --no-codesign
+
+      - name: Package macOS bundle
+        run: |
+          cd build/macos/Build/Products/Release
+          zip -r "$GITHUB_WORKSPACE/macos-bundle.zip" .
+
+      - name: Package iOS bundle
+        run: |
+          cd build/ios/iphoneos
+          zip -r "$GITHUB_WORKSPACE/ios-bundle.zip" .
+
+      - name: Upload macOS
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: macos-bundle.zip
+
+      - name: Upload iOS Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build
+          path: ios-bundle.zip
+
+  release:
+    needs: [linux-android-web, windows, macos]
+    runs-on: ubuntu-latest
+    environment: dev
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Stage release assets
+        run: |
+          mkdir -p release-assets
+          cp artifacts/android-apk/app-release.apk release-assets/app-release.apk
+          cp artifacts/android-aab/app-release.aab release-assets/app-release.aab
+          cp artifacts/linux/linux-bundle.zip release-assets/linux-bundle.zip
+          cp artifacts/web/web-bundle.zip release-assets/web-bundle.zip
+          cp artifacts/windows/windows-bundle.zip release-assets/windows-bundle.zip
+          cp artifacts/macos/macos-bundle.zip release-assets/macos-bundle.zip
+          cp artifacts/ios-build/ios-bundle.zip release-assets/ios-bundle.zip
+          ls -la release-assets
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Build ${{ github.run_number }}
+          body: |
+            Automated multi-platform build from `${{ github.ref_name }}` @ `${{ github.sha }}`.
+          files: release-assets/*
