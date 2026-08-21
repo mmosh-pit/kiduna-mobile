@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../config/env.dart';
 import '../../core/extensions/context_extensions.dart';
 
 class KidunaOtpField extends StatefulWidget {
@@ -113,6 +114,12 @@ class _KidunaOtpFieldState extends State<KidunaOtpField> {
                 decoration: InputDecoration(
                   counterText: '',
                   contentPadding: EdgeInsets.zero,
+                  hintText: Env.isProduction ? null : '0',
+                  hintStyle: TextStyle(
+                    fontFamily: 'GoudyHeavyface',
+                    fontSize: 26,
+                    color: colors.quiet.withValues(alpha: 0.3),
+                  ),
                   filled: true,
                   fillColor: colors.deep.withValues(alpha: 0.7),
                   border: OutlineInputBorder(

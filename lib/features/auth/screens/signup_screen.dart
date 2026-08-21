@@ -7,13 +7,16 @@ import '../../../core/extensions/context_extensions.dart';
 import '../../../core/utils/logger.dart';
 import '../../../data/local/secure_storage.dart';
 import '../../../data/services/auth_service.dart';
+import '../../../main.dart' show pendingInviteCode;
 import '../../../shared/widgets/app_header.dart';
 import '../../../shared/widgets/kiduna_message_box.dart';
 import '../../../shared/widgets/kiduna_progress_bar.dart';
 import '../../dashboard/screens/dashboard_screen.dart';
 import '../widgets/signup_left_panel.dart';
+import '../widgets/signup_step_five.dart';
 import '../widgets/signup_step_four.dart';
 import '../widgets/signup_step_one.dart';
+import '../widgets/signup_step_six.dart';
 import '../widgets/signup_step_three.dart';
 import '../widgets/signup_step_two.dart';
 import 'login_screen.dart';
@@ -36,8 +39,28 @@ class _SignupScreenState extends State<SignupScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final _kinshipCodeController = TextEditingController();
-  final _handshakeController = TextEditingController();
+  final _mobileController = TextEditingController();
+  final _inviteCodeController = TextEditingController();
+
+  // Stored after Step 4 for use in Step 5
+  String _mobileCountryCode = '';
+  String _mobileNumber = '';
+
+  // Invite preview info (shown on Step 6 after code validation)
+  Map<String, dynamic>? _invitePreviewInfo;
+
+  @override
+  void initState() {
+    super.initState();
+    // Prefill invite code from URL (e.g., /join/RLM-A3Kx9M)
+    if (pendingInviteCode != null && pendingInviteCode!.isNotEmpty) {
+      _inviteCodeController.text = pendingInviteCode!;
+      AppLogger.info(
+        'Prefilled invite code: ${pendingInviteCode!}',
+        tag: 'Signup',
+      );
+    }
+  }
 
   @override
   void dispose() {
@@ -46,8 +69,8 @@ class _SignupScreenState extends State<SignupScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
-    _kinshipCodeController.dispose();
-    _handshakeController.dispose();
+    _mobileController.dispose();
+    _inviteCodeController.dispose();
     super.dispose();
   }
 
@@ -101,7 +124,7 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  // Step 1 → send email OTP
+  // ── Step 1 → send email OTP ─────────────────────────────────────────────
   Future<void> _generateOtp() async {
     final email = _emailController.text.trim();
     setState(() => _isLoading = true);
@@ -141,7 +164,7 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
-  // Step 2 → verify OTP
+  // ── Step 2 → verify email OTP ───────────────────────────────────────────
   Future<void> _verifyOtp(String otpCode) async {
     final email = _emailController.text.trim();
     setState(() => _isLoading = true);
@@ -174,7 +197,7 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
-  // Step 2 → resend OTP
+  // ── Step 2 → resend email OTP ───────────────────────────────────────────
   Future<void> _resendOtp() async {
     final email = _emailController.text.trim();
     setState(() => _isLoading = true);
@@ -204,7 +227,7 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
-  // Step 3 → create account + wallet + kinship code
+  // ── Step 3 → create account ─────────────────────────────────────────────
   Future<void> _createAccount() async {
     setState(() => _isLoading = true);
 
@@ -254,30 +277,169 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
-  // Step 4 → validate kinship code + complete signup
-  Future<void> _completeSignup() async {
-    final code = _kinshipCodeController.text.trim();
-    final email = _emailController.text.trim();
+  // ── Step 4 → send SMS OTP ──────────────────────────────────────────────
+  Future<void> _generateSmsOtp(String payload) async {
+    // payload format: "countryCode|mobileNumber" (e.g., "91|6382987509")
+    final parts = payload.split('|');
+    if (parts.length != 2) {
+      _onError('Invalid mobile number format.');
+      return;
+    }
+    _mobileCountryCode = parts[0];
+    _mobileNumber = parts[1];
+
     setState(() => _isLoading = true);
 
     try {
-      final exists = await AuthService.instance.validateKinshipCode(code: code);
+      await AuthService.instance.generateSmsOtp(
+        mobile: _mobileNumber,
+        countryCode: _mobileCountryCode,
+        email: _emailController.text.trim(),
+      );
+      if (!mounted) return;
+      _showMessage(
+        'Code sent to +$_mobileCountryCode $_mobileNumber',
+        MessageType.success,
+      );
+      _goToStep(5);
+    } on ConflictException catch (e) {
+      if (!mounted) return;
+      _onError(e.message ?? 'Mobile number already registered.');
+    } on ValidationException catch (e) {
+      if (!mounted) return;
+      _onError(e.message ?? 'Failed to send SMS code.');
+    } on NetworkException {
+      if (!mounted) return;
+      _onError('No internet connection. Please check your network.');
+    } on ApiTimeoutException {
+      if (!mounted) return;
+      _onError('Request timed out. Please try again.');
+    } on ServerException {
+      if (!mounted) return;
+      _onError('Server error. Please try again later.');
+    } catch (e, st) {
+      AppLogger.error(
+        'Unexpected error in generateSmsOtp',
+        error: e,
+        stackTrace: st,
+      );
+      if (!mounted) return;
+      _onError('Something went wrong. Please try again.');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  // ── Step 5 → verify SMS OTP ────────────────────────────────────────────
+  Future<void> _verifySmsOtp(String otpCode) async {
+    setState(() => _isLoading = true);
+
+    try {
+      await AuthService.instance.verifySmsOtp(
+        mobile: _mobileNumber,
+        otp: otpCode,
+      );
+      if (!mounted) return;
+      _goToStep(6);
+    } on ValidationException catch (e) {
+      if (!mounted) return;
+      _onError(e.message ?? 'Invalid code.');
+    } on NetworkException {
+      if (!mounted) return;
+      _onError('No internet connection.');
+    } on ApiTimeoutException {
+      if (!mounted) return;
+      _onError('Request timed out. Please try again.');
+    } catch (e, st) {
+      AppLogger.error(
+        'Unexpected error in verifySmsOtp',
+        error: e,
+        stackTrace: st,
+      );
+      if (!mounted) return;
+      _onError('Something went wrong. Please try again.');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  // ── Step 5 → resend SMS OTP ────────────────────────────────────────────
+  Future<void> _resendSmsOtp() async {
+    setState(() => _isLoading = true);
+
+    try {
+      await AuthService.instance.resendSmsOtp(
+        mobile: _mobileNumber,
+        countryCode: _mobileCountryCode,
+        email: _emailController.text.trim(),
+      );
+      if (!mounted) return;
+      _showMessage('Code resent to your phone.', MessageType.success);
+    } on ValidationException catch (e) {
+      if (!mounted) return;
+      _onError(e.message ?? 'Failed to resend code.');
+    } on NetworkException {
+      if (!mounted) return;
+      _onError('No internet connection.');
+    } catch (e, st) {
+      AppLogger.error(
+        'Unexpected error in resendSmsOtp',
+        error: e,
+        stackTrace: st,
+      );
+      if (!mounted) return;
+      _onError('Could not resend code. Please try again.');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  // ── Step 6 → join realm via invitation code ──────────────────────────
+  Future<void> _completeSignup() async {
+    final code = _inviteCodeController.text.trim();
+    setState(() => _isLoading = true);
+
+    try {
+      // Preview first to validate
+      final preview = await AuthService.instance.previewInvite(code: code);
       if (!mounted) return;
 
-      if (!exists) {
-        _onError('Invalid Kinship Code. Please check and try again.');
+      if (preview['valid'] != true) {
+        final reason = preview['reason'] as String? ?? 'Invalid invitation code.';
+        _onError(reason);
         setState(() => _isLoading = false);
         return;
       }
 
-      await AuthService.instance.updateKinshipCode(
-        email: email,
-        referredCode: code,
-      );
+      // Join the realm — backend handles:
+      //   1. Add to realm_members
+      //   2. Resolve inviter's kinship code
+      //   3. Build lineage automatically
+      final result = await AuthService.instance.joinRealmViaInvite(code: code);
       if (!mounted) return;
 
-      AppLogger.info('Signup complete', tag: 'Auth');
-      _navigateToDashboard();
+      if (result['success'] == true) {
+        final realmName = result['realmName'] as String? ?? 'the community';
+        AppLogger.info(
+          'Signup complete — joined $realmName (lineage=${result['lineageBuilt']})',
+          tag: 'Auth',
+        );
+        _navigateToDashboard();
+      } else if (result['already_member'] == true) {
+        AppLogger.info('Already a member — proceeding to dashboard', tag: 'Auth');
+        _navigateToDashboard();
+      } else {
+        _onError('Failed to join. Please try again.');
+      }
+    } on ValidationException catch (e) {
+      if (!mounted) return;
+      _onError(e.message ?? 'Invalid invitation code.');
     } on NetworkException {
       if (!mounted) return;
       _onError('No internet connection. Please check your network.');
@@ -337,12 +499,31 @@ class _SignupScreenState extends State<SignupScreen> {
       case 4:
         return SignupStepFour(
           key: const ValueKey(4),
-          onComplete: _completeSignup,
+          onNext: _generateSmsOtp,
           onBack: () => _goToStep(3),
           onError: _onError,
-          kinshipCodeController: _kinshipCodeController,
-          handshakeController: _handshakeController,
+          mobileController: _mobileController,
           isLoading: _isLoading,
+        );
+      case 5:
+        return SignupStepFive(
+          key: const ValueKey(5),
+          formattedMobile: '+$_mobileCountryCode $_mobileNumber',
+          onNext: _verifySmsOtp,
+          onBack: () => _goToStep(4),
+          onError: _onError,
+          onResend: _resendSmsOtp,
+          isLoading: _isLoading,
+        );
+      case 6:
+        return SignupStepSix(
+          key: const ValueKey(6),
+          onComplete: _completeSignup,
+          onBack: () => _goToStep(5),
+          onError: _onError,
+          inviteCodeController: _inviteCodeController,
+          isLoading: _isLoading,
+          previewInfo: _invitePreviewInfo,
         );
       default:
         return const SizedBox.shrink();
@@ -411,7 +592,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       KidunaProgressBar(
-                        totalSteps: 4,
+                        totalSteps: 6,
                         currentStep: _currentStep,
                       ),
                       const SizedBox(height: 28),

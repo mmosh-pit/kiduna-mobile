@@ -3,25 +3,22 @@ import 'package:flutter/material.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../shared/animations/slide_in_animation.dart';
 import '../../../shared/widgets/kiduna_primary_button.dart';
-import '../../../shared/widgets/kiduna_secondary_button.dart';
 import '../../../shared/widgets/kiduna_text_field.dart';
 
 class SignupStepFour extends StatefulWidget {
   const SignupStepFour({
     super.key,
-    required this.onComplete,
+    required this.onNext,
     required this.onBack,
     required this.onError,
-    required this.kinshipCodeController,
-    required this.handshakeController,
+    required this.mobileController,
     this.isLoading = false,
   });
 
-  final VoidCallback onComplete;
+  final ValueChanged<String> onNext;
   final VoidCallback onBack;
   final ValueChanged<String> onError;
-  final TextEditingController kinshipCodeController;
-  final TextEditingController handshakeController;
+  final TextEditingController mobileController;
   final bool isLoading;
 
   @override
@@ -29,25 +26,42 @@ class SignupStepFour extends StatefulWidget {
 }
 
 class _SignupStepFourState extends State<SignupStepFour> {
-  final _handshakeFocus = FocusNode();
+  String _selectedCountryCode = '+1';
 
-  @override
-  void dispose() {
-    _handshakeFocus.dispose();
-    super.dispose();
-  }
+  final _countryCodes = const [
+    ('+1', '🇺🇸', 'US'),
+    ('+44', '🇬🇧', 'UK'),
+    ('+91', '🇮🇳', 'IN'),
+    ('+61', '🇦🇺', 'AU'),
+    ('+49', '🇩🇪', 'DE'),
+    ('+33', '🇫🇷', 'FR'),
+    ('+81', '🇯🇵', 'JP'),
+    ('+86', '🇨🇳', 'CN'),
+    ('+82', '🇰🇷', 'KR'),
+    ('+55', '🇧🇷', 'BR'),
+    ('+52', '🇲🇽', 'MX'),
+    ('+234', '🇳🇬', 'NG'),
+    ('+27', '🇿🇦', 'ZA'),
+    ('+971', '🇦🇪', 'UAE'),
+    ('+65', '🇸🇬', 'SG'),
+  ];
 
   void _validate() {
     if (widget.isLoading) return;
 
-    final code = widget.kinshipCodeController.text.trim();
-
-    if (code.isEmpty) {
-      widget.onError('Please enter a Kinship Code.');
+    final mobile = widget.mobileController.text.trim();
+    if (mobile.isEmpty) {
+      widget.onError('Please enter your mobile number.');
+      return;
+    }
+    if (mobile.length < 7) {
+      widget.onError('Please enter a valid mobile number.');
       return;
     }
 
-    widget.onComplete();
+    // Pass countryCode + mobile as combined string for backend
+    final countryCodeDigits = _selectedCountryCode.replaceAll('+', '');
+    widget.onNext('$countryCodeDigits|$mobile');
   }
 
   @override
@@ -70,72 +84,125 @@ class _SignupStepFourState extends State<SignupStepFour> {
               ),
               children: [
                 TextSpan(
-                  text: 'Step 4 of 4',
+                  text: 'Step 4 of 6',
                   style: TextStyle(
                     color: colors.text,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                const TextSpan(text: ' · Make a Connection'),
+                const TextSpan(
+                  text:
+                      '— Enter your mobile number. We\'ll send a 6-digit code by text to verify and continue.',
+                ),
               ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Mobile number',
+            style: text.caption.copyWith(
+              color: colors.text,
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
+            ),
+          ),
+          Text(
+            ' *',
+            style: text.caption.copyWith(
+              color: colors.error,
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
             ),
           ),
           const SizedBox(height: 8),
-          Text(
-            'Privacy, trust, and relationships are at the heart of Kiduna. Enter a unique Kinship Code and a Private Handshake to establish your first connection.',
-            style: text.body.copyWith(
-              color: colors.muted,
-              fontSize: 15,
-              height: 1.6,
-            ),
-          ),
-          const SizedBox(height: 20),
-          KidunaTextField(
-            label: 'Enter a Kinship Code',
-            placeholder: 'XXX—XXX—XXX',
-            controller: widget.kinshipCodeController,
-            required: true,
-            maxLength: 20,
-            textInputAction: TextInputAction.next,
-            onSubmitted: (_) => _handshakeFocus.requestFocus(),
-          ),
-          const SizedBox(height: 20),
-          KidunaTextField(
-            label: 'Enter a Private Handshake',
-            controller: widget.handshakeController,
-            focusNode: _handshakeFocus,
-            maxLength: 120,
-            textInputAction: TextInputAction.done,
-            onSubmitted: (_) => _validate(),
-          ),
-          const SizedBox(height: 24),
-          KidunaPrimaryButton(
-            label: widget.isLoading
-                ? 'Creating your account...'
-                : 'Enter Kiduna!',
-            onPressed: _validate,
-            isLoading: widget.isLoading,
-          ),
-          const SizedBox(height: 24),
           Container(
-            padding: const EdgeInsets.only(top: 20),
             decoration: BoxDecoration(
-              border: Border(top: BorderSide(color: colors.line)),
+              color: colors.deep.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: colors.camel.withValues(alpha: 0.3),
+              ),
             ),
-            child: Column(
+            child: Row(
               children: [
-                Text(
-                  'Don\'t have a relationship with a current member?',
-                  style: text.body.copyWith(color: colors.muted, fontSize: 13),
-                  textAlign: TextAlign.center,
+                // Country code dropdown
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      right: BorderSide(
+                        color: colors.camel.withValues(alpha: 0.3),
+                      ),
+                    ),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _selectedCountryCode,
+                      dropdownColor: colors.raised,
+                      style: text.body.copyWith(
+                        color: colors.text,
+                        fontSize: 14,
+                      ),
+                      icon: Icon(
+                        Icons.arrow_drop_down,
+                        color: colors.muted,
+                        size: 20,
+                      ),
+                      items: _countryCodes.map((cc) {
+                        return DropdownMenuItem<String>(
+                          value: cc.$1,
+                          child: Text(
+                            '${cc.$2} ${cc.$1}',
+                            style: text.body.copyWith(
+                              color: colors.text,
+                              fontSize: 14,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() => _selectedCountryCode = value);
+                        }
+                      },
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 12),
-                KidunaSecondaryButton(
-                  label: 'Join Our Online Communities to Meet One',
-                  onPressed: () {},
+                // Mobile number input
+                Expanded(
+                  child: TextField(
+                    controller: widget.mobileController,
+                    keyboardType: TextInputType.phone,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) => _validate(),
+                    style: text.body.copyWith(
+                      color: colors.text,
+                      fontSize: 15,
+                    ),
+                    cursorColor: colors.sky,
+                    decoration: InputDecoration(
+                      hintText: 'Mobile number',
+                      hintStyle: text.body.copyWith(
+                        color: colors.quiet,
+                        fontSize: 15,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 14,
+                      ),
+                      border: InputBorder.none,
+                    ),
+                  ),
                 ),
               ],
             ),
+          ),
+          const SizedBox(height: 24),
+          KidunaPrimaryButton(
+            label: widget.isLoading ? 'Sending code...' : 'Send code',
+            onPressed: _validate,
+            isLoading: widget.isLoading,
           ),
         ],
       ),

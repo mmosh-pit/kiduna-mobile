@@ -10,6 +10,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../shared/layouts/responsive_layout.dart';
 import '../../../shared/widgets/app_header.dart';
 import '../../../shared/widgets/ki_agent.dart';
+import '../controllers/ecosystem_controller.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -20,6 +21,15 @@ class DashboardScreen extends ConsumerStatefulWidget {
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   int _activeTab = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Load ecosystem early so realmId is available for chat API
+    Future.microtask(() {
+      ref.read(ecosystemControllerProvider.notifier).loadEcosystem();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
