@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../features/auth/controllers/auth_controller.dart';
 import '../../../features/auth/screens/login_screen.dart';
+import '../../../features/field/screens/field_screen.dart';
 import '../../../features/game/screens/game_screen.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/layouts/responsive_layout.dart';
@@ -200,16 +201,15 @@ Widget _buildLeftPanel(BuildContext context, int activeTab) {
   final l10n = AppLocalizations.of(context)!;
 
   return switch (activeTab) {
+    0 => const FieldStack(),
     1 => const GameScreen(),
     _ => _ComingSoonPanel(
         title: switch (activeTab) {
-          0 => l10n.tabMatching,
           2 => l10n.tabStandings,
           3 => l10n.tabGuilds,
           _ => '',
         },
         icon: switch (activeTab) {
-          0 => Icons.people,
           2 => Icons.emoji_events,
           3 => Icons.shield,
           _ => Icons.hourglass_empty,

@@ -27,6 +27,8 @@ abstract class AppTheme {
       extensions: const <ThemeExtension<dynamic>>[
         KidunaColors.standard,
         KidunaText.standard,
+        KidunaMetrics.standard,
+        KidunaShadows.standard,
       ],
     );
     return base.copyWith(textTheme: _applyDisplayFont(base.textTheme));

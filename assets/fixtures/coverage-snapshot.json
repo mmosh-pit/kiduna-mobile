@@ -1,0 +1,305 @@
+{
+  "schemaVersion": "1.0",
+  "viewer": {
+    "id": "coverage-viewer",
+    "displayName": "Coverage Viewer",
+    "allyId": "cov-ally-open",
+    "relationship": "Mage · every role exercised",
+    "roles": {
+      "cov-ecosystem": "Mage",
+      "cov-organization": "Catalyst",
+      "cov-alliance": "Luminary",
+      "cov-community": "Organizer",
+      "cov-program": "Creator",
+      "cov-project": "Builder",
+      "cov-institution": "Member",
+      "cov-guest-realm": "Guest"
+    },
+    "gravity": {
+      "cov-ecosystem": 5,
+      "cov-organization": 4,
+      "cov-alliance": 3,
+      "cov-community": 2,
+      "cov-program": 1,
+      "cov-project": 3,
+      "cov-institution": 2,
+      "cov-guest-realm": 1
+    }
+  },
+  "ecosystem": {
+    "id": "cov-ecosystem",
+    "name": "Coverage Ecosystem",
+    "type": "Ecosystem"
+  },
+  "realms": [
+    {
+      "id": "cov-ecosystem",
+      "name": "Coverage Ecosystem",
+      "type": "Ecosystem",
+      "parentId": null,
+      "purpose": "Vital, near band, seed present, portrait present, Ally stationed.",
+      "motif": "☯",
+      "childIds": [
+        "cov-organization",
+        "cov-alliance"
+      ],
+      "clusterId": "formation",
+      "seed": {
+        "left": 41,
+        "top": 38
+      },
+      "mass": 3,
+      "fixture": false,
+      "stationedAllyId": "cov-ally-open",
+      "portrait": "assets/organization-crests/beacon.png",
+      "reason": "Gravity 5 — Vital. Sits nearest its cluster centre at the highest fidelity.",
+      "themes": [
+        "Civic Life & Governance",
+        "Community & Mutual Aid",
+        "Work & Trades"
+      ]
+    },
+    {
+      "id": "cov-organization",
+      "name": "Coverage Organization",
+      "type": "Organization",
+      "parentId": "cov-ecosystem",
+      "purpose": "Central. Seed present, portrait absent, Ally stationed.",
+      "motif": "⌑",
+      "childIds": [
+        "cov-program"
+      ],
+      "clusterId": "care",
+      "seed": {
+        "left": 18,
+        "top": 69
+      },
+      "mass": 2,
+      "fixture": false,
+      "stationedAllyId": "cov-ally-engaged",
+      "portrait": null,
+      "reason": "Gravity 4 — Central. Near band, generic emblem because no portrait is supplied.",
+      "themes": [
+        "Education & Learning",
+        "Technology & Digital Life"
+      ]
+    },
+    {
+      "id": "cov-alliance",
+      "name": "Coverage Alliance",
+      "type": "Alliance",
+      "parentId": "cov-ecosystem",
+      "purpose": "Relevant. Seed ABSENT — the client must derive it from the ring algorithm.",
+      "motif": "◌",
+      "childIds": [],
+      "clusterId": "place",
+      "mass": 2,
+      "fixture": false,
+      "stationedAllyId": "cov-ally-focused",
+      "portrait": "assets/organization-crests/bridge.png",
+      "themes": [
+        "Energy & Infrastructure"
+      ]
+    },
+    {
+      "id": "cov-community",
+      "name": "Coverage Community",
+      "type": "Community",
+      "parentId": "cov-ecosystem",
+      "purpose": "Available — Gravity 2, the level the live AEV fixture can never reach.",
+      "motif": "⊕",
+      "childIds": [],
+      "clusterId": "culture",
+      "mass": 1,
+      "fixture": false,
+      "stationedAllyId": "cov-ally-dreaming",
+      "portrait": null,
+      "reason": "Gravity 2 is unreachable from the reference defaults; it exists only here and via the control.",
+      "themes": [
+        "Heritage & Identity",
+        "Arts & Culture"
+      ]
+    },
+    {
+      "id": "cov-program",
+      "name": "Coverage Program",
+      "type": "Program",
+      "parentId": "cov-organization",
+      "purpose": "Quiet. Far band, sole member of its cluster, no Ally stationed.",
+      "motif": "♨",
+      "childIds": [],
+      "clusterId": "law",
+      "seed": {
+        "left": 76,
+        "top": 29
+      },
+      "mass": 1,
+      "fixture": false,
+      "stationedAllyId": null,
+      "portrait": null,
+      "reason": "Gravity 1 — Quiet. Pushed slightly outward, drawn as a generic type glyph.",
+      "themes": [
+        "Mental Health & Recovery"
+      ]
+    },
+    {
+      "id": "cov-project",
+      "name": "Coverage Project",
+      "type": "Project",
+      "parentId": "cov-organization",
+      "purpose": "Nested child — exercises the unlabelled branch cluster.",
+      "motif": "⊙",
+      "childIds": [],
+      "clusterId": "branch",
+      "mass": 1,
+      "fixture": false,
+      "stationedAllyId": null,
+      "themes": [
+        "Storytelling & Journalism"
+      ]
+    },
+    {
+      "id": "cov-institution",
+      "name": "Coverage Cooperative, Inc.",
+      "type": "Institution",
+      "parentId": "cov-ecosystem",
+      "purpose": "A PROPOSED legal entity. Must be visually distinguishable and never presented as real.",
+      "motif": "⬡",
+      "childIds": [],
+      "clusterId": "formation",
+      "seed": {
+        "left": 55,
+        "top": 44
+      },
+      "mass": 2,
+      "fixture": true,
+      "stationedAllyId": null,
+      "portrait": null,
+      "reason": "fixture: true — proposed, not registered.",
+      "themes": [
+        "Money & Finance",
+        "Business & Markets"
+      ]
+    },
+    {
+      "id": "cov-guest-realm",
+      "name": "Coverage Guest Realm",
+      "type": "Community",
+      "parentId": "cov-ecosystem",
+      "purpose": "Lowest standing and lowest Gravity — the quietest legitimate context.",
+      "motif": "◯",
+      "childIds": [],
+      "clusterId": "care",
+      "mass": 1,
+      "fixture": true,
+      "stationedAllyId": null
+    }
+  ],
+  "clusters": [
+    {
+      "id": "formation",
+      "label": "Formation · work · economy",
+      "accent": "#03CCD9",
+      "left": 41,
+      "top": 38,
+      "radiusX": 29,
+      "radiusY": 22,
+      "startAngle": -2.8,
+      "arc": 5.25
+    },
+    {
+      "id": "care",
+      "label": "Care · family · relationship",
+      "accent": "#CF6F58",
+      "left": 18,
+      "top": 69,
+      "radiusX": 15,
+      "radiusY": 18,
+      "startAngle": -2.2,
+      "arc": 4.25
+    },
+    {
+      "id": "place",
+      "label": "Place · ecology · mutual aid",
+      "accent": "#8FE6C6",
+      "left": 48,
+      "top": 76,
+      "radiusX": 24,
+      "radiusY": 13,
+      "startAngle": -2.85,
+      "arc": 4.8
+    },
+    {
+      "id": "culture",
+      "label": "Culture · play · public imagination",
+      "accent": "#9A7DE8",
+      "left": 79,
+      "top": 63,
+      "radiusX": 15,
+      "radiusY": 23,
+      "startAngle": -2.35,
+      "arc": 4.45
+    },
+    {
+      "id": "law",
+      "label": "Law · accountable institutions",
+      "accent": "#EAAA00",
+      "left": 76,
+      "top": 29,
+      "radiusX": 7,
+      "radiusY": 9,
+      "startAngle": -1.4,
+      "arc": 1.2
+    },
+    {
+      "id": "branch",
+      "label": "",
+      "accent": "#62A8DF",
+      "left": 50,
+      "top": 54,
+      "radiusX": 39,
+      "radiusY": 33,
+      "startAngle": -1.5708,
+      "arc": 6.2832
+    }
+  ],
+  "allies": [
+    {
+      "id": "cov-ally-open",
+      "name": "Open Ally",
+      "state": "open",
+      "portrait": "assets/allies/ally-open-sample.png"
+    },
+    {
+      "id": "cov-ally-engaged",
+      "name": "Engaged Ally",
+      "state": "engaged",
+      "portrait": "assets/allies/ally-engaged-sample.png"
+    },
+    {
+      "id": "cov-ally-focused",
+      "name": "Focused Ally",
+      "state": "focused",
+      "portrait": "assets/allies/ally-focused-sample.png"
+    },
+    {
+      "id": "cov-ally-dreaming",
+      "name": "Dreaming Ally",
+      "state": "dreaming",
+      "portrait": null
+    }
+  ],
+  "bridges": [
+    {
+      "fromRealmId": "cov-organization",
+      "toRealmId": "cov-community"
+    },
+    {
+      "fromRealmId": "cov-alliance",
+      "toRealmId": "cov-institution"
+    }
+  ],
+  "currentPath": {
+    "targetRealmId": "cov-ecosystem"
+  }
+}

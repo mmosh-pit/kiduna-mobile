@@ -33,7 +33,7 @@ class AppHeader extends StatelessWidget {
             height: isMobile ? 34 : 40,
           ),
           const Spacer(),
-          ?trailing,
+          if (trailing != null) trailing!,
         ],
       ),
     );
