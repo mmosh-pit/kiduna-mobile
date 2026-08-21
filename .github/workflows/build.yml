@@ -47,11 +47,11 @@ jobs:
 
       - run: flutter doctor -v
 
-      - name: Build APK
-        run: flutter build apk --release
+      # - name: Build APK
+      #   run: flutter build apk --release
 
-      - name: Build AAB
-        run: flutter build appbundle --release
+      # - name: Build AAB
+      #   run: flutter build appbundle --release
 
       - name: Build Linux
         run: flutter build linux --release
