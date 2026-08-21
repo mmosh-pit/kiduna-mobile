@@ -20,11 +20,15 @@ class KnowledgeService {
   Future<List<KnowledgeBaseModel>> fetchKnowledgeBases({
     required String wallet,
     String? platformId,
+    String? realmId,
   }) async {
     try {
       final queryParams = <String, dynamic>{'wallet': wallet};
       if (platformId != null) {
         queryParams['platform_id'] = platformId;
+      }
+      if (realmId != null) {
+        queryParams['realmId'] = realmId;
       }
 
       final response = await _dio.get<Map<String, dynamic>>(
@@ -73,6 +77,7 @@ class KnowledgeService {
     required String name,
     required String wallet,
     String? platformId,
+    String? realmId,
     String privacy = 'private',
   }) async {
     try {
@@ -82,6 +87,7 @@ class KnowledgeService {
           'name': name,
           'wallet': wallet,
           if (platformId != null) 'platform_id': platformId,
+          if (realmId != null) 'realmId': realmId,
           'privacy': privacy,
         },
       );

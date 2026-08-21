@@ -98,14 +98,16 @@ class ApprovalService {
   final Dio _dio;
 
   /// Fetch pending approvals for a wallet.
-  Future<List<ApprovalModel>> fetchPending({required String wallet}) async {
+  Future<List<ApprovalModel>> fetchPending({required String wallet, String? realmId}) async {
     try {
+      final queryParams = <String, dynamic>{
+        'wallet': wallet,
+        'status': 'pending',
+      };
+      if (realmId != null) queryParams['realmId'] = realmId;
       final response = await _dio.get<Map<String, dynamic>>(
         ApiEndpoints.approvals,
-        queryParameters: {
-          'wallet': wallet,
-          'status': 'pending',
-        },
+        queryParameters: queryParams,
       );
 
       final body = response.data;
@@ -144,6 +146,10 @@ class ApprovalService {
           'wallet': wallet,
           if (editedAction != null) 'editedAction': editedAction,
         },
+        options: Options(
+          sendTimeout: const Duration(seconds: 5),
+          receiveTimeout: const Duration(seconds: 60),
+        ),
       );
       AppLogger.info(
         'Approved: $approvalId',
@@ -151,6 +157,16 @@ class ApprovalService {
       );
       return true;
     } on DioException catch (e) {
+      // If timeout but request was sent, treat as success
+      // (backend will execute in background).
+      if (e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.connectionTimeout) {
+        AppLogger.info(
+          'Approve sent (timeout waiting for execution): $approvalId',
+          tag: 'ApprovalService',
+        );
+        return true;
+      }
       AppLogger.warning(
         'Failed to approve: ${e.message}',
         tag: 'ApprovalService',

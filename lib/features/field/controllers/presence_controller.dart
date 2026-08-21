@@ -6,6 +6,7 @@ import '../../../data/models/instruct_model.dart';
 import '../../../data/services/instruct_service.dart';
 import '../../auth/controllers/auth_controller.dart';
 import 'ally_controller.dart';
+import 'field_controller.dart';
 
 /// Global presence (instruct listing + detail) state provider.
 final presenceControllerProvider =
@@ -130,11 +131,13 @@ class PresenceController extends Notifier<PresenceState> {
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
+      final realmId = ref.read(fieldControllerProvider).currentRealmId;
       final instruct = await _service.createInstruct(
         name: name,
         wallet: _wallet,
         content: content,
         goal: goal,
+        realmId: realmId != 'kinship-duna' ? realmId : null,
         connectedKbId: connectedKbId,
         connectedKbName: connectedKbName,
       );

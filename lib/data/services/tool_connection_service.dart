@@ -77,6 +77,7 @@ class ToolConnectionService {
     required String wallet,
     required String toolName,
     required Map<String, String> credentials,
+    String? realmId,
   }) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
@@ -85,6 +86,7 @@ class ToolConnectionService {
           'wallet': wallet,
           'tool_name': toolName,
           'credentials': credentials,
+          if (realmId != null) 'realmId': realmId,
         },
       );
 
