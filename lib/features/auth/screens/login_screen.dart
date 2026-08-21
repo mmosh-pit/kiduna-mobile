@@ -1,9 +1,11 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/extensions/context_extensions.dart';
 import '../../../shared/widgets/app_header.dart';
 import '../../dashboard/screens/dashboard_screen.dart';
+import '../../download/screens/download_app_screen.dart';
 import '../controllers/auth_controller.dart';
 import '../enums/auth_status.dart';
 import '../widgets/login_form.dart';
@@ -26,6 +28,8 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
+  bool _hasAutoNavigated = false;
+
   void _navigateToForgotPassword() {
     Navigator.of(context).pushReplacement(
       PageRouteBuilder<void>(
@@ -58,10 +62,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     final authState = ref.read(authControllerProvider);
     if (authState.isAuthenticated) {
+      final destination = kIsWeb
+          ? const DownloadAppScreen()
+          : const DashboardScreen();
       Navigator.of(context).pushReplacement(
         PageRouteBuilder<void>(
           pageBuilder: (context, animation, secondaryAnimation) =>
-              const DashboardScreen(),
+              destination,
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },
@@ -78,6 +85,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final authState = ref.watch(authControllerProvider);
     final isLoading = authState.status == AuthStatus.loading;
     final apiError = authState.error;
+
+    // Auto-navigate if session was restored (user already logged in)
+    if (authState.isAuthenticated && !_hasAutoNavigated) {
+      _hasAutoNavigated = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final destination = kIsWeb
+            ? const DownloadAppScreen()
+            : const DashboardScreen();
+        Navigator.of(context).pushReplacement(
+          PageRouteBuilder<void>(
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                destination,
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+            transitionDuration: const Duration(milliseconds: 300),
+          ),
+        );
+      });
+    }
 
     return Scaffold(
       backgroundColor: colors.deep,

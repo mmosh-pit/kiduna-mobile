@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../../../core/errors/exceptions.dart';
@@ -12,6 +13,7 @@ import '../../../shared/widgets/app_header.dart';
 import '../../../shared/widgets/kiduna_message_box.dart';
 import '../../../shared/widgets/kiduna_progress_bar.dart';
 import '../../dashboard/screens/dashboard_screen.dart';
+import '../../download/screens/download_app_screen.dart';
 import '../widgets/signup_left_panel.dart';
 import '../widgets/signup_step_five.dart';
 import '../widgets/signup_step_four.dart';
@@ -112,10 +114,13 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   void _navigateToDashboard() {
+    final destination = kIsWeb
+        ? const DownloadAppScreen()
+        : const DashboardScreen();
     Navigator.of(context).pushReplacement(
       PageRouteBuilder<void>(
         pageBuilder: (context, animation, secondaryAnimation) =>
-            const DashboardScreen(),
+            destination,
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(opacity: animation, child: child);
         },
