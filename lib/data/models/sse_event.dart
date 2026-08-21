@@ -1,11 +1,5 @@
 import 'package:flutter/foundation.dart';
 
-/// A parsed Server-Sent Event from `POST /api/chatmessages/stream`.
-///
-/// The stream sends JSON lines prefixed with `data: `. Each has an `event`
-/// field that determines the subtype. Only the three completion-relevant
-/// events are modeled as concrete subtypes; orchestration/tool events are
-/// captured by [SseInfoEvent].
 sealed class SseEvent {
   const SseEvent();
 
@@ -30,10 +24,6 @@ sealed class SseEvent {
     };
   }
 
-  /// Safely convert a JSON number to [int].
-  ///
-  /// On web, `jsonDecode` produces `double` for all numbers (JavaScript has
-  /// no integer type), so a bare `as int` throws `_TypeError`.
   static int _intField(dynamic value) {
     if (value is int) return value;
     if (value is num) return value.toInt();
@@ -41,7 +31,6 @@ sealed class SseEvent {
   }
 }
 
-/// Incremental text token from the assistant's response.
 @immutable
 class SseTokenEvent extends SseEvent {
   const SseTokenEvent({required this.token});
@@ -52,7 +41,6 @@ class SseTokenEvent extends SseEvent {
   String toString() => 'SseTokenEvent(token: $token)';
 }
 
-/// The stream is complete — contains the full assembled response.
 @immutable
 class SseDoneEvent extends SseEvent {
   const SseDoneEvent({
@@ -70,7 +58,6 @@ class SseDoneEvent extends SseEvent {
       'SseDoneEvent(length: ${fullResponse.length}, in: $inputTokens, out: $outputTokens)';
 }
 
-/// An error occurred during streaming.
 @immutable
 class SseErrorEvent extends SseEvent {
   const SseErrorEvent({required this.error, this.code = ''});
@@ -82,8 +69,6 @@ class SseErrorEvent extends SseEvent {
   String toString() => 'SseErrorEvent(code: $code, error: $error)';
 }
 
-/// An informational event (start, intent, routing, toolCall, etc.)
-/// that the UI does not need to act on directly.
 @immutable
 class SseInfoEvent extends SseEvent {
   const SseInfoEvent({required this.event, required this.data});

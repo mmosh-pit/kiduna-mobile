@@ -10,7 +10,6 @@ import '../../../data/models/user_model.dart';
 import '../../../data/services/auth_service.dart';
 import '../enums/auth_status.dart';
 
-/// Global authentication state.
 @immutable
 class AuthState {
   const AuthState({
@@ -45,22 +44,12 @@ class AuthState {
   }
 }
 
-/// Drives global auth — login, logout, and session restoration.
-///
-/// On [build] (app startup) the controller checks secure storage for a stored
-/// token and verifies it via `/is-auth`. If valid, the user is silently
-/// restored; if not, status moves to [AuthStatus.unauthenticated] and the
-/// router redirects to the login screen.
 class AuthController extends Notifier<AuthState> {
   @override
   AuthState build() {
-    // Kick off session restore immediately. We start in `initial` and the
-    // async work moves us to `authenticated` or `unauthenticated`.
     _restoreSession();
     return const AuthState();
   }
-
-  // ── Session restore ──────────────────────────────────────────────────
 
   Future<void> _restoreSession() async {
     final storage = SecureStorage.instance;
@@ -95,7 +84,6 @@ class AuthController extends Notifier<AuthState> {
     try {
       final user = await AuthService.instance.checkAuth(storedToken);
 
-      // Refresh stored user data with the latest from the server.
       await storage.saveUser(user);
 
       state = state.copyWith(
@@ -109,7 +97,6 @@ class AuthController extends Notifier<AuthState> {
       );
       debugPrint('🔑 [Auth] Session restored — ${user.email} (${user.id})');
     } on UnauthorizedException {
-      // Token expired or revoked — clear everything and send to login.
       await storage.clearAll();
       state = state.copyWith(
         status: AuthStatus.unauthenticated,
@@ -118,7 +105,6 @@ class AuthController extends Notifier<AuthState> {
       );
       AppLogger.info('Stored token invalid — cleared', tag: 'Auth');
     } on AppException catch (e) {
-      // Network or server error — fall back to cached user if available.
       final cachedUser = await storage.getUser();
       if (cachedUser != null) {
         state = state.copyWith(
@@ -136,13 +122,6 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
-  // ── Login ────────────────────────────────────────────────────────────
-
-  /// Authenticate with email and password.
-  ///
-  /// On success: stores token + user in secure storage, updates state to
-  /// [AuthStatus.authenticated]. On failure: sets [AuthState.error] with a
-  /// user-friendly message.
   Future<void> login(String email, String password) async {
     state = state.copyWith(status: AuthStatus.loading, clearError: true);
 
@@ -189,9 +168,6 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
-  // ── Logout ───────────────────────────────────────────────────────────
-
-  /// Clear the session and return to unauthenticated state.
   Future<void> logout() async {
     await SecureStorage.instance.clearAll();
     state = const AuthState(status: AuthStatus.unauthenticated);
@@ -199,7 +175,6 @@ class AuthController extends Notifier<AuthState> {
   }
 }
 
-/// Global auth state provider.
 final authControllerProvider = NotifierProvider<AuthController, AuthState>(
   AuthController.new,
 );

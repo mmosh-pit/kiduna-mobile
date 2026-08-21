@@ -327,9 +327,10 @@ class FieldController extends Notifier<FieldState> {
 
     // Fetch pending approval count and gravity when auth state changes.
     ref.listen(authControllerProvider, (prev, next) {
-      if (next.user != null && (prev?.user == null || prev?.user?.wallet != next.user?.wallet)) {
+      final wallet = next.user?.wallet;
+      if (next.user != null && wallet != null && (prev?.user == null || prev?.user?.wallet != wallet)) {
         fetchPendingApprovalCount();
-        _loadGravityFromApi(next.user!.wallet);
+        _loadGravityFromApi(wallet);
       }
     });
 

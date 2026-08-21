@@ -26,6 +26,7 @@ class FieldPanel extends StatefulWidget {
     this.summary,
     this.width,
     this.initialOffset = const Offset(24, 24),
+    this.minimizedOffset,
     this.initialMode = FieldPanelMode.expanded,
     this.opacity = 1,
     this.accent = false,
@@ -48,6 +49,10 @@ class FieldPanel extends StatefulWidget {
   final double? width;
 
   final Offset initialOffset;
+
+  /// Position to snap to when minimized. When null the panel stays in place.
+  final Offset? minimizedOffset;
+
   final FieldPanelMode initialMode;
   final double opacity;
 
@@ -68,9 +73,6 @@ class _FieldPanelState extends State<FieldPanel> {
   late Offset _offset = widget.initialOffset;
 
   void _drag(Offset delta) {
-    if (_mode == FieldPanelMode.minimized) {
-      return;
-    }
     setState(() {
       final width = widget.width ?? 260;
       final maxLeft = (widget.bounds.width - width - 8).clamp(
@@ -91,8 +93,11 @@ class _FieldPanelState extends State<FieldPanel> {
         final width = widget.width ?? 260;
         _offset = Offset(
           ((widget.bounds.width - width) / 2).clamp(8.0, double.infinity),
-          (widget.bounds.height * 0.16).clamp(8.0, double.infinity),
+          (widget.bounds.height * 0.3).clamp(8.0, double.infinity),
         );
+      } else if (mode == FieldPanelMode.minimized &&
+          widget.minimizedOffset != null) {
+        _offset = widget.minimizedOffset!;
       }
       _mode = mode;
     });

@@ -4,16 +4,9 @@ import 'package:flutter/foundation.dart';
 import '../errors/exceptions.dart';
 import '../utils/logger.dart';
 
-/// Injects the `Authorization: Bearer <token>` header into every request when
-/// a token is available.
-///
-/// The token is supplied via [tokenProvider] — a simple getter callback. This
-/// avoids a direct import of the secure-storage singleton, making the
-/// interceptor testable with a stub.
 class AuthInterceptor extends Interceptor {
   AuthInterceptor({required this.tokenProvider});
 
-  /// Returns the current auth token, or `null` when unauthenticated.
   final Future<String?> Function() tokenProvider;
 
   @override
@@ -29,11 +22,6 @@ class AuthInterceptor extends Interceptor {
   }
 }
 
-/// Maps [DioException] types to the app's typed exception hierarchy.
-///
-/// Every HTTP error category becomes the matching [AppException] subclass so
-/// callers only deal with the seven exception types defined in
-/// `core/errors/exceptions.dart`.
 class ErrorInterceptor extends Interceptor {
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
@@ -98,16 +86,11 @@ class ErrorInterceptor extends Interceptor {
       if (data is Map<String, dynamic>) {
         return (data['detail'] ?? data['message'] ?? data['error']) as String?;
       }
-    } catch (_) {
-      // Ignore parse errors — fall through to null.
-    }
+    } catch (_) {}
     return null;
   }
 }
 
-/// Logs request/response details in debug builds only.
-///
-/// Never logs tokens, emails, or other PII (CLAUDE.md Section 6).
 class AppLogInterceptor extends Interceptor {
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {

@@ -8,28 +8,17 @@ import '../../core/errors/exceptions.dart';
 import '../../core/utils/logger.dart';
 import '../models/user_model.dart';
 
-/// Keys used for storage entries.
 abstract class _Keys {
   static const String token = 'kiduna_auth_token';
   static const String user = 'kiduna_auth_user';
 }
 
-/// Auth persistence layer.
-///
-/// * **Web** — uses [SharedPreferences] which reliably stores to
-///   `window.localStorage` on web. `flutter_secure_storage` does NOT
-///   persist across page reloads on web (encrypted IndexedDB issue).
-///
-/// * **Mobile / Desktop** — uses [FlutterSecureStorage] (encrypted).
 class SecureStorage {
   SecureStorage._();
 
   static final SecureStorage instance = SecureStorage._();
 
-  // Native-only (mobile / desktop) — encrypted.
-  final FlutterSecureStorage _native = const FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
-  );
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   // Web-only — SharedPreferences (backed by localStorage on web).
   SharedPreferences? _prefs;
@@ -121,9 +110,10 @@ class SecureStorage {
 
   Future<UserModel?> getUser() async {
     try {
-      final raw = await _read(_Keys.user);
+      final raw = await _storage.read(key: _Keys.user);
       if (raw == null || raw.isEmpty) return null;
-      return UserModel.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+      final json = jsonDecode(raw) as Map<String, dynamic>;
+      return UserModel.fromJson(json);
     } catch (e, st) {
       AppLogger.error('Failed to read user', tag: 'Storage', error: e, stackTrace: st);
       return null;

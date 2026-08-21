@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 
-/// Role of a message in a conversation.
 enum ChatRole {
   user,
   assistant,
@@ -15,13 +14,8 @@ enum ChatRole {
   }
 }
 
-/// Delivery status of a message in the local UI.
 enum ChatMessageStatus { sending, streaming, complete, error }
 
-/// A single message in the Ki conversation thread.
-///
-/// Mirrors the backend's `ChatMessage` schema from
-/// `GET /api/conversations/{presence_id}/{user_wallet}`.
 @immutable
 class ChatMessageModel {
   const ChatMessageModel({

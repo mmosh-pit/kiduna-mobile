@@ -12,10 +12,13 @@ import '../../../shared/widgets/section_bar.dart';
 import '../../../shared/widgets/section_placeholder.dart';
 import '../../exchange/screens/exchange_screen.dart';
 import '../controllers/field_controller.dart';
+import '../widgets/advanced_actions_panel.dart';
 import '../widgets/field_background.dart';
 import '../widgets/field_chrome_panels.dart';
+import '../widgets/field_panel.dart';
 import '../widgets/field_working_panels.dart';
 import '../widgets/ki_region.dart';
+import '../widgets/realm_constellation.dart';
 import '../widgets/realm_context_pill.dart';
 
 /// The main app screen. The header and section bar sit at the top; the active
@@ -151,7 +154,7 @@ class _FieldKiWide extends ConsumerWidget {
         final fieldWidth = max(0.0, total - boundaryW - kiWidth);
         return Row(
           children: [
-            SizedBox(width: fieldWidth, child: const _FieldStack()),
+            SizedBox(width: fieldWidth, child: const FieldStack()),
             SizedBox(
               width: boundaryW,
               child: _Boundary(totalWidth: total),
@@ -172,7 +175,7 @@ class _FieldKiNarrow extends StatelessWidget {
     return const Column(
       key: ValueKey('field-narrow'),
       children: [
-        Expanded(flex: 3, child: _FieldStack()),
+        Expanded(flex: 3, child: FieldStack()),
         Expanded(flex: 2, child: KiRegion()),
       ],
     );
@@ -180,8 +183,8 @@ class _FieldKiNarrow extends StatelessWidget {
 }
 
 /// The pannable Field canvas with the movable panels overlaid.
-class _FieldStack extends ConsumerWidget {
-  const _FieldStack();
+class FieldStack extends ConsumerWidget {
+  const FieldStack({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -198,6 +201,26 @@ class _FieldStack extends ConsumerWidget {
           return Stack(
             children: [
               const _FieldCanvas(),
+              Positioned.fill(
+                child: InteractiveViewer(
+                  scaleEnabled: false,
+                  boundaryMargin: const EdgeInsets.all(200),
+                  child: Padding(
+                    padding: const EdgeInsets.only(
+                      top: 96,
+                      left: 26,
+                      right: 26,
+                      bottom: 28,
+                    ),
+                    child: RealmConstellation(
+                      currentRealmId: state.currentRealmId,
+                      selectedRealmId: state.selectedRealmId,
+                      onSelect: controller.selectAtlasRealm,
+                      showHoverDetails: true,
+                    ),
+                  ),
+                ),
+              ),
               _RealmIdentity(
                 realm: realm,
                 inspectOpen: state.inspectOpen,
@@ -217,6 +240,26 @@ class _FieldStack extends ConsumerWidget {
                 bounds: bounds,
                 opacity: opacity,
               ),
+              if (state.selectedPlacement != null)
+                FieldPanel(
+                  key: ValueKey('panel-advanced-${state.selectedRealmId}'),
+                  label: state.selectedPlacement!.realm.name,
+                  bounds: bounds,
+                  width: 520,
+                  opacity: opacity,
+                  initialOffset: Offset(
+                    ((bounds.width - 520) / 2).clamp(8.0, double.infinity),
+                    (bounds.height * 0.3).clamp(8.0, double.infinity),
+                  ),
+                  onClose: controller.clearSelection,
+                  child: AdvancedActionsPanel(
+                    placement: state.selectedPlacement!,
+                    onEnter: (enterRealm) {
+                      controller.clearSelection();
+                      controller.enterAtlasRealm(enterRealm);
+                    },
+                  ),
+                ),
             ],
           );
         },

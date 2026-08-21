@@ -1,14 +1,15 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kiduna_mobile/app/app.dart';
-import 'package:kiduna_mobile/features/field/screens/field_screen.dart';
+
+import 'package:kiduna_mobile/main.dart';
 
 void main() {
-  testWidgets('KidunaApp boots into the Field', (tester) async {
+  testWidgets('App renders login screen with form fields', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(const ProviderScope(child: KidunaApp()));
-
-    expect(find.byType(FieldScreen), findsOneWidget);
-    // Ki is present in the Field.
-    expect(find.text('Ki'), findsWidgets);
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('Email address'), findsOneWidget);
+    expect(find.text('Password'), findsOneWidget);
   });
 }

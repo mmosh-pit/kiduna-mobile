@@ -1,107 +1,135 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../../../core/extensions/context_extensions.dart';
-import '../enums/auth_status.dart';
+import '../../../shared/animations/fade_up_animation.dart';
+import '../../../shared/widgets/kiduna_message_box.dart';
+import '../../../shared/widgets/kiduna_primary_button.dart';
+import '../../../shared/widgets/kiduna_text_field.dart';
 
-/// The login form — email, password, and submit button.
-///
-/// [onSubmit] is called with `(email, password)` when the form is valid.
-/// [status] and [error] drive the loading spinner and error message.
+typedef LoginCallback = void Function(String email, String password);
+
 class LoginForm extends StatefulWidget {
   const LoginForm({
     super.key,
-    required this.onSubmit,
-    required this.status,
-    this.error,
+    required this.onLogin,
+    required this.onCreateAccount,
+    required this.onForgotPassword,
+    this.isLoading = false,
+    this.apiError,
   });
 
-  final void Function(String email, String password) onSubmit;
-  final AuthStatus status;
-  final String? error;
+  final LoginCallback onLogin;
+  final VoidCallback onCreateAccount;
+  final VoidCallback onForgotPassword;
+  final bool isLoading;
+  final String? apiError;
 
   @override
   State<LoginForm> createState() => _LoginFormState();
 }
 
 class _LoginFormState extends State<LoginForm> {
-  final _email = TextEditingController();
-  final _password = TextEditingController();
-  bool _obscure = true;
-  String? _localError;
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _passwordFocus = FocusNode();
+  bool _showPassword = false;
+  String? _validationError;
 
   @override
   void dispose() {
-    _email.dispose();
-    _password.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _passwordFocus.dispose();
     super.dispose();
   }
 
-  void _submit() {
-    final email = _email.text.trim();
-    final password = _password.text;
+  String? get _displayError => _validationError ?? widget.apiError;
+
+  void _validate() {
+    if (widget.isLoading) return;
+
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
 
     if (email.isEmpty) {
-      setState(() => _localError = context.l10n.emailRequired);
+      setState(() => _validationError = 'Please enter your email address.');
+      return;
+    }
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
+      setState(() => _validationError = 'Please enter a valid email address.');
       return;
     }
     if (password.isEmpty) {
-      setState(() => _localError = context.l10n.passwordRequired);
+      setState(() => _validationError = 'Please enter your password.');
       return;
     }
 
-    setState(() => _localError = null);
-    widget.onSubmit(email, password);
+    setState(() => _validationError = null);
+    widget.onLogin(email, password);
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.kiduna;
     final text = context.kidunaText;
-    final isLoading = widget.status == AuthStatus.loading;
-    final displayError = _localError ?? widget.error;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // ── Email ────────────────────────────────────────────────────
-        Text(
-          context.l10n.emailLabel,
-          style: text.label.copyWith(color: colors.cream),
+        FadeUpAnimation(
+          child: Text('Log in', style: text.h2.copyWith(color: colors.text)),
         ),
-        const SizedBox(height: 6),
-        TextField(
-          controller: _email,
-          keyboardType: TextInputType.emailAddress,
-          textInputAction: TextInputAction.next,
-          autocorrect: false,
-          enabled: !isLoading,
-          style: text.body.copyWith(color: colors.text),
-          decoration: _inputDecoration(context, hint: context.l10n.emailHint),
+        const SizedBox(height: 8),
+        FadeUpAnimation(
+          delay: const Duration(milliseconds: 100),
+          child: Text(
+            'Welcome back. Enter your credentials to continue.',
+            style: text.body.copyWith(
+              color: colors.muted,
+              fontSize: 15,
+              height: 1.6,
+            ),
+          ),
         ),
-
-        const SizedBox(height: 16),
-
-        // ── Password ─────────────────────────────────────────────────
-        Text(
-          context.l10n.passwordLabel,
-          style: text.label.copyWith(color: colors.cream),
+        const SizedBox(height: 28),
+        if (_displayError != null) ...[
+          KidunaMessageBox(message: _displayError!, type: MessageType.error),
+          const SizedBox(height: 16),
+        ],
+        FadeUpAnimation(
+          delay: const Duration(milliseconds: 200),
+          child: KidunaTextField(
+            label: 'Email address',
+            placeholder: 'name@example.com',
+            controller: _emailController,
+            required: true,
+            maxLength: 254,
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.next,
+            onSubmitted: (_) => _passwordFocus.requestFocus(),
+          ),
         ),
-        const SizedBox(height: 6),
-        TextField(
-          controller: _password,
-          obscureText: _obscure,
-          textInputAction: TextInputAction.done,
-          enabled: !isLoading,
-          onSubmitted: (_) => _submit(),
-          style: text.body.copyWith(color: colors.text),
-          decoration: _inputDecoration(
-            context,
-            hint: context.l10n.passwordHint,
+        const SizedBox(height: 18),
+        FadeUpAnimation(
+          delay: const Duration(milliseconds: 300),
+          child: KidunaTextField(
+            label: 'Password',
+            placeholder: 'Enter your password',
+            controller: _passwordController,
+            focusNode: _passwordFocus,
+            required: true,
+            obscureText: !_showPassword,
+            maxLength: 32,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _validate(),
             suffix: IconButton(
-              onPressed: () => setState(() => _obscure = !_obscure),
+              onPressed: () {
+                setState(() => _showPassword = !_showPassword);
+              },
               icon: Icon(
-                _obscure
+                _showPassword
                     ? Icons.visibility_off_outlined
                     : Icons.visibility_outlined,
                 size: 20,
@@ -110,90 +138,69 @@ class _LoginFormState extends State<LoginForm> {
             ),
           ),
         ),
-
-        // ── Error ────────────────────────────────────────────────────
-        if (displayError != null) ...[
-          const SizedBox(height: 14),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(Icons.error_outline, size: 16, color: colors.gold),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  displayError,
-                  style: text.bodySmall.copyWith(
-                    color: colors.gold,
-                    height: 1.4,
-                  ),
+        const SizedBox(height: 8),
+        FadeUpAnimation(
+          delay: const Duration(milliseconds: 350),
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: widget.isLoading ? null : widget.onForgotPassword,
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                foregroundColor: colors.sky,
+                textStyle: const TextStyle(
+                  fontFamily: 'Avenir',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-            ],
-          ),
-        ],
-
-        const SizedBox(height: 24),
-
-        // ── Submit ───────────────────────────────────────────────────
-        SizedBox(
-          height: 48,
-          child: ElevatedButton(
-            onPressed: isLoading ? null : _submit,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: colors.sky,
-              foregroundColor: colors.skyButtonInk,
-              disabledBackgroundColor: colors.sky.withValues(alpha: 0.4),
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+              child: const Text('Forgot password?'),
             ),
-            child: isLoading
-                ? SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      color: colors.skyButtonInk,
-                    ),
-                  )
-                : Text(
-                    context.l10n.logIn,
-                    style: text.body.copyWith(
-                      color: colors.skyButtonInk,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
           ),
         ),
+        const SizedBox(height: 24),
+        FadeUpAnimation(
+          delay: const Duration(milliseconds: 400),
+          child: KidunaPrimaryButton(
+            label: widget.isLoading ? 'Logging in...' : 'Log in',
+            onPressed: _validate,
+            isLoading: widget.isLoading,
+          ),
+        ),
+        const SizedBox(height: 24),
+        if (kIsWeb)
+          FadeUpAnimation(
+            delay: const Duration(milliseconds: 450),
+            child: Center(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Don\'t have an account? ',
+                    style: text.body.copyWith(color: colors.muted, fontSize: 13),
+                  ),
+                  TextButton(
+                    onPressed: widget.isLoading ? null : widget.onCreateAccount,
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      foregroundColor: colors.sky,
+                      textStyle: const TextStyle(
+                        fontFamily: 'Avenir',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    child: const Text('Create account →'),
+                  ),
+                ],
+              ),
+            ),
+          ),
       ],
-    );
-  }
-
-  InputDecoration _inputDecoration(
-    BuildContext context, {
-    required String hint,
-    Widget? suffix,
-  }) {
-    final colors = context.kiduna;
-    final border = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
-      borderSide: BorderSide(color: colors.camel.withValues(alpha: 0.28)),
-    );
-    return InputDecoration(
-      isDense: true,
-      filled: true,
-      fillColor: colors.surface,
-      hintText: hint,
-      hintStyle: context.kidunaText.body.copyWith(color: colors.quiet),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      border: border,
-      enabledBorder: border,
-      focusedBorder: border.copyWith(borderSide: BorderSide(color: colors.sky)),
-      disabledBorder: border.copyWith(
-        borderSide: BorderSide(color: colors.camel.withValues(alpha: 0.14)),
-      ),
-      suffixIcon: suffix,
     );
   }
 }
