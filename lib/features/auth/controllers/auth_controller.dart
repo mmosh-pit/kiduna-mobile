@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -70,6 +72,24 @@ class AuthController extends Notifier<AuthState> {
       return;
     }
 
+    // Log the stored token's payload for debugging (JWT middle section)
+    try {
+      final parts = storedToken.split('.');
+      if (parts.length == 3) {
+        final payload = parts[1];
+        // Pad base64 if needed
+        final padded = payload.padRight((payload.length + 3) & ~3, '=');
+        final decoded = Uri.decodeFull(
+          String.fromCharCodes(base64Decode(padded)),
+        );
+        debugPrint('🔑 [Auth] Stored JWT payload: $decoded');
+        AppLogger.debug('Stored JWT payload: $decoded', tag: 'Auth');
+      }
+    } catch (e) {
+      debugPrint('🔑 [Auth] Could not decode stored JWT: $e');
+      AppLogger.debug('Could not decode stored JWT', tag: 'Auth');
+    }
+
     state = state.copyWith(status: AuthStatus.loading, clearError: true);
 
     try {
@@ -83,7 +103,11 @@ class AuthController extends Notifier<AuthState> {
         token: storedToken,
         status: AuthStatus.authenticated,
       );
-      AppLogger.info('Session restored', tag: 'Auth');
+      AppLogger.info(
+        'Session restored — ${user.email} (${user.id})',
+        tag: 'Auth',
+      );
+      debugPrint('🔑 [Auth] Session restored — ${user.email} (${user.id})');
     } on UnauthorizedException {
       // Token expired or revoked — clear everything and send to login.
       await storage.clearAll();
@@ -137,7 +161,11 @@ class AuthController extends Notifier<AuthState> {
         token: result.token,
         status: AuthStatus.authenticated,
       );
-      AppLogger.info('Login complete', tag: 'Auth');
+      AppLogger.info(
+        'Login complete — ${result.user.email} (${result.user.id})',
+        tag: 'Auth',
+      );
+      debugPrint('🔑 [Auth] Login complete — ${result.user.email} (${result.user.id})');
     } on UnauthorizedException {
       state = state.copyWith(
         status: AuthStatus.error,
