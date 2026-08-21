@@ -114,6 +114,7 @@ jobs:
           AUTH_API_URL=${{ secrets.AUTH_API_URL }}
           STUDIO_BASE_URL=${{ secrets.STUDIO_BASE_URL }}
           GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_API_KEY=${{secrets.GOOGLE_API_KEY}}
           EOF
 
       - run: flutter pub get
@@ -151,6 +152,7 @@ jobs:
           AUTH_API_URL=${{ secrets.AUTH_API_URL }}
           STUDIO_BASE_URL=${{ secrets.STUDIO_BASE_URL }}
           GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_API_KEY=${{secrets.GOOGLE_API_KEY}}
           EOF
 
       - run: flutter pub get
