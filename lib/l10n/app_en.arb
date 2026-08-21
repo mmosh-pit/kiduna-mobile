@@ -1,0 +1,14 @@
+{
+  "@@locale": "en",
+  "gameTitle": "Medieval Poker",
+  "gameSubtitle": "Choose your path to glory",
+  "singlePlayerLabel": "Single Player",
+  "singlePlayerSubtitle": "Play against AI opponents",
+  "playOnlineLabel": "Play Online",
+  "leaderboardLabel": "Leaderboard",
+  "comingSoon": "Coming Soon",
+  "tabMatching": "Matching",
+  "tabCards": "Cards",
+  "tabStandings": "Standings",
+  "tabGuilds": "Guilds"
+}
