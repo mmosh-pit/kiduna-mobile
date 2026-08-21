@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feat/feature-build-worflow
+      - dev
   workflow_dispatch:
 
 jobs:
