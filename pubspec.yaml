@@ -27,6 +27,7 @@ dependencies:
   web_socket_channel: 3.0.3
   audioplayers: ^6.8.1
   uuid: 4.5.1
+  file_picker: ^12.0.0
 
 dev_dependencies:
   flutter_test:
@@ -40,6 +41,11 @@ flutter:
   assets:
     - .env
     - assets/icons/
+    - assets/images/
+    - assets/images/allies/
+    - assets/images/organization-crests/
+    - assets/images/realm-emblems/
+    - assets/fixtures/
     - assets/medieval_poker/
     - assets/medieval_poker/cards/
     - assets/medieval_poker/power/
@@ -56,3 +62,9 @@ flutter:
     - family: GoudyHeavyface
       fonts:
         - asset: assets/fonts/goudy-heavyface.ttf
+    - family: IBMPlexSans
+      fonts:
+        - asset: assets/fonts/IBMPlexSans-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/IBMPlexSans-Medium.ttf
+          weight: 500

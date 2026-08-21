@@ -119,6 +119,14 @@ lib/l10n/app_localizations*.dart
 # Symbols
 app.*.symbols
 
+# IDE (see CLAUDE.md Section 10)
+.idea/
+.vscode/
+*.iml
+
+# Flutter DevTools — local per-developer settings
+devtools_options.yaml
+
 # Exceptions to above rules.
 !**/ios/**/default.mode1v3
 !**/ios/**/default.mode2v3

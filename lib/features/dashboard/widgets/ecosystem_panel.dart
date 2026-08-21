@@ -313,8 +313,8 @@ class _InspectPanel extends StatelessWidget {
       ('TYPE', ecosystem.type.toUpperCase()),
       ('PURPOSE', ecosystem.purpose ?? '–'),
       ('DESCRIPTION', ecosystem.description ?? '–'),
-      ('VISIBILITY', ecosystem.visibility?.toUpperCase() ?? 'PUBLIC'),
-      ('MEMBERS', '${ecosystem.memberCount}'),
+      ('VISIBILITY', ecosystem.visibility.toUpperCase()),
+      ('MEMBERS', '${ecosystem.members.length}'),
     ];
 
     return Container(

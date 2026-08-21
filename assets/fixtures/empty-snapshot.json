@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "1.0",
+  "viewer": {
+    "id": "alice",
+    "displayName": "Alice",
+    "allyId": "luna",
+    "relationship": "Catalyst · Ecosystem-wide authority",
+    "roles": {},
+    "gravity": {}
+  },
+  "ecosystem": {
+    "id": "kinship-duna",
+    "name": "Kinship Duna",
+    "type": "Ecosystem"
+  },
+  "realms": [],
+  "clusters": [],
+  "allies": [
+    {
+      "id": "luna",
+      "name": "Luna",
+      "state": "open",
+      "portrait": "assets/allies/ally-open-sample.png"
+    }
+  ],
+  "bridges": []
+}

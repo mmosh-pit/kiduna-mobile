@@ -1,0 +1,118 @@
+{
+  "schemaVersion": "1.0",
+  "viewer": {
+    "id": "edge-viewer",
+    "displayName": "Edge Viewer",
+    "allyId": null,
+    "roles": {
+      "edge-solo": "Member",
+      "edge-unknown-type": "Member",
+      "edge-long-name": "Member",
+      "edge-minimal": "Member"
+    },
+    "gravity": {
+      "edge-solo": 4,
+      "edge-unknown-type": 3,
+      "edge-long-name": 3,
+      "edge-minimal": 1
+    }
+  },
+  "ecosystem": {
+    "id": "edge-ecosystem",
+    "name": "Edge Ecosystem"
+  },
+  "realms": [
+    {
+      "id": "edge-solo",
+      "name": "Solitary Realm",
+      "type": "Organization",
+      "parentId": null,
+      "purpose": "The ONLY member of its cluster. Connectors chain from the second placement onward, so this cluster must draw zero connectors without erroring or being special-cased away.",
+      "motif": "◆",
+      "childIds": [],
+      "clusterId": "law",
+      "mass": 1,
+      "fixture": false,
+      "stationedAllyId": null
+    },
+    {
+      "id": "edge-unknown-type",
+      "name": "Unrecognised Type Realm",
+      "type": "Constellation",
+      "parentId": null,
+      "purpose": "Forward compatibility. 'Constellation' is not a known Realm type; the client MUST degrade to the conceptual emblem rather than throw, or adding a Realm type becomes a breaking change.",
+      "motif": "✦",
+      "childIds": [],
+      "clusterId": "formation",
+      "mass": 1,
+      "fixture": false,
+      "stationedAllyId": null,
+      "themes": [
+        "Watershed Restoration"
+      ]
+    },
+    {
+      "id": "edge-long-name",
+      "name": "A Realm Whose Name Runs Considerably Longer Than Any Node Label Was Ever Designed To Accommodate Without Truncation",
+      "type": "Community",
+      "parentId": null,
+      "purpose": "Label overflow. The name is attached to its node and must never detach, wrap into a neighbour, or be silently dropped.",
+      "motif": "≋",
+      "childIds": [],
+      "clusterId": "formation",
+      "mass": 1,
+      "fixture": false,
+      "stationedAllyId": null,
+      "themes": [
+        "Environment & Climate",
+        "Animals",
+        "Food & Agriculture"
+      ]
+    },
+    {
+      "id": "edge-minimal",
+      "name": "Minimal Realm",
+      "type": "Project",
+      "clusterId": "formation",
+      "mass": 1,
+      "fixture": false
+    }
+  ],
+  "clusters": [
+    {
+      "id": "formation",
+      "label": "Formation · work · economy",
+      "accent": "#03CCD9",
+      "left": 41,
+      "top": 38,
+      "radiusX": 29,
+      "radiusY": 22,
+      "startAngle": -2.8,
+      "arc": 5.25
+    },
+    {
+      "id": "law",
+      "label": "Law · accountable institutions",
+      "accent": "#EAAA00",
+      "left": 76,
+      "top": 29,
+      "radiusX": 7,
+      "radiusY": 9,
+      "startAngle": -1.4,
+      "arc": 1.2
+    }
+  ],
+  "bridges": [
+    {
+      "fromRealmId": "edge-solo",
+      "toRealmId": "edge-does-not-exist"
+    },
+    {
+      "fromRealmId": "edge-also-missing",
+      "toRealmId": "edge-unknown-type"
+    }
+  ],
+  "currentPath": {
+    "targetRealmId": "edge-does-not-exist"
+  }
+}

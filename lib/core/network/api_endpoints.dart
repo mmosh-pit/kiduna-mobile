@@ -1,46 +1,227 @@
+/// Centralised API endpoint paths — never hardcode path strings at call sites.
+///
+/// Paths for the kinship-agent API use [agent]; paths for the auth backend
+/// (kinship-backend) use [auth].
 abstract class ApiEndpoints {
   const ApiEndpoints._();
 
-  // ── Auth (kinship-backend, uses authDio) ─────────────────────────────
+  // ── Auth (kinship-backend) ────────────────────────────────────────────
 
+  /// `POST /login` — email + password login.
   static const String login = '/login';
+
+  /// `GET /is-auth` — verify token and refresh user data.
   static const String isAuth = '/is-auth';
 
-  // ── Visitor flow (kinship-backend, uses authDio) ─────────────────────
+  // ── Visitor flow (kinship-backend) ───────────────────────────────────
 
+  /// `POST /visitors/generate-otp` — send OTP to email.
   static const String generateOtp = '/visitors/generate-otp';
+
+  /// `POST /visitors/verify-otp` — verify submitted OTP.
   static const String verifyOtp = '/visitors/verify-otp';
+
+  /// `POST /visitors/resend-otp` — resend OTP.
   static const String resendOtp = '/visitors/resend-otp';
+
+  /// `POST /visitors/save-early-access` — save early-access record.
   static const String saveEarlyAccess = '/visitors/save-early-access';
+
+  /// `POST /visitors/upsert-early-access` — upsert early-access record.
   static const String upsertEarlyAccess = '/visitors/upsert-early-access';
+
+  /// `GET /visitors/has-code-exist` — check if invite code exists.
   static const String hasCodeExist = '/visitors/has-code-exist';
 
-  // ── Forgot password (kinship-backend, uses authDio) ─────────────────
+  // ── Forgot password (kinship-backend) ────────────────────────────────
+
+  /// `POST /forgot-password-verification` — forgot-password OTP.
   static const String forgotPasswordVerification =
       '/forgot-password-verification';
 
-  // ── Agents (kinship-agent, uses dio) ─────────────────────────────────
+  // ── Codes (kinship-agent) ─────────────────────────────────────────────
 
+  /// `POST /api/v1/codes` — create an invitation code.
+  static const String codes = '/api/v1/codes';
+
+  // ── Agents (kinship-agent) ────────────────────────────────────────────
+
+  /// `GET /api/agents/ally` — fetch the system ally agent.
   static const String allyAgent = '/api/agents/ally';
 
-  // ── Chat (kinship-agent, uses dio) ───────────────────────────────────
+  // ── Chat (kinship-agent) ──────────────────────────────────────────────
 
+  /// `POST /api/chatmessages/stream` — SSE streaming chat.
   static const String chatStream = '/api/chatmessages/stream';
 
+  /// `GET /api/conversations/{presenceId}/{userWallet}` — conversation history.
   static String conversationHistory(String presenceId, String userWallet) =>
       '/api/conversations/$presenceId/$userWallet';
 
-  // ── Prompts (kinship-agent, uses dio) ────────────────────────────────
+  // ── Agent updates (kinship-agent) ─────────────────────────────────────
 
-  static const String prompts = '/api/prompts';
-
-  static String promptUpdate(String promptId) => '/api/prompts/$promptId';
-
-  // ── Agent CRUD (kinship-agent, uses dio) ─────────────────────────────
-
+  /// `PATCH /api/agents/{id}` — update agent fields.
   static String agentUpdate(String agentId) => '/api/agents/$agentId';
 
-  // ── Realms (kinship-backend, uses authDio) ──────────────────────────
+  // ── Prompts (kinship-agent) ────────────────────────────────────────
 
+  /// `POST /api/prompts` — create a prompt record.
+  static const String prompts = '/api/prompts';
+
+  /// `PATCH /api/prompts/{promptId}` — update an existing prompt.
+  static String promptUpdate(String promptId) => '/api/prompts/$promptId';
+
+  // ── Knowledge (kinship-agent) ────────────────────────────────────────
+
+  /// `GET/POST /api/knowledge` — list or create knowledge bases.
+  static const String knowledge = '/api/knowledge';
+
+  /// `GET/PATCH/DELETE /api/knowledge/{kbId}` — single KB operations.
+  static String knowledgeById(String kbId) => '/api/knowledge/$kbId';
+
+  /// `POST /api/knowledge/{kbId}/upload` — upload files to a KB.
+  static String knowledgeUpload(String kbId) => '/api/knowledge/$kbId/upload';
+
+  /// `POST /api/knowledge/{kbId}/ingest-text` — ingest raw text.
+  static String knowledgeIngestText(String kbId) =>
+      '/api/knowledge/$kbId/ingest-text';
+
+  /// `DELETE /api/knowledge/{kbId}/items/{itemId}` — delete a KB item.
+  static String knowledgeItem(String kbId, String itemId) =>
+      '/api/knowledge/$kbId/items/$itemId';
+
+  /// `POST /api/knowledge/{kbId}/ingest-pending` — ingest all pending items.
+  static String knowledgeIngestPending(String kbId) =>
+      '/api/knowledge/$kbId/ingest-pending';
+
+  /// `POST /api/knowledge/search` — semantic search across KBs.
+  static const String knowledgeSearch = '/api/knowledge/search';
+
+  /// `POST /api/knowledge/{kbId}/gdrive-import` — import file from Drive.
+  static String knowledgeGdriveImport(String kbId) =>
+      '/api/knowledge/$kbId/gdrive-import';
+
+  // ── Skills (kinship-agent) ────────────────────────────────────────────
+
+  /// `POST /api/skills` — create a new skill.
+  static const String skills = '/api/skills';
+
+  /// `DELETE /api/skills/{id}` — delete a skill.
+  static String skillDelete(String skillId) => '/api/skills/$skillId';
+
+  /// `PATCH /api/skills/{id}` — update a skill's configuration.
+  static String skillUpdate(String skillId) => '/api/skills/$skillId';
+
+  /// `PATCH /api/skills/{id}/status` — pause or resume a skill.
+  static String skillStatus(String skillId) => '/api/skills/$skillId/status';
+
+  /// `POST /api/skills/generate-content` — AI-generate SKILL.md content.
+  static const String skillGenerateContent = '/api/skills/generate-content';
+
+  // ── Approvals ──────────────────────────────────────────────────
+
+  /// `GET /api/approvals` — list approval requests.
+  static const String approvals = '/api/approvals';
+
+  /// `GET /api/approvals/stats` — approval statistics.
+  static const String approvalStats = '/api/approvals/stats';
+
+  /// `PATCH /api/approvals/{id}/approve` — approve an action.
+  static String approvalApprove(String id) => '/api/approvals/$id/approve';
+
+  /// `PATCH /api/approvals/{id}/reject` — reject an action.
+  static String approvalReject(String id) => '/api/approvals/$id/reject';
+
+  // ── Realms (kinship-backend) ────────────────────────────────────────────
+
+  /// `POST /realms` — create any Realm type.
+  /// `GET /realms` — list caller's Realms (with optional type/parentId/tags filters).
+  static const String realms = '/realms';
+
+  /// `GET /realms/:id` — single Realm detail + members.
+  static String realmById(String id) => '/realms/$id';
+
+  /// `GET /realms/handle-availability?handle=...` — unified handle check.
+  static const String realmHandleAvailability = '/realms/handle-availability';
+
+  /// `GET /realms/ecosystem` — genesis Ecosystem check (no auth).
   static const String realmsEcosystem = '/realms/ecosystem';
+
+  /// `GET /realms/by-tags?tags=...` — tag-based Realm discovery.
+  static const String realmsByTags = '/realms/by-tags';
+
+  /// `GET /realms/tree/:id` — Realm + one level of children.
+  static String realmTree(String id) => '/realms/tree/$id';
+
+  /// `GET /realms/enrollments?wallet=...` — public enrollment disclosure.
+  static const String realmEnrollments = '/realms/enrollments';
+
+  // ── Alliances (kinship-backend) ────────────────────────────────────────
+
+  /// `POST /alliances` — create an alliance.
+  /// `GET /alliances` — list caller's alliances.
+  static const String alliances = '/alliances';
+
+  /// `GET /alliances/handle-availability?handle=...` — check alliance handle.
+  static const String allianceHandleAvailability =
+      '/alliances/handle-availability';
+
+  // ── Institutions (kinship-backend) ────────────────────────────────────
+
+  /// `POST /institutions` — create an institution.
+  static const String institutions = '/institutions';
+
+  /// `GET /institutions/handle-availability?handle=...` — check handle.
+  static const String institutionHandleAvailability =
+      '/institutions/handle-availability';
+
+  // ── Dunas (kinship-backend) ──────────────────────────────────────────
+
+  /// `GET /api/v1/dunas` — fetch genesis and caller's dunas.
+  static const String dunas = '/api/v1/dunas';
+
+  /// `POST /api/v1/dunas/organizations` — create organization under genesis.
+  static const String dunasOrganizations = '/api/v1/dunas/organizations';
+
+  // ── Gravity (kinship-agent) ────────────────────────────────────────────
+
+  /// `GET /api/gravity/{wallet}` — per-realm gravity scores.
+  static String gravity(String wallet) => '/api/gravity/$wallet';
+
+  /// `POST /api/gravity/override` — upsert a gravity override.
+  static const String gravityOverride = '/api/gravity/override';
+
+  /// `GET /api/gravity/overrides/{wallet}` — list all overrides.
+  static String gravityOverrides(String wallet) =>
+      '/api/gravity/overrides/$wallet';
+
+  // ── Activity (kinship-agent) ─────────────────────────────────────────
+
+  /// `POST /api/activity` — log a user activity event.
+  static const String activity = '/api/activity';
+
+  // ── Tools (kinship-agent) ─────────────────────────────────────────────
+
+  /// `GET /api/tools/available` — discover tools from MCP servers.
+  static const String toolsAvailable = '/api/tools/available';
+
+  // ── Tool connections (kinship-agent) ──────────────────────────────────
+
+  /// `POST /api/tools/verify` — test credentials without saving.
+  static const String toolsVerify = '/api/tools/verify';
+
+  /// `POST /api/tools/save` — save verified tool to the wallet's global pool.
+  static const String toolsSave = '/api/tools/save';
+
+  /// `GET /api/tools/saved?wallet={wallet}` — list connected tool accounts.
+  static String toolsSaved(String wallet) =>
+      '/api/tools/saved?wallet=${Uri.encodeComponent(wallet)}';
+
+  /// `DELETE /api/tools/saved/{id}?wallet={wallet}` — disconnect a tool.
+  static String toolsRemove(String id, String wallet) =>
+      '/api/tools/saved/$id?wallet=${Uri.encodeComponent(wallet)}';
+
+  /// `GET /api/tools/saved/by-wallet?wallet={wallet}&tool_name={tool}` — get tool credentials.
+  static String toolsSavedByWallet(String wallet, String toolName) =>
+      '/api/tools/saved/by-wallet?wallet=${Uri.encodeComponent(wallet)}&tool_name=$toolName';
 }

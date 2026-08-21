@@ -11,6 +11,9 @@ abstract class Env {
   static String get env => _raw('ENV');
 
   static bool get isProduction => env == 'prod';
+  static String get googleClientId => _raw('GOOGLE_CLIENT_ID');
+  static String get googleApiKey => _raw('GOOGLE_API_KEY');
+
   static bool get isConfigured =>
       apiBaseUrl.isNotEmpty && authApiUrl.isNotEmpty;
 }

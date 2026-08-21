@@ -1,5 +1,601 @@
 {
   "@@locale": "en",
+  "appName": "Kiduna",
+  "welcomeTo": "Welcome to {name}",
+  "@welcomeTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "baseProjectReady": "Base project ready. Start building features.",
+  "ki": "Ki",
+  "inspect": "Inspect",
+  "compute": "Compute",
+  "openResources": "Open Resources",
+  "fieldFocus": "Field focus",
+  "possibleActions": "Possible Actions",
+  "aFewActionsYouCanTakeNow": "A few Actions you can take now",
+  "selectAnyFactToExploreItWithKi": "Select any fact to explore it with Ki.",
+  "messageKi": "Message Ki",
+  "sendToKi": "Send to Ki",
+  "startVoiceInput": "Start voice input",
+  "prepareInvitation": "Prepare invitation",
+  "nameYouUseForThem": "Name you use for them",
+  "expiration": "Expiration",
+  "proposedRole": "Proposed role",
+  "notes": "Notes",
+  "copyLink": "Copy link",
+  "copyCode": "Copy code",
+  "uniqueLink": "Unique link",
+  "kinshipCode": "Kinship Code",
+  "personalInvitation": "Personal invitation",
+  "realmName": "Realm name",
+  "typeLabel": "Type",
+  "purpose": "Purpose",
+  "createRealmAction": "Create Realm",
+  "createOrganizationAction": "Create Organization",
+  "creating": "Creating…",
+  "organizationName": "Organization name",
+  "nameThisOrganization": "Name this Organization",
+  "registrationLabel": "Registration",
+  "registrationHint": "e.g. Kinship Duna, WV Org. ID 167085",
+  "whatIsTheMissionYourMembersShare": "What is the mission your members share?",
+  "emailLabel": "Email",
+  "emailHint": "you@example.com",
+  "allianceNameLabel": "Alliance name",
+  "allianceNameHint": "e.g. Conference Planning",
+  "handleLabel": "Handle",
+  "handleHint": "conference_planning",
+  "handleTaken": "Handle already taken",
+  "descriptionLabel": "Description",
+  "allianceDescriptionHint": "What this Alliance is for.",
+  "purposeProjectLabel": "Purpose / Project",
+  "alliancePurposeHint": "Plan and run Kiduna Live",
+  "visibilityLabel": "Visibility",
+  "approvalThresholdLabel": "Approval Threshold",
+  "approvalThresholdHint": "Starts at 1 of 1 — raise it later under \"Approval Threshold\".",
+  "createAllianceAction": "Create Alliance",
+  "communityNameLabel": "Community name",
+  "communityNameHint": "e.g. Tamil Health Collective",
+  "communityDescriptionHint": "What this Community is about.",
+  "communityPurposeHint": "Bringing people together around a shared interest",
+  "createCommunityAction": "Create Community",
+  "programNameLabel": "Program name",
+  "programNameHint": "e.g. Youth Leadership Pathway",
+  "programDescriptionHint": "What this Program offers.",
+  "programPurposeHint": "Building skills and capacity through structured learning",
+  "createProgramAction": "Create Program",
+  "projectNameLabel": "Project name",
+  "projectNameHint": "e.g. Community Health Survey 2026",
+  "projectDescriptionHint": "What this Project delivers.",
+  "projectPurposeHint": "A specific deliverable or outcome within a bounded scope",
+  "createProjectAction": "Create Project",
+  "conceptNameLabel": "Concept name",
+  "conceptNameHint": "e.g. Distributed Care Network",
+  "conceptDescriptionHint": "What this Concept explores or proposes.",
+  "conceptPurposeHint": "An idea, framework, or model being developed collaboratively",
+  "createConceptAction": "Create Concept",
+  "cellNameLabel": "Cell name",
+  "cellNameHint": "e.g. Tamil Nadu Care Circle",
+  "cellDescriptionHint": "What this Cell focuses on.",
+  "cellPurposeHint": "A small, trusted group working closely on a shared objective",
+  "createCellAction": "Create Cell",
+  "dyadNameLabel": "Dyad name",
+  "dyadNameHint": "e.g. Alice & Bob Partnership",
+  "dyadDescriptionHint": "What this Dyad is about.",
+  "dyadPurposeHint": "A two-party partnership with shared purpose and mutual accountability",
+  "createDyadAction": "Create Dyad",
+  "councilNameLabel": "Council name",
+  "councilNameHint": "e.g. Elder Care Advisory Council",
+  "councilDescriptionHint": "What this Council oversees or advises on.",
+  "councilPurposeHint": "A deliberative body that guides decisions for a shared domain",
+  "createCouncilAction": "Create Council",
+  "institutionNameLabel": "Institution name",
+  "institutionNameHint": "e.g. Acme Corporation",
+  "entityTypeLabel": "Entity type",
+  "institutionDescriptionHint": "What this Institution does.",
+  "institutionPurposeHint": "Its mission or mandate",
+  "registrationDomainLabel": "Registration domain",
+  "registrationDomainHint": "e.g. acme.com",
+  "standingDocUrlLabel": "Standing document URL",
+  "standingDocUrlHint": "https://...",
+  "designateContactLabel": "Designate contact",
+  "designateContactHint": "Contact person name",
+  "designateEmailLabel": "Designate email",
+  "designateEmailHint": "contact@acme.com",
+  "addressLabel": "Address",
+  "addressHint": "Physical address",
+  "createInstitutionAction": "Create Institution",
+  "open": "Open",
+  "design": "Design",
+  "refine": "Refine",
+  "portraitDirection": "Portrait direction",
+  "createPossiblePortraits": "Create possible portraits",
+  "navigation": "Navigation",
+  "close": "Close",
+  "collapse": "Collapse",
+  "minimize": "Minimize",
+  "expand": "Expand",
+  "resizeFieldAndKi": "Resize Field and Ki",
+  "whatYouMostCommonlyCallThem": "What you most commonly call them",
+  "nameThisRealm": "Name this Realm",
+  "whatShouldThisRealmBringIntoBeing": "What should this Realm bring into being?",
+  "warmConstellation": "Warm constellation",
+  "celestialGuide": "Celestial guide",
+  "deepFieldCompanion": "Deep-field companion",
+  "livingGrove": "Living grove",
+  "radiantBridge": "Radiant bridge",
+  "celestialBeacon": "Celestial beacon",
+  "ancientWarmAlertCelestialEnamelHint": "Ancient, warm, alert, celestial enamel...",
+  "focused": "Focused",
+  "dreaming": "Dreaming",
+  "engaged": "Engaged",
+  "openState": "Open",
+  "invitationMessageFor": "{name}, Alice has invited you to join Kinship Duna. This is a personal invitation — when you arrive, Ki will know who sent you and help you find your way.",
+  "@invitationMessageFor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "realmCreatedTitle": "{name} created",
+  "@realmCreatedTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "copiedToClipboard": "Copied to clipboard",
+  "invitationIntendedOnlyFor": "This invitation is intended only for {name} and expires once used.",
+  "@invitationIntendedOnlyFor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "sendThroughKi": "Send through Ki",
+  "invitationCopied": "Invitation copied",
+  "linkCopied": "Link copied",
+  "codeCopied": "Code copied",
+  "yourAllies": "Your Allies",
+  "capacities": "Capacities",
+  "member": "Member",
+  "sevenDays": "7 days",
+  "friend": "Friend",
+  "realmEmblem": "Realm emblem",
+  "panelClosed": "{name} panel closed",
+  "@panelClosed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "realmPortrait": "Realm Portrait",
+  "defaultPortraitDescription": "The default Community Portrait is used until you deliberately create a custom one.",
+  "askKi": "Ask Ki",
+  "chooseRoles": "Choose roles",
+  "requiredField": "* Required",
+  "change": "Change",
+  "create": "Create",
+  "privateHandshakeOptional": "Private handshake · optional",
+  "shareASecretWordOrPhrase": "Share a secret word or phrase.",
+  "invitationNotesHint": "Tell Ki about your relationship, the reason for the invitation, and any notes you have that will help Ki welcome your guest and make them feel at home. All notes you include will be marked \"Personal\" and only available to you.",
+  "presentName": "Name",
+  "savePresentation": "Save presentation",
+  "presentPurposeHint": "What should {name} make possible?",
+  "@presentPurposeHint": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "presentPortraitDescription": "Default {type} Portrait. Create a custom close-range identity whenever it becomes useful.",
+  "@presentPortraitDescription": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "whatRealmKnowsAndCanDo": "What {name} knows and what it can do",
+  "@whatRealmKnowsAndCanDo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "persona": "Persona",
+  "aliceCatalyst": "Alice — Catalyst",
+  "view": "View",
+  "viewNcev": "T1 · S1 · 1.0 — Newly Created Ecosystem View (NCEV)",
+  "viewAev": "T1 · S1 · 1.1 — Advanced Ecosystem View (AEV)",
+  "viewSceneRough": "T2 · S1 · 1.0 — Kinship Duna Scene Rough",
+  "viewSceneRoughV2": "T2 · S1 · 1.1 — Kinship Duna Scene Rough v2",
+  "viewSceneRoughV3": "T2 · S1 · 1.2 — Kinship Duna Scene Rough v3",
+  "studioNeedsMoreRoom": "Studio needs a little more room.",
+  "reopenAtWiderWidth": "Reopen this View at 1024px or wider.",
+  "viewComingSoon": "This View isn't available yet.",
+  "atlas": "Atlas",
+  "backToAtlas": "BACK TO ATLAS",
+  "scene": "Scene",
+  "yourAllies": "Your Allies",
+  "messageKi": "Message Ki…",
+  "aevKiWelcome": "Welcome Alice. Kinship Duna is the current Realm. The Field shows the other Realms visible through this Source’s authority and relationships.",
+  "aevKiWelcomeDetail": "Possible Actions starts with Kinship Duna. Select another Realm to inspect what may be done there.",
+  "whatShouldIDoFirst": "What should I do first?",
+  "tellMeMoreAboutKinshipDuna": "Tell me more about Kinship Duna.",
+  "surface": "Surface",
+  "kidunaWeb": "Kiduna Web",
+  "kidunaStudio": "Kiduna Studio",
+  "kidunaLive": "Kiduna Live",
+  "kidunaExpress": "Kiduna Express",
+  "kidunaTv": "Kiduna TV",
+  "comingLater": "coming later",
+  "stories": "Stories",
+  "downloadDesignKit": "Download Studio Design Kit v. 1.7",
+  "selectedInTheField": "Selected in the Field",
+  "currentRealmLabel": "Current Realm",
+  "yourRole": "Your role",
+  "stationedAlly": "Stationed Ally",
+  "noneStationed": "None stationed",
+  "nestedRealms": "Nested Realms",
+  "legalStatus": "Legal status",
+  "designFixtureNotYetVerified": "Design fixture · Not yet verified",
+  "gravityLabel": "Gravity",
+  "gravityQuiet": "Quiet",
+  "gravityAvailable": "Available",
+  "gravityRelevant": "Relevant",
+  "gravityCentral": "Central",
+  "gravityVital": "Vital",
+  "gravityQuietMeaning": "Legitimate context, but not currently relevant",
+  "gravityAvailableMeaning": "Related and easy to find",
+  "gravityRelevantMeaning": "Connected to current interests or work",
+  "gravityCentralMeaning": "Directly involved in current responsibility or Focus",
+  "gravityVitalMeaning": "Requires sustained awareness or consequential attention",
+  "whyIsThisHere": "Why is this here?",
+  "enterRealmName": "Enter {name}",
+  "@enterRealmName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "whyRealmIsHere": "Why {name} is here",
+  "@whyRealmIsHere": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "gravityIsContextual": "Its current Gravity is {level} · {name}. Gravity is contextual and inspectable; it is not a score or ranking.",
+  "@gravityIsContextual": {
+    "placeholders": {
+      "level": {
+        "type": "int"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "inspectRealmInvitation": "Inspect {name}, adjust its Gravity if useful, or enter it to make its Possible Actions current.",
+  "@inspectRealmInvitation": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "setGravityFor": "Set Gravity for {name}",
+  "@setGravityFor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "gravityOfRealm": "Gravity of {name}: {level}",
+  "@gravityOfRealm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "navigateToRealm": "Navigate to {name}",
+  "@navigateToRealm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "realmBreadcrumb": "Realm breadcrumb",
+  "noNestedRealmsVisible": "No nested Realms are visible here.",
+  "useNavigationOrAskKi": "Use Navigation to return, or ask Ki what could be formed here.",
+  "allyNoneStationed": "Ally · None stationed",
+  "wisdom": "Wisdom",
+  "whatRealmMayKnow": "What {name} may know",
+  "@whatRealmMayKnow": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "presence": "Presence",
+  "howRealmBehaves": "How {name} behaves",
+  "@howRealmBehaves": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "connections": "Connections",
+  "accountsRealmMayReach": "Accounts {name} may reach",
+  "@accountsRealmMayReach": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "automations": "Automations",
+  "whatKeepsWorkingFor": "What keeps working for {name}",
+  "@whatKeepsWorkingFor": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "skills": "Skills",
+  "whatRealmKnowsHowToDo": "What {name} knows how to do",
+  "@whatRealmKnowsHowToDo": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "edit": "Edit",
+  "remove": "Remove",
+  "download": "Download",
+  "delete": "Delete",
+  "connect": "Connect",
+  "disconnect": "Disconnect",
+  "connected": "Connected",
+  "uploadFiles": "Upload files",
+  "uploadSkills": "Upload Skills",
+  "dropSourcesHere": "Drop sources here",
+  "dropZoneFormats": "TXT, MD, DOC, DOCX, or PDF. Sources are prepared as Wisdom Drops in Markdown.",
+  "createNewWisdomWithKi": "Create new Wisdom with Ki",
+  "developNewPresenceWithKi": "Develop a new Presence with Ki",
+  "createNewSkillWithKi": "Create a new Skill with Ki",
+  "currentSystemInstructions": "Current system instructions",
+  "presenceRequired": "A Presence is always required. It may be changed or reset, but it cannot be deleted.",
+  "resetToDefault": "Reset to inherited default",
+  "trigger": "Trigger",
+  "prepareSelectedAutomations": "Prepare selected Automations",
+  "everyAccountSpecificAndVerified": "Every account is specific and verified",
+  "stopWhenAuthorityExpires": "Stop when authority expires, the work conflicts, or Alice pauses it.",
+  "connectedDisconnect": "Connected · Disconnect",
+  "googleDocsOrDriveLink": "Google Docs or Drive link",
+  "checkAccess": "Check access",
+  "openInGoogleDocs": "Open in Google Docs",
+  "nSelectedDraft": "{count} selected · Draft",
+  "@nSelectedDraft": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "nSkillsAvailable": "{count} Skills available",
+  "@nSkillsAvailable": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "skillName": "Skill name",
+  "nameThisSkill": "Name this Skill",
+  "triggerType": "Trigger type",
+  "selectTriggerType": "How should this Skill activate?",
+  "triggerEvent": "Event",
+  "triggerEventDescription": "Reacts when something happens",
+  "triggerTime": "Time",
+  "triggerTimeDescription": "Runs on a schedule",
+  "triggerCondition": "Condition",
+  "triggerConditionDescription": "Fires when a threshold is met",
+  "triggerCommand": "Command",
+  "triggerCommandDescription": "Activated by a spoken request",
+  "whenLabel": "When",
+  "whenHint": "Describe when this Skill should activate",
+  "thenLabel": "Then",
+  "thenHint": "Describe what this Skill should do",
+  "toolsLabel": "Tools",
+  "toolsDescription": "Select the tools this Skill may use (optional)",
+  "requiresApprovalLabel": "Requires approval",
+  "requiresApprovalDescription": "Ask before executing",
+  "createSkill": "Create Skill",
+  "skillCreated": "Skill created",
+  "skillRemoved": "Skill removed",
+  "skillNameRequired": "Skill name is required",
+  "triggerTypeRequired": "Select a trigger type",
+  "whenRequired": "Describe when the Skill should activate",
+  "thenRequired": "Describe what the Skill should do",
+  "quickPicks": "Quick picks",
+  "conditionField": "Field",
+  "conditionOperator": "Operator",
+  "conditionThreshold": "Threshold",
+  "skillDetail": "Markdown · Realm scope · Version 1.0",
+  "noSkillsCreated": "No skills were created.",
+
+  "welcomeBack": "Welcome back",
+  "signInToContinue": "Sign in to continue to Kiduna",
+  "emailLabel": "Email",
+  "emailHint": "Enter your email",
+  "emailRequired": "Please enter your email",
+  "passwordLabel": "Password",
+  "passwordHint": "Enter your password",
+  "passwordRequired": "Please enter your password",
+  "logIn": "Log in",
+  "loadingAlly": "Loading your ally…",
+  "allyLoadFailed": "Unable to load your ally. Please try again.",
+  "chatStreamError": "Unable to get a response. Please try again.",
+  "chatHistoryLoadFailed": "Unable to load conversation history.",
+  "kiIsTyping": "Ki is thinking…",
+  "retryMessage": "Retry",
+  "realmBreadcrumb": "Realm breadcrumb",
+  "navigateToRealm": "Navigate to {name}",
+  "@navigateToRealm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "noNestedRealmsVisible": "No nested Realms visible",
+  "useNavigationOrAskKi": "Use navigation or ask Ki",
+  "allyNoneStationed": "None stationed",
+
+  "kbLoading": "Loading knowledge base…",
+  "kbLoadFailed": "Unable to load knowledge base.",
+  "noWisdomItems": "No sources added yet.",
+  "kbItemPending": "Pending",
+  "kbItemIngested": "Ready",
+  "kbItemFailed": "Failed",
+  "nSourcesAvailable": "{count} sources",
+  "@nSourcesAvailable": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "uploadingFiles": "Uploading…",
+  "importingFromDrive": "Importing from Drive…",
+  "driveImportProgress": "Importing {done} of {total}…",
+  "@driveImportProgress": {
+    "placeholders": {
+      "done": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "kbCreateFailed": "Unable to create knowledge base.",
+  "kbDeleteConfirm": "Delete this source?",
+  "retry": "Retry",
+  "createKnowledgeBase": "Create Knowledge Base",
+  "kbNameHint": "Knowledge base name",
+  "kbNameRequired": "Please enter a name.",
+  "deleteKnowledgeBase": "Delete Knowledge Base",
+  "deleteKbConfirm": "This will permanently delete this knowledge base and all its sources.",
+  "cancel": "Cancel",
+  "kbSelectedName": "Knowledge Base: {name}",
+  "@kbSelectedName": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "kbVisibility": "Visibility",
+  "kbVisibilityPublic": "Public",
+  "kbVisibilityPrivate": "Private",
+  "kbVisibilitySecret": "Secret",
+  "kbVisibilityPersonal": "Personal",
+  "googleDrive": "Google Drive",
+  "connectGoogleDrive": "Connect Google Drive",
+  "driveConnecting": "Connecting…",
+  "driveSignInFailed": "Google sign-in failed. Please try again.",
+  "driveSignInRequired": "Please connect Google Drive first.",
+  "driveImportAction": "Import",
+  "drivePasteLinkHint": "https://drive.google.com/drive/folders/…",
+  "driveInvalidUrl": "Invalid Google Drive URL. Paste a file or folder link.",
+  "driveFileNotFound": "File not found or not accessible.",
+  "driveUnsupportedType": "Unsupported file type. Only PDF, TXT, DOCX, and Google Docs are supported.",
+  "driveFileTooLarge": "File exceeds the 5 MB size limit.",
+  "driveFilesTooLarge": "{count} files exceed the 5 MB size limit.",
+  "@driveFilesTooLarge": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "driveNoSupportedFiles": "No supported files found. Only PDF, TXT, DOCX, and Google Docs are supported.",
+  "presenceStatusInherited": "Inherited foundation · locally editable",
+  "presenceStatusDraft": "Local draft · not published",
+  "presenceStatusSaved": "Published",
+  "presenceStatusSaving": "Saving…",
+  "presenceStatusReset": "Reset to default",
+  "presenceDefaultPrompt": "Act in service of {name}’s purpose. Preserve human direction, explain consequential choices, and never infer private intent.",
+  "@presenceDefaultPrompt": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "presenceSave": "Save Presence",
+  "presenceSaveFailed": "Unable to save presence. Please try again.",
+  "instructName": "Instruct Name",
+  "instructNameHint": "e.g. Professional Tone",
+  "instructGoal": "Goal",
+  "instructGoalHint": "What should this instruct accomplish?",
+  "instructStance": "Stance",
+  "instructInformKb": "Inform (Knowledge Base)",
+  "instructNone": "None",
+  "instructActive": "Active",
+  "instructEdit": "Edit",
+  "instructDelete": "Delete",
+  "instructDeleteTitle": "Delete Instruct",
+  "instructDeleteConfirm": "Delete \"{name}\"? This cannot be undone.",
+  "@instructDeleteConfirm": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "instructCreateNew": "Create New Instruct",
+  "instructCreateTitle": "Create Instruct",
+  "instructGenerateWithAi": "Generate with AI",
+  "instructSave": "Save",
+  "instructSaving": "Saving…",
+  "instructNoInstructs": "No instructs yet. Create one below.",
+  "instructHowRealmBehaves": "How {name} behaves",
+  "@instructHowRealmBehaves": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "instructCountStatus": "{count} instructs",
+  "@instructCountStatus": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "instructLoading": "Loading…",
+  "instructStanceHint": "System instruct content…",
+  "instructCharsWords": "{chars} chars · {words} words",
+  "@instructCharsWords": {
+    "placeholders": {
+      "chars": { "type": "int" },
+      "words": { "type": "int" }
+    }
+  },
+  "primaryThemeLabel": "Primary Theme",
+  "primaryThemeHint": "Select a theme",
+  "primaryFocusLabel": "Primary Focus",
+  "primaryFocusHint": "Select a focus",
+  "selectThemeFirst": "Select a theme first",
+  "enterAction": "Enter",
+  "chatAction": "Chat",
+  "organize": "Organize",
+  "buildAction": "Build",
+  "enjoy": "Enjoy",
+  "actAction": "Act",
+  "govern": "Govern",
+  "settle": "Settle",
+  "setLevel": "Set Level",
+  "pin": "Pin",
+  "hideRealm": "Hide",
+  "noRealmsYet": "No nested Realms yet",
+  "noRealmsYetDetail": "Use 'Form a New Realm' to create one inside this Realm.",
+
   "gameTitle": "Medieval Poker",
   "gameSubtitle": "Choose your path to glory",
   "singlePlayerLabel": "Single Player",
