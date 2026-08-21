@@ -23,19 +23,25 @@ class ChatService {
     required String presenceId,
     required String message,
     required String userWallet,
+    String? userId,
+    String? realmId,
   }) async* {
     AppLogger.debug(
       'Opening SSE stream for presence=$presenceId (web=$kIsWeb)',
       tag: 'ChatService',
     );
     try {
+      final data = <String, dynamic>{
+        'presenceId': presenceId,
+        'message': message,
+        'userWallet': userWallet,
+      };
+      if (userId != null && userId.isNotEmpty) data['userId'] = userId;
+      if (realmId != null && realmId.isNotEmpty) data['realmId'] = realmId;
+
       final response = await _dio.post<dynamic>(
         ApiEndpoints.chatStream,
-        data: {
-          'presenceId': presenceId,
-          'message': message,
-          'userWallet': userWallet,
-        },
+        data: data,
         options: Options(
           responseType: kIsWeb ? ResponseType.plain : ResponseType.stream,
           receiveTimeout: const Duration(minutes: 5),
