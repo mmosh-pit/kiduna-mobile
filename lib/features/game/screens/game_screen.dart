@@ -2,14 +2,10 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/extensions/context_extensions.dart';
-import '../../../games/medieval_poker/flame/table_renderer.dart';
+import '../../../games/medieval_poker/flame/medieval_poker_game.dart';
+import '../../../games/medieval_poker/flame/poker_hud.dart';
 import '../../../games/medieval_poker/medieval_poker_leaderboard_screen.dart';
 import '../../../games/medieval_poker/medieval_poker_lobby_screen.dart';
-import '../../../games/medieval_poker/session/card_zoom.dart';
-import '../../../games/medieval_poker/session/game_session.dart';
-import '../../../games/medieval_poker/session/local_session.dart';
-import '../../../games/medieval_poker/session/paced_session.dart';
-import '../../../games/medieval_poker/session/session_hud.dart';
 import '../../../l10n/app_localizations.dart';
 
 /// Game feature entry — shows mode selection or active poker game.
@@ -250,7 +246,9 @@ class _ModeButton extends StatelessWidget {
   }
 }
 
-/// Active poker game — wraps Elias's LocalSession + TableRenderer.
+/// Active poker game — uses the LEGACY [MedievalPokerGame] + [PokerHud]
+/// for proper animations and pacing (AI thinking delays, card dealing
+/// animations, "X is thinking..." banners). Same engine as kinship-app.
 class _PokerTableView extends StatefulWidget {
   const _PokerTableView({required this.onExit});
 
@@ -261,76 +259,31 @@ class _PokerTableView extends StatefulWidget {
 }
 
 class _PokerTableViewState extends State<_PokerTableView> {
-  late LocalSession _local;
-  late GameSession _session;
-  late TableRenderer _renderer;
-  final CardZoomController _cardZoom = CardZoomController();
-  final GlobalKey<NavigatorState> _navKey = GlobalKey<NavigatorState>();
-  int _generation = 0;
+  MedievalPokerGame? _game;
 
   @override
   void initState() {
     super.initState();
-    _create();
-  }
-
-  void _create() {
-    _local = LocalSession(opponentCount: 3);
-    _session = PacedSession(_local);
-    _renderer = TableRenderer(session: _session, cardZoom: _cardZoom);
-    _local.start();
-  }
-
-  void _playAgain() {
-    setState(() {
-      _session.dispose();
-      _generation++;
-      _create();
-    });
-  }
-
-  @override
-  void dispose() {
-    _session.dispose();
-    _cardZoom.dispose();
-    super.dispose();
+    _game = MedievalPokerGame(opponentCount: 3);
   }
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            size: Size(constraints.maxWidth, constraints.maxHeight),
-            padding: EdgeInsets.zero,
-          ),
-          child: ClipRect(
-            child: Navigator(
-              key: _navKey,
-              onGenerateRoute: (_) => MaterialPageRoute<void>(
-                builder: (_) => Scaffold(
-                  backgroundColor: Colors.black,
-                  resizeToAvoidBottomInset: false,
-                  body: GameWidget<TableRenderer>(
-                    key: ValueKey(_generation),
-                    game: _renderer,
-                    overlayBuilderMap: {
-                      'hud': (context, game) => SessionHud(
-                            session: _session,
-                            onExit: widget.onExit,
-                            onPlayAgain: _playAgain,
-                            cardZoom: _cardZoom,
-                          ),
-                    },
-                    initialActiveOverlays: const ['hud'],
-                  ),
-                ),
+    final game = _game;
+    if (game == null) {
+      return const SizedBox.shrink();
+    }
+    return ClipRect(
+      child: GameWidget<MedievalPokerGame>(
+        game: game,
+        overlayBuilderMap: {
+          'hud': (context, g) => PokerHud(
+                game: game,
+                onExit: widget.onExit,
               ),
-            ),
-          ),
-        );
-      },
+        },
+        initialActiveOverlays: const ['hud'],
+      ),
     );
   }
 }
