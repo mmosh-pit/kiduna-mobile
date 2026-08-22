@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io' show Directory, File, Platform;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -17,15 +18,18 @@ class SecureStorage {
 
   static final SecureStorage instance = SecureStorage._();
 
+  // macOS uses a plain JSON file in Application Support instead of the
+  // keychain: ad-hoc signed builds are not in the keychain item ACL, so macOS
+  // prompts for the login password on every launch and "Always Allow" doesn't
+  // stick across rebuilds. Switch back to FlutterSecureStorage on macOS once
+  // the app is signed with a real Apple Developer Team ID.
+  bool get _useMacFile => !kIsWeb && Platform.isMacOS;
+
   final FlutterSecureStorage _storage = const FlutterSecureStorage(
     aOptions: AndroidOptions(
       preferencesKeyPrefix: 'kiduna',
     ),
     iOptions: IOSOptions(
-      accessibility: KeychainAccessibility.first_unlock,
-    ),
-    mOptions: MacOsOptions(
-      usesDataProtectionKeychain: false,
       accessibility: KeychainAccessibility.first_unlock,
     ),
     lOptions: LinuxOptions(),
@@ -36,17 +40,61 @@ class SecureStorage {
     ),
   );
 
+  // ── macOS file-based backend ───────────────────────────────────────────
+
+  File? _cachedFile;
+
+  Future<File> _macFile() async {
+    if (_cachedFile != null) return _cachedFile!;
+    final home = Platform.environment['HOME'] ?? '';
+    final dir = Directory('$home/Library/Application Support/kiduna_mobile');
+    if (!await dir.exists()) {
+      await dir.create(recursive: true);
+    }
+    return _cachedFile = File('${dir.path}/auth.json');
+  }
+
+  Future<Map<String, String>> _readMacMap() async {
+    final f = await _macFile();
+    if (!await f.exists()) return <String, String>{};
+    final raw = await f.readAsString();
+    if (raw.isEmpty) return <String, String>{};
+    final decoded = jsonDecode(raw) as Map<String, dynamic>;
+    return decoded.map((k, v) => MapEntry(k, v as String));
+  }
+
+  Future<void> _writeMacMap(Map<String, String> map) async {
+    final f = await _macFile();
+    await f.writeAsString(jsonEncode(map));
+  }
+
   // ── Internal read/write/delete ─────────────────────────────────────────
 
   Future<void> _write(String key, String value) async {
+    if (_useMacFile) {
+      final map = await _readMacMap();
+      map[key] = value;
+      await _writeMacMap(map);
+      return;
+    }
     await _storage.write(key: key, value: value);
   }
 
   Future<String?> _read(String key) async {
+    if (_useMacFile) {
+      final map = await _readMacMap();
+      return map[key];
+    }
     return _storage.read(key: key);
   }
 
   Future<void> _delete(String key) async {
+    if (_useMacFile) {
+      final map = await _readMacMap();
+      map.remove(key);
+      await _writeMacMap(map);
+      return;
+    }
     await _storage.delete(key: key);
   }
 

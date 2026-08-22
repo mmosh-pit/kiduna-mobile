@@ -33,7 +33,7 @@ class EcosystemState {
 
   /// All Realms in display order: genesis first, then organizations, then others.
   List<RealmModel> get all => [
-    if (genesis != null) genesis!,
+    ?genesis,
     ...organizations,
     ...realms,
   ];

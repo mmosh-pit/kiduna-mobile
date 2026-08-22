@@ -33,8 +33,8 @@ import 'field_traverse.dart';
 class FieldGame extends FlameGame
     with DragCallbacks, ScrollDetector, KeyboardEvents {
   FieldGame({
-    required KidunaColors palette,
-    required bool reduceMotion,
+    required this._palette,
+    required this._reduceMotion,
     this.source,
     this.nav = NavMode.none,
     this.hideStars = false,
@@ -42,8 +42,7 @@ class FieldGame extends FlameGame
     this.onDeselect,
     this.onReady,
     this.onStarView,
-  })  : _palette = palette,
-        _reduceMotion = reduceMotion;
+  });
 
   static const double _loopSeconds = 16;
 

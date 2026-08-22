@@ -1,4 +1,5 @@
 /// Formatting helpers shared across presale widgets (card, detail, buy sheet).
+library;
 
 /// Abbreviates large numbers (e.g. "2000000000" → "2.0B").
 String formatTokenNumber(String value) {

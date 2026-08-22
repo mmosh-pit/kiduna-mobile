@@ -251,7 +251,7 @@ class _ReferenceViewer extends StatelessWidget {
                               minScale: 1,
                               maxScale: 4,
                               child: Image.asset(path, fit: BoxFit.contain,
-                                  errorBuilder: (_, __, ___) => const Center(
+                                  errorBuilder: (_, _, _) => const Center(
                                         child: Text('Reference unavailable',
                                             style: TextStyle(
                                                 color: Colors.white54)),
@@ -1552,7 +1552,7 @@ class _PowerHandFan extends StatelessWidget {
               height: _cardH,
               fit: BoxFit.cover,
               filterQuality: FilterQuality.medium,
-              errorBuilder: (_, __, ___) => Container(
+              errorBuilder: (_, _, _) => Container(
                 width: _cardW,
                 height: _cardH,
                 decoration: BoxDecoration(
@@ -1589,13 +1589,13 @@ class _PowerCardThumb extends StatelessWidget {
         fit: BoxFit.cover,
         filterQuality: FilterQuality.medium,
         // Power art missing → try the Item art, then a ★ placeholder.
-        errorBuilder: (_, __, ___) => Image.asset(
+        errorBuilder: (_, _, _) => Image.asset(
           'assets/medieval_poker/items/$templateId.png',
           width: 46,
           height: 74,
           fit: BoxFit.cover,
           filterQuality: FilterQuality.medium,
-          errorBuilder: (_, __, ___) => const SizedBox(
+          errorBuilder: (_, _, _) => const SizedBox(
             width: 46,
             height: 74,
             child: Center(
