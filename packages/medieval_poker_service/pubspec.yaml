@@ -1,0 +1,16 @@
+name: medieval_poker_service
+description: >-
+  Authoritative server-side game-service for online Medieval Poker. Hosts the
+  shared PokerGame engine per room, produces per-player snapshots, drives the
+  hand loop via a PlayerAgent seam (AI or a remote human over WebSocket), and
+  runs the turn clock. Pure Dart (dart:io) — no Flutter.
+publish_to: "none"
+version: 0.1.0
+
+environment:
+  sdk: ">=3.8.0 <4.0.0"
+
+dependencies:
+  medieval_poker_engine:
+    path: ../medieval_poker_engine
+  crypto: ^3.0.0 # HS256 verification of the lobby-minted game token

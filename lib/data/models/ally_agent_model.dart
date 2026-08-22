@@ -1,10 +1,5 @@
 import 'package:flutter/foundation.dart';
 
-/// The Ally agent profile — sourced from `GET /api/agents/ally`.
-///
-/// Represents the system-wide companion presence (Ki). Only the fields
-/// kiduna-mobile needs are typed here; unknown keys from the backend
-/// are silently ignored by [fromJson].
 @immutable
 class AllyAgentModel {
   const AllyAgentModel({

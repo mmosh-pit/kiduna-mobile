@@ -13,6 +13,32 @@ abstract class ApiEndpoints {
   /// `GET /is-auth` — verify token and refresh user data.
   static const String isAuth = '/is-auth';
 
+  // ── Visitor flow (kinship-backend) ───────────────────────────────────
+
+  /// `POST /visitors/generate-otp` — send OTP to email.
+  static const String generateOtp = '/visitors/generate-otp';
+
+  /// `POST /visitors/verify-otp` — verify submitted OTP.
+  static const String verifyOtp = '/visitors/verify-otp';
+
+  /// `POST /visitors/resend-otp` — resend OTP.
+  static const String resendOtp = '/visitors/resend-otp';
+
+  /// `POST /visitors/save-early-access` — save early-access record.
+  static const String saveEarlyAccess = '/visitors/save-early-access';
+
+  /// `POST /visitors/upsert-early-access` — upsert early-access record.
+  static const String upsertEarlyAccess = '/visitors/upsert-early-access';
+
+  /// `GET /visitors/has-code-exist` — check if invite code exists.
+  static const String hasCodeExist = '/visitors/has-code-exist';
+
+  // ── Forgot password (kinship-backend) ────────────────────────────────
+
+  /// `POST /forgot-password-verification` — forgot-password OTP.
+  static const String forgotPasswordVerification =
+      '/forgot-password-verification';
+
   // ── Codes (kinship-agent) ─────────────────────────────────────────────
 
   /// `POST /api/v1/codes` — create an invitation code.
@@ -137,6 +163,33 @@ abstract class ApiEndpoints {
   /// `GET /realms/enrollments?wallet=...` — public enrollment disclosure.
   static const String realmEnrollments = '/realms/enrollments';
 
+  // ── Alliances (kinship-backend) ────────────────────────────────────────
+
+  /// `POST /alliances` — create an alliance.
+  /// `GET /alliances` — list caller's alliances.
+  static const String alliances = '/alliances';
+
+  /// `GET /alliances/handle-availability?handle=...` — check alliance handle.
+  static const String allianceHandleAvailability =
+      '/alliances/handle-availability';
+
+  // ── Institutions (kinship-backend) ────────────────────────────────────
+
+  /// `POST /institutions` — create an institution.
+  static const String institutions = '/institutions';
+
+  /// `GET /institutions/handle-availability?handle=...` — check handle.
+  static const String institutionHandleAvailability =
+      '/institutions/handle-availability';
+
+  // ── Dunas (kinship-backend) ──────────────────────────────────────────
+
+  /// `GET /api/v1/dunas` — fetch genesis and caller's dunas.
+  static const String dunas = '/api/v1/dunas';
+
+  /// `POST /api/v1/dunas/organizations` — create organization under genesis.
+  static const String dunasOrganizations = '/api/v1/dunas/organizations';
+
   // ── Gravity (kinship-agent) ────────────────────────────────────────────
 
   /// `GET /api/gravity/{wallet}` — per-realm gravity scores.
@@ -178,4 +231,19 @@ abstract class ApiEndpoints {
   /// `GET /api/tools/saved/by-wallet?wallet={wallet}&tool_name={tool}` — get tool credentials.
   static String toolsSavedByWallet(String wallet, String toolName) =>
       '/api/tools/saved/by-wallet?wallet=${Uri.encodeComponent(wallet)}&tool_name=$toolName';
+
+  // ── Presales (kinship-backend) ──────────────────────────────────────────
+
+  /// `GET /tokens/presales` — list presales (public, filterable by status/symbol).
+  static const String presales = '/tokens/presales';
+
+  /// `GET /tokens/presales/{id}` — single presale details (public).
+  static String presaleById(String id) => '/tokens/presales/$id';
+
+  /// `POST /tokens/presales/{id}/buy` — purchase tokens (auth required).
+  static String presaleBuy(String id) => '/tokens/presales/$id/buy';
+
+  /// `GET /tokens/presales/{id}/purchases` — purchase history (auth required).
+  static String presalePurchases(String id) =>
+      '/tokens/presales/$id/purchases';
 }

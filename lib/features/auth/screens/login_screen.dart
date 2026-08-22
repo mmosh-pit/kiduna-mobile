@@ -1,63 +1,177 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
-import '../../../config/assets.dart';
 import '../../../core/extensions/context_extensions.dart';
+import '../../../shared/widgets/app_header.dart';
+import '../../dashboard/screens/dashboard_screen.dart';
+import '../../download/screens/download_app_screen.dart';
 import '../controllers/auth_controller.dart';
+import '../enums/auth_status.dart';
 import '../widgets/login_form.dart';
+import '../widgets/signup_left_panel.dart';
+import 'forgot_password_screen.dart';
+import 'signup_screen.dart';
 
-/// Full-screen login — dark espresso background, centred Kiduna logo and
-/// [LoginForm].
-///
-/// Reads auth state from [authControllerProvider]; navigation is handled by
-/// the GoRouter redirect guard — the screen itself never calls `context.go`.
-class LoginScreen extends ConsumerWidget {
+const _loginLeftPanel = SignupLeftPanel(
+  tagline: 'The Genesis Ecosystem welcomes you back.',
+  headingPrefix: 'Welcome ',
+  headingAccent: 'Back',
+  description: 'Continue your journey with creators, builders, organizers, and intelligent agents shaping a network where everyone has a place and a part to play.',
+);
+
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authControllerProvider);
-    final controller = ref.read(authControllerProvider.notifier);
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends ConsumerState<LoginScreen> {
+  bool _hasAutoNavigated = false;
+
+  void _navigateToForgotPassword() {
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder<void>(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            const ForgotPasswordScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
+    );
+  }
+
+  void _navigateToSignup() {
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder<void>(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            const SignupScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
+    );
+  }
+
+  Future<void> _login(String email, String password) async {
+    await ref.read(authControllerProvider.notifier).login(email, password);
+    if (!mounted) return;
+
+    final authState = ref.read(authControllerProvider);
+    if (authState.isAuthenticated) {
+      final destination = kIsWeb
+          ? const DownloadAppScreen()
+          : const DashboardScreen();
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder<void>(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              destination,
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+          transitionDuration: const Duration(milliseconds: 300),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final colors = context.kiduna;
-    final text = context.kidunaText;
+    final isMobile = context.isMobile;
+    final authState = ref.watch(authControllerProvider);
+    final isLoading = authState.status == AuthStatus.loading;
+    final apiError = authState.error;
+
+    // Auto-navigate if session was restored (user already logged in)
+    if (authState.isAuthenticated && !_hasAutoNavigated) {
+      _hasAutoNavigated = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final destination = kIsWeb
+            ? const DownloadAppScreen()
+            : const DashboardScreen();
+        Navigator.of(context).pushReplacement(
+          PageRouteBuilder<void>(
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                destination,
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+            transitionDuration: const Duration(milliseconds: 300),
+          ),
+        );
+      });
+    }
 
     return Scaffold(
-      backgroundColor: colors.field,
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 380),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // ── Logo ────────────────────────────────────────────
-                SvgPicture.asset(AppAssets.kidunaLogo, width: 160),
-                const SizedBox(height: 48),
-
-                // ── Heading ─────────────────────────────────────────
-                Text(
-                  context.l10n.welcomeBack,
-                  style: text.heading.copyWith(color: colors.cream),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  context.l10n.signInToContinue,
-                  style: text.body.copyWith(color: colors.muted),
-                ),
-                const SizedBox(height: 32),
-
-                // ── Form ────────────────────────────────────────────
-                LoginForm(
-                  onSubmit: controller.login,
-                  status: authState.status,
-                  error: authState.error,
-                ),
-              ],
-            ),
+      backgroundColor: colors.deep,
+      body: Column(
+        children: [
+          const AppHeader(),
+          Expanded(
+            child: isMobile
+                ? _buildMobileLayout(isLoading, apiError)
+                : _buildDesktopLayout(isLoading, apiError),
           ),
-        ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopLayout(bool isLoading, String? apiError) {
+    return Row(
+      children: [
+        const Expanded(flex: 11, child: _loginLeftPanel),
+        Expanded(flex: 9, child: _buildRightPanel(isLoading, apiError)),
+      ],
+    );
+  }
+
+  Widget _buildMobileLayout(bool isLoading, String? apiError) {
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          const SizedBox(height: 610, child: _loginLeftPanel),
+          _buildRightPanel(isLoading, apiError),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRightPanel(bool isLoading, String? apiError) {
+    final colors = context.kiduna;
+
+    return Container(
+      color: colors.deep,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 40),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: constraints.maxHeight - 80,
+                maxWidth: double.infinity,
+              ),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 400),
+                  child: LoginForm(
+                    onLogin: _login,
+                    onCreateAccount: _navigateToSignup,
+                    onForgotPassword: _navigateToForgotPassword,
+                    isLoading: isLoading,
+                    apiError: apiError,
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

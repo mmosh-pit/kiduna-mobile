@@ -1,65 +1,99 @@
-import 'package:flutter/foundation.dart';
-
-/// The authenticated user's profile — sourced from kinship-backend's
-/// `/login` and `/is-auth` responses.
-///
-/// Only the fields kiduna-mobile actually uses are kept here. The backend
-/// returns additional keys (subscription, membership, etc.) that are
-/// intentionally ignored until they are needed.
-@immutable
 class UserModel {
   const UserModel({
     required this.id,
     required this.email,
     required this.name,
-    required this.wallet,
-    required this.role,
+    this.uuid,
+    this.picture,
+    this.banner,
+    this.displayName,
+    this.lastName,
+    this.username,
+    this.bio,
+    this.wallet,
+    this.kinshipCode,
+    this.role,
+    this.onboardingStep,
+    this.onboardingStatus,
   });
 
   final String id;
   final String email;
   final String name;
-  final String wallet;
-  final String role;
+  final String? uuid;
+  final String? picture;
+  final String? banner;
+  final String? displayName;
+  final String? lastName;
+  final String? username;
+  final String? bio;
+  final String? wallet;
+  final String? kinshipCode;
+  final String? role;
+  final int? onboardingStep;
+  final String? onboardingStatus;
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      id: (json['id'] ?? json['_id'] ?? '') as String,
-      email: (json['email'] ?? '') as String,
-      name:
-          (json['name'] ??
-                  json['firstName'] ??
-                  (json['profile'] as Map<String, dynamic>?)?['displayName'] ??
-                  'User')
-              as String,
-      wallet: (json['wallet'] ?? '') as String,
-      role: (json['role'] ?? 'member') as String,
+      id: json['id'] as String,
+      email: json['email'] as String,
+      name: (json['name'] as String?) ?? '',
+      uuid: json['uuid'] as String?,
+      picture: json['picture'] as String?,
+      banner: json['banner'] as String?,
+      displayName: json['display_name'] as String?,
+      lastName: json['last_name'] as String?,
+      username: json['username'] as String?,
+      bio: json['bio'] as String?,
+      wallet: json['wallet'] as String?,
+      kinshipCode: json['kinship_code'] as String?,
+      role: json['role'] as String?,
+      onboardingStep: json['onboarding_step'] as int?,
+      onboardingStatus: json['onboarding_status'] as String?,
     );
   }
 
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'email': email,
-    'name': name,
-    'wallet': wallet,
-    'role': role,
-  };
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'email': email,
+      'name': name,
+      'uuid': uuid,
+      'picture': picture,
+      'banner': banner,
+      'display_name': displayName,
+      'last_name': lastName,
+      'username': username,
+      'bio': bio,
+      'wallet': wallet,
+      'kinship_code': kinshipCode,
+      'role': role,
+      'onboarding_step': onboardingStep,
+      'onboarding_status': onboardingStatus,
+    };
+  }
+}
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is UserModel &&
-          runtimeType == other.runtimeType &&
-          id == other.id &&
-          email == other.email &&
-          name == other.name &&
-          wallet == other.wallet &&
-          role == other.role;
+class AuthResponse {
+  const AuthResponse({required this.token, required this.user});
 
-  @override
-  int get hashCode => Object.hash(id, email, name, wallet, role);
+  final String token;
+  final UserModel user;
 
-  @override
-  String toString() =>
-      'UserModel(id: $id, name: $name, wallet: ${wallet.length > 12 ? '${wallet.substring(0, 12)}…' : wallet})';
+  /// Parses login response: `{ data: { token, user } }`
+  factory AuthResponse.fromLoginJson(Map<String, dynamic> json) {
+    final data = json['data'] as Map<String, dynamic>;
+    return AuthResponse(
+      token: data['token'] as String,
+      user: UserModel.fromJson(data['user'] as Map<String, dynamic>),
+    );
+  }
+
+  /// Parses visitors signup response: `{ status, token, user }`
+  factory AuthResponse.fromVisitorJson(Map<String, dynamic> json) {
+    return AuthResponse(
+      token: json['token'] as String,
+      user: UserModel.fromJson(json['user'] as Map<String, dynamic>),
+    );
+  }
 }

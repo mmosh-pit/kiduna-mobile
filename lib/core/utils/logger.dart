@@ -2,14 +2,7 @@ import 'dart:developer' as dev;
 
 import 'package:flutter/foundation.dart';
 
-/// Application logger — the ONLY sanctioned way to log.
-///
-/// Never use `print`, `debugPrint`, or `stdout`. Debug/info/warning logs are
-/// stripped in release; errors always log and should be forwarded to a crash
-/// reporter in release builds.
-abstract class AppLogger {
-  const AppLogger._();
-
+class AppLogger {
   static void debug(String message, {String? tag}) {
     if (kDebugMode) {
       dev.log('💚 [DEBUG] ${tag != null ? '[$tag] ' : ''}$message');
@@ -39,7 +32,5 @@ abstract class AppLogger {
       error: error,
       stackTrace: stackTrace,
     );
-    // TODO(KID-1): Forward to a crash reporter (Sentry/Crashlytics) in release.
-    // if (kReleaseMode) { CrashReporting.recordError(error, stackTrace); }
   }
 }

@@ -6,21 +6,40 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../data/models/field_realm.dart';
 import '../../../shared/layouts/responsive_layout.dart';
+import '../../../shared/models/section_item.dart';
 import '../../../shared/widgets/app_header.dart';
+import '../../../shared/widgets/section_bar.dart';
+import '../../../shared/widgets/section_placeholder.dart';
+import '../../exchange/screens/exchange_screen.dart';
 import '../controllers/field_controller.dart';
+import '../widgets/advanced_actions_panel.dart';
 import '../widgets/field_background.dart';
 import '../widgets/field_chrome_panels.dart';
+import '../widgets/field_panel.dart';
 import '../widgets/field_working_panels.dart';
 import '../widgets/ki_region.dart';
+import '../widgets/realm_constellation.dart';
 import '../widgets/realm_context_pill.dart';
 
-/// The Studio Field — recreation of `the-field-01` (Newly Created Ecosystem
-/// View). On desktop the Field and Ki sit side by side with a resizable
-/// boundary; on narrow surfaces the Field sits above Ki. Movable panels
-/// (Compute, Possible Actions, Inspect, and the working panels) overlay the
-/// pannable deep-field canvas.
-class FieldScreen extends StatelessWidget {
+/// The main app screen. The header and section bar sit at the top; the active
+/// section's content fills the remaining space with Ki alongside.
+///
+/// * Exchange (index 0, default) — presale exchange UI.
+/// * Studio  (index 3) — the original NCEV field with panels and Ki.
+/// * Others  — "Coming Soon" placeholder with Ki.
+///
+/// Existing widgets (_FieldKiWide, _FieldKiNarrow, _FieldStack, _FieldCanvas,
+/// _RealmIdentity, _Boundary) are completely untouched below.
+class FieldScreen extends StatefulWidget {
   const FieldScreen({super.key});
+
+  @override
+  State<FieldScreen> createState() => _FieldScreenState();
+}
+
+class _FieldScreenState extends State<FieldScreen> {
+  /// Active section index. Exchange (0) is the default.
+  int _activeSection = SectionIndex.exchange;
 
   @override
   Widget build(BuildContext context) {
@@ -29,14 +48,91 @@ class FieldScreen extends StatelessWidget {
       body: Column(
         children: [
           const AppHeader(),
-          Expanded(
-            child: ResponsiveLayout(
-              desktop: (_) => const _FieldKiWide(),
-              mobile: (_) => const _FieldKiNarrow(),
-            ),
+          SectionBar(
+            sections: kSections,
+            activeIndex: _activeSection,
+            onChanged: (i) => setState(() => _activeSection = i),
           ),
+          Expanded(child: _buildSectionContent()),
         ],
       ),
+    );
+  }
+
+  Widget _buildSectionContent() {
+    switch (_activeSection) {
+      case SectionIndex.studio:
+        // Original NCEV — existing layout, untouched.
+        return ResponsiveLayout(
+          desktop: (_) => const _FieldKiWide(),
+          mobile: (_) => const _FieldKiNarrow(),
+        );
+      case SectionIndex.exchange:
+        // Presale exchange UI with Ki chat.
+        return ResponsiveLayout(
+          desktop: (_) => const _ContentKiWide(content: ExchangeScreen()),
+          mobile: (_) => const _ContentKiNarrow(content: ExchangeScreen()),
+        );
+      default:
+        // Other sections: placeholder with Ki chat.
+        final placeholder = SectionPlaceholder(
+          sectionName: kSections[_activeSection].label,
+        );
+        return ResponsiveLayout(
+          desktop: (_) => _ContentKiWide(content: placeholder),
+          mobile: (_) => _ContentKiNarrow(content: placeholder),
+        );
+    }
+  }
+}
+
+/// Desktop layout for non-Studio sections: content + boundary + Ki side by side.
+/// Mirrors _FieldKiWide but accepts any content widget instead of _FieldStack.
+class _ContentKiWide extends ConsumerWidget {
+  const _ContentKiWide({required this.content});
+
+  final Widget content;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final kiFraction = ref.watch(
+      fieldControllerProvider.select((s) => s.kiFraction),
+    );
+    final boundaryW = context.metrics.boundaryWidth;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final total = constraints.maxWidth;
+        final kiWidth = max(280.0, kiFraction * total);
+        final contentWidth = max(0.0, total - boundaryW - kiWidth);
+        return Row(
+          children: [
+            SizedBox(width: contentWidth, child: content),
+            SizedBox(
+              width: boundaryW,
+              child: _Boundary(totalWidth: total),
+            ),
+            SizedBox(width: kiWidth, child: const KiRegion()),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// Mobile layout for non-Studio sections: content on top, Ki below.
+/// Mirrors _FieldKiNarrow but accepts any content widget.
+class _ContentKiNarrow extends StatelessWidget {
+  const _ContentKiNarrow({required this.content});
+
+  final Widget content;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Expanded(flex: 3, child: content),
+        const Expanded(flex: 2, child: KiRegion()),
+      ],
     );
   }
 }
@@ -58,7 +154,7 @@ class _FieldKiWide extends ConsumerWidget {
         final fieldWidth = max(0.0, total - boundaryW - kiWidth);
         return Row(
           children: [
-            SizedBox(width: fieldWidth, child: const _FieldStack()),
+            SizedBox(width: fieldWidth, child: const FieldStack()),
             SizedBox(
               width: boundaryW,
               child: _Boundary(totalWidth: total),
@@ -79,7 +175,7 @@ class _FieldKiNarrow extends StatelessWidget {
     return const Column(
       key: ValueKey('field-narrow'),
       children: [
-        Expanded(flex: 3, child: _FieldStack()),
+        Expanded(flex: 3, child: FieldStack()),
         Expanded(flex: 2, child: KiRegion()),
       ],
     );
@@ -87,8 +183,8 @@ class _FieldKiNarrow extends StatelessWidget {
 }
 
 /// The pannable Field canvas with the movable panels overlaid.
-class _FieldStack extends ConsumerWidget {
-  const _FieldStack();
+class FieldStack extends ConsumerWidget {
+  const FieldStack({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -105,6 +201,26 @@ class _FieldStack extends ConsumerWidget {
           return Stack(
             children: [
               const _FieldCanvas(),
+              Positioned.fill(
+                child: InteractiveViewer(
+                  scaleEnabled: false,
+                  boundaryMargin: const EdgeInsets.all(200),
+                  child: Padding(
+                    padding: const EdgeInsets.only(
+                      top: 96,
+                      left: 26,
+                      right: 26,
+                      bottom: 28,
+                    ),
+                    child: RealmConstellation(
+                      currentRealmId: state.currentRealmId,
+                      selectedRealmId: state.selectedRealmId,
+                      onSelect: controller.selectAtlasRealm,
+                      showHoverDetails: true,
+                    ),
+                  ),
+                ),
+              ),
               _RealmIdentity(
                 realm: realm,
                 inspectOpen: state.inspectOpen,
@@ -124,6 +240,26 @@ class _FieldStack extends ConsumerWidget {
                 bounds: bounds,
                 opacity: opacity,
               ),
+              if (state.selectedPlacement != null)
+                FieldPanel(
+                  key: ValueKey('panel-advanced-${state.selectedRealmId}'),
+                  label: state.selectedPlacement!.realm.name,
+                  bounds: bounds,
+                  width: 520,
+                  opacity: opacity,
+                  initialOffset: Offset(
+                    ((bounds.width - 520) / 2).clamp(8.0, double.infinity),
+                    (bounds.height * 0.3).clamp(8.0, double.infinity),
+                  ),
+                  onClose: controller.clearSelection,
+                  child: AdvancedActionsPanel(
+                    placement: state.selectedPlacement!,
+                    onEnter: (enterRealm) {
+                      controller.clearSelection();
+                      controller.enterAtlasRealm(enterRealm);
+                    },
+                  ),
+                ),
             ],
           );
         },

@@ -9,7 +9,7 @@ import '../../l10n/app_localizations.dart';
 /// Prefer these over repeatedly calling `Theme.of(context)` / `MediaQuery.of`.
 extension ContextExtensions on BuildContext {
   /// Localized strings for the current locale. See lib/l10n/app_en.arb.
-  AppLocalizations get l10n => AppLocalizations.of(this);
+  AppLocalizations get l10n => AppLocalizations.of(this)!;
 
   ThemeData get theme => Theme.of(this);
   ColorScheme get colors => Theme.of(this).colorScheme;

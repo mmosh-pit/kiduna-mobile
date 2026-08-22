@@ -1,133 +1,133 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../core/errors/exceptions.dart';
 import '../../core/utils/logger.dart';
 import '../models/user_model.dart';
 
-/// Keys used for secure-storage entries — never hardcode strings at call sites.
 abstract class _Keys {
-  static const String token = 'auth_token';
-  static const String user = 'auth_user';
+  static const String token = 'kiduna_auth_token';
+  static const String user = 'kiduna_auth_user';
 }
 
-/// Thin wrapper around [FlutterSecureStorage] for auth persistence.
-///
-/// Tokens and user data are stored encrypted on-device. Use [instance] for the
-/// shared singleton — never create a second FlutterSecureStorage.
 class SecureStorage {
   SecureStorage._();
 
   static final SecureStorage instance = SecureStorage._();
 
   final FlutterSecureStorage _storage = const FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    aOptions: AndroidOptions(
+      preferencesKeyPrefix: 'kiduna',
+    ),
+    iOptions: IOSOptions(
+      accessibility: KeychainAccessibility.first_unlock,
+    ),
+    mOptions: MacOsOptions(
+      usesDataProtectionKeychain: false,
+      accessibility: KeychainAccessibility.first_unlock,
+    ),
+    lOptions: LinuxOptions(),
+    wOptions: WindowsOptions(),
+    webOptions: WebOptions(
+      dbName: 'kiduna_secure_storage',
+      publicKey: 'kiduna',
+    ),
   );
+
+  // ── Internal read/write/delete ─────────────────────────────────────────
+
+  Future<void> _write(String key, String value) async {
+    await _storage.write(key: key, value: value);
+  }
+
+  Future<String?> _read(String key) async {
+    return _storage.read(key: key);
+  }
+
+  Future<void> _delete(String key) async {
+    await _storage.delete(key: key);
+  }
 
   // ── Token ──────────────────────────────────────────────────────────────
 
-  /// Persist the auth token.
   Future<void> saveToken(String token) async {
     try {
-      await _storage.write(key: _Keys.token, value: token);
+      await _write(_Keys.token, token);
+      if (kDebugMode) {
+        debugPrint('🔑 [Storage] Token saved (${token.length} chars)');
+      }
     } catch (e, st) {
-      AppLogger.error(
-        'Failed to save token',
-        tag: 'Storage',
-        error: e,
-        stackTrace: st,
-      );
+      AppLogger.error('Failed to save token', tag: 'Storage', error: e, stackTrace: st);
       throw const CacheException('Failed to save authentication token');
     }
   }
 
-  /// Read the stored token, or `null` when none exists.
   Future<String?> getToken() async {
     try {
-      return await _storage.read(key: _Keys.token);
+      final token = await _read(_Keys.token);
+      if (kDebugMode) {
+        debugPrint(
+          '🔑 [Storage] Token read: ${token != null ? "${token.length} chars" : "null"}',
+        );
+      }
+      return token;
     } catch (e, st) {
-      AppLogger.error(
-        'Failed to read token',
-        tag: 'Storage',
-        error: e,
-        stackTrace: st,
-      );
+      AppLogger.error('Failed to read token', tag: 'Storage', error: e, stackTrace: st);
       return null;
     }
   }
 
-  /// Delete the stored token.
   Future<void> deleteToken() async {
     try {
-      await _storage.delete(key: _Keys.token);
+      await _delete(_Keys.token);
+      if (kDebugMode) {
+        debugPrint('🔑 [Storage] Token deleted');
+      }
     } catch (e, st) {
-      AppLogger.error(
-        'Failed to delete token',
-        tag: 'Storage',
-        error: e,
-        stackTrace: st,
-      );
+      AppLogger.error('Failed to delete token', tag: 'Storage', error: e, stackTrace: st);
     }
   }
 
   // ── User ───────────────────────────────────────────────────────────────
 
-  /// Persist the user model as JSON.
   Future<void> saveUser(UserModel user) async {
     try {
-      final json = jsonEncode(user.toJson());
-      await _storage.write(key: _Keys.user, value: json);
+      await _write(_Keys.user, jsonEncode(user.toJson()));
     } catch (e, st) {
-      AppLogger.error(
-        'Failed to save user',
-        tag: 'Storage',
-        error: e,
-        stackTrace: st,
-      );
+      AppLogger.error('Failed to save user', tag: 'Storage', error: e, stackTrace: st);
       throw const CacheException('Failed to save user data');
     }
   }
 
-  /// Read the stored user, or `null` when none exists or JSON is invalid.
   Future<UserModel?> getUser() async {
     try {
-      final raw = await _storage.read(key: _Keys.user);
-      if (raw == null || raw.isEmpty) {
-        return null;
-      }
+      final raw = await _read(_Keys.user);
+      if (raw == null || raw.isEmpty) return null;
       final json = jsonDecode(raw) as Map<String, dynamic>;
       return UserModel.fromJson(json);
     } catch (e, st) {
-      AppLogger.error(
-        'Failed to read user',
-        tag: 'Storage',
-        error: e,
-        stackTrace: st,
-      );
+      AppLogger.error('Failed to read user', tag: 'Storage', error: e, stackTrace: st);
       return null;
     }
   }
 
-  /// Delete the stored user.
   Future<void> deleteUser() async {
     try {
-      await _storage.delete(key: _Keys.user);
+      await _delete(_Keys.user);
     } catch (e, st) {
-      AppLogger.error(
-        'Failed to delete user',
-        tag: 'Storage',
-        error: e,
-        stackTrace: st,
-      );
+      AppLogger.error('Failed to delete user', tag: 'Storage', error: e, stackTrace: st);
     }
   }
 
   // ── Bulk ───────────────────────────────────────────────────────────────
 
-  /// Clear all auth-related storage (token + user).
   Future<void> clearAll() async {
     await deleteToken();
     await deleteUser();
+    if (kDebugMode) {
+      debugPrint('🔑 [Storage] All auth data cleared');
+    }
   }
 }

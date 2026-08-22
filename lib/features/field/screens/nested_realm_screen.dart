@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
-import '../../../app/routes.dart';
 import '../../../config/assets.dart';
 import '../../../config/kiduna_colors.dart';
 import '../../../config/kiduna_text.dart';
@@ -196,9 +194,13 @@ class _NestedRealmField extends ConsumerWidget {
                 realmPath: breadcrumb,
                 onBreadcrumbTap: (index) {
                   if (index == 0) {
-                    context.go(Routes.aev);
+                    Navigator.of(context).popUntil((route) => route.isFirst);
                   } else {
-                    context.go(Routes.realmPath(realmId: breadcrumb[index]));
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => NestedRealmScreen(realmId: breadcrumb[index]),
+                      ),
+                    );
                   }
                 },
               ),
@@ -247,7 +249,11 @@ class _NestedRealmField extends ConsumerWidget {
                   placement: state.selectedPlacement!,
                   onEnter: (enterRealm) {
                     controller.clearSelection();
-                    context.go(Routes.realmPath(realmId: enterRealm.id));
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => NestedRealmScreen(realmId: enterRealm.id),
+                      ),
+                    );
                   },
                 ),
               ),

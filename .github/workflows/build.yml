@@ -3,7 +3,8 @@ name: Flutter Multi Platform Build
 on:
   push:
     branches:
-      - feat/build-application-gitactions
+      - feat/feature-build-worflow
+      - dev
   workflow_dispatch:
 
 jobs:
@@ -28,6 +29,7 @@ jobs:
           AUTH_API_URL=${{ secrets.AUTH_API_URL }}
           STUDIO_BASE_URL=${{ secrets.STUDIO_BASE_URL }}
           GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_API_KEY=${{secrets.GOOGLE_API_KEY}}
           EOF
 
       - name: Install Linux build dependencies
@@ -46,11 +48,11 @@ jobs:
 
       - run: flutter doctor -v
 
-      - name: Build APK
-        run: flutter build apk --release
+      # - name: Build APK
+      #   run: flutter build apk --release
 
-      - name: Build AAB
-        run: flutter build appbundle --release
+      # - name: Build AAB
+      #   run: flutter build appbundle --release
 
       - name: Build Linux
         run: flutter build linux --release
@@ -113,6 +115,7 @@ jobs:
           AUTH_API_URL=${{ secrets.AUTH_API_URL }}
           STUDIO_BASE_URL=${{ secrets.STUDIO_BASE_URL }}
           GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_API_KEY=${{secrets.GOOGLE_API_KEY}}
           EOF
 
       - run: flutter pub get
@@ -150,6 +153,7 @@ jobs:
           AUTH_API_URL=${{ secrets.AUTH_API_URL }}
           STUDIO_BASE_URL=${{ secrets.STUDIO_BASE_URL }}
           GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_API_KEY=${{secrets.GOOGLE_API_KEY}}
           EOF
 
       - run: flutter pub get

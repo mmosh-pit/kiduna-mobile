@@ -339,19 +339,20 @@ class _KbDetailPanelState extends ConsumerState<KbDetailPanel> {
   }
 
   Future<void> _onUpload(KnowledgeController ctrl) async {
-    final result = await FilePicker.pickFiles(
+    final picked = await FilePicker.pickFiles(
       allowMultiple: true,
       type: FileType.custom,
       allowedExtensions: ['txt', 'md', 'docx', 'pdf'],
       withData: true,
     );
     if (!mounted) return;
-    if (result == null || result.files.isEmpty) return;
+    if (picked.isEmpty) return;
 
     final files = <({String name, List<int> bytes})>[];
-    for (final f in result.files) {
-      if (f.bytes != null && f.name.isNotEmpty) {
-        files.add((name: f.name, bytes: f.bytes!));
+    for (final f in picked) {
+      if (f.name.isNotEmpty) {
+        final data = await f.readAsBytes();
+        files.add((name: f.name, bytes: data));
       }
     }
     if (files.isEmpty) return;

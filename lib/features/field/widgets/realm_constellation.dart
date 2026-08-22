@@ -225,6 +225,9 @@ class _RealmNode extends StatefulWidget {
 class _RealmNodeState extends State<_RealmNode> {
   bool _hovered = false;
 
+  static const _animDuration = Duration(milliseconds: 260);
+  static const _animCurve = Curves.easeOutCubic;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.kiduna;
@@ -245,10 +248,14 @@ class _RealmNodeState extends State<_RealmNode> {
     Widget node = GestureDetector(
       onTap: widget.onTap,
       behavior: HitTestBehavior.opaque,
-      child: Opacity(
+      child: AnimatedOpacity(
         opacity: effectiveOpacity,
-        child: Transform.scale(
+        duration: _animDuration,
+        curve: _animCurve,
+        child: AnimatedScale(
           scale: scale,
+          duration: _animDuration,
+          curve: _animCurve,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [

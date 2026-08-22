@@ -12,9 +12,6 @@ import '../../core/utils/sse_parser.dart';
 import '../models/chat_message_model.dart';
 import '../models/sse_event.dart';
 
-/// Handles Ki chat interactions via the kinship-agent API.
-///
-/// Returns parsed data or throws typed exceptions — no business logic.
 class ChatService {
   ChatService._();
 
@@ -22,31 +19,29 @@ class ChatService {
 
   Dio get _dio => ApiClient.instance.dio;
 
-  /// Open an SSE stream for a chat message.
-  ///
-  /// On native: uses `ResponseType.stream` for real-time token streaming.
-  /// On web: uses `ResponseType.plain` because Dio's web adapter does not
-  /// reliably expose the Fetch API ReadableStream. The full response text
-  /// is received at once, then parsed into SSE frames.
-  ///
-  /// This is a POST — it is never retried on failure.
   Stream<SseEvent> streamChat({
     required String presenceId,
     required String message,
     required String userWallet,
+    String? userId,
+    String? realmId,
   }) async* {
     AppLogger.debug(
       'Opening SSE stream for presence=$presenceId (web=$kIsWeb)',
       tag: 'ChatService',
     );
     try {
+      final data = <String, dynamic>{
+        'presenceId': presenceId,
+        'message': message,
+        'userWallet': userWallet,
+      };
+      if (userId != null && userId.isNotEmpty) data['userId'] = userId;
+      if (realmId != null && realmId.isNotEmpty) data['realmId'] = realmId;
+
       final response = await _dio.post<dynamic>(
         ApiEndpoints.chatStream,
-        data: {
-          'presenceId': presenceId,
-          'message': message,
-          'userWallet': userWallet,
-        },
+        data: data,
         options: Options(
           responseType: kIsWeb ? ResponseType.plain : ResponseType.stream,
           receiveTimeout: const Duration(minutes: 5),
@@ -74,16 +69,8 @@ class ChatService {
 
       final Stream<List<int>> byteStream;
       if (body is ResponseBody) {
-        AppLogger.debug(
-          'Using ResponseBody stream (native)',
-          tag: 'ChatService',
-        );
         byteStream = body.stream;
       } else if (body is String) {
-        AppLogger.debug(
-          'Using plain text response (${body.length} chars)',
-          tag: 'ChatService',
-        );
         byteStream = Stream.value(utf8.encode(body));
       } else {
         AppLogger.warning(
@@ -110,10 +97,6 @@ class ChatService {
     }
   }
 
-  /// Fetch the full conversation history.
-  ///
-  /// Sends `GET /api/conversations/{presenceId}/{userWallet}`.
-  /// Returns the list of [ChatMessageModel] from the conversation.
   Future<List<ChatMessageModel>> fetchHistory({
     required String presenceId,
     required String userWallet,
