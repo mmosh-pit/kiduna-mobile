@@ -1212,35 +1212,6 @@ AtlasRealmType _parseAtlasType(String type) {
   return AtlasRealmType.organization;
 }
 
-String _defaultMotif(AtlasRealmType type) {
-  switch (type) {
-    case AtlasRealmType.ecosystem:
-      return '🌍';
-    case AtlasRealmType.organization:
-      return '🏛';
-    case AtlasRealmType.alliance:
-      return '🤝';
-    case AtlasRealmType.program:
-      return '📐';
-    case AtlasRealmType.project:
-      return '🔨';
-    case AtlasRealmType.dyad:
-      return '👥';
-    case AtlasRealmType.community:
-      return '🏘';
-    case AtlasRealmType.institution:
-      return '🏦';
-    case AtlasRealmType.council:
-      return '⚖';
-    case AtlasRealmType.concept:
-      return '💡';
-    case AtlasRealmType.cell:
-      return '🔬';
-    case AtlasRealmType.clan:
-      return '🛡';
-  }
-}
-
 /// Convert an API [RealmModel] to an [AtlasRealm] for constellation display.
 AtlasRealm atlasRealmFromModel(RealmModel model) {
   final type = _parseAtlasType(model.type);
@@ -1250,7 +1221,7 @@ AtlasRealm atlasRealmFromModel(RealmModel model) {
     type: type,
     parent: model.parentId,
     purpose: model.purpose ?? '',
-    motif: _defaultMotif(type),
+    motif: '',
     primaryTheme: model.primaryTheme,
   );
 }
