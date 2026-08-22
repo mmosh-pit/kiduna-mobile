@@ -56,16 +56,4 @@ class ApiClient {
 
     _initialized = true;
   }
-
-  late final Dio authDio = Dio(
-    BaseOptions(
-      baseUrl: Env.authApiUrl,
-      connectTimeout: AppConstants.connectTimeout,
-      receiveTimeout: AppConstants.receiveTimeout,
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-    ),
-  )..interceptors.addAll([ErrorInterceptor(), AppLogInterceptor()]);
 }
