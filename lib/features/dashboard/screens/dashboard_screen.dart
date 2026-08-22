@@ -160,21 +160,128 @@ class _TabItem extends StatelessWidget {
 }
 
 /// Desktop layout — left panel (based on tab) + Ki chat right.
-class _ContentWide extends StatelessWidget {
+/// The boundary between them is draggable to resize the Ki chat.
+class _ContentWide extends StatefulWidget {
   const _ContentWide({required this.activeTab});
 
   final int activeTab;
 
   @override
+  State<_ContentWide> createState() => _ContentWideState();
+}
+
+class _ContentWideState extends State<_ContentWide> {
+  double _kiFraction = 0.30;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final total = constraints.maxWidth;
+        final kiWidth = (_kiFraction * total).clamp(280.0, total * 0.50);
+        final contentWidth = total - 12 - kiWidth;
+
+        return Row(
+          children: [
+            SizedBox(
+              width: contentWidth,
+              child: _buildLeftPanel(context, widget.activeTab),
+            ),
+            _ResizeBoundary(
+              onDrag: (dx) {
+                setState(() {
+                  _kiFraction = (_kiFraction - dx / total).clamp(0.20, 0.50);
+                });
+              },
+            ),
+            SizedBox(width: kiWidth, child: const KiAgent()),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ResizeBoundary extends StatefulWidget {
+  const _ResizeBoundary({required this.onDrag});
+
+  final ValueChanged<double> onDrag;
+
+  @override
+  State<_ResizeBoundary> createState() => _ResizeBoundaryState();
+}
+
+class _ResizeBoundaryState extends State<_ResizeBoundary> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
     final colors = context.kiduna;
+    final active = _hovered;
+    final lineColor = active
+        ? colors.sky.withValues(alpha: 0.5)
+        : colors.sky.withValues(alpha: 0.3);
+    final arrowColor = active
+        ? colors.sky
+        : colors.sky.withValues(alpha: 0.5);
 
-    return Row(
-      children: [
-        Expanded(flex: 6, child: _buildLeftPanel(context, activeTab)),
-        Container(width: 1, color: colors.camel.withValues(alpha: 0.18)),
-        const Expanded(flex: 4, child: KiAgent()),
-      ],
+    return MouseRegion(
+      cursor: SystemMouseCursors.resizeColumn,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onHorizontalDragUpdate: (d) => widget.onDrag(d.delta.dx),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          width: 12,
+          color: active
+              ? colors.sky.withValues(alpha: 0.06)
+              : Colors.transparent,
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '◂',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: arrowColor,
+                    height: 1,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  width: 2,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: lineColor,
+                    borderRadius: BorderRadius.circular(2),
+                    boxShadow: [
+                      BoxShadow(
+                        blurRadius: active ? 10 : 4,
+                        color: colors.sky.withValues(
+                          alpha: active ? 0.35 : 0.15,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '▸',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: arrowColor,
+                    height: 1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
