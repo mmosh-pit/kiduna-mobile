@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../../config/kiduna_colors.dart';
 import '../../../config/theme.dart';
 import '../../../core/extensions/context_extensions.dart';
+import '../../../data/models/realm_model.dart';
 import '../data/design_persona.dart';
 import '../data/field_composition.dart';
 import '../data/realm_atlas.dart';
@@ -26,6 +27,7 @@ class RealmConstellation extends StatelessWidget {
     this.selectedRealmId,
     this.onSelect,
     this.showHoverDetails = false,
+    this.apiRealms = const [],
   });
 
   final DesignPersona persona;
@@ -33,10 +35,13 @@ class RealmConstellation extends StatelessWidget {
   final String? selectedRealmId;
   final ValueChanged<FieldPlacement>? onSelect;
   final bool showHoverDetails;
+  final List<RealmModel> apiRealms;
 
   @override
   Widget build(BuildContext context) {
-    final realms = visibleChildren(currentRealmId, persona);
+    final realms = apiRealms.isNotEmpty
+        ? apiRealms.map(atlasRealmFromModel).toList()
+        : visibleChildren(currentRealmId, persona);
     final composition = fieldCompositionFor(currentRealmId, persona, realms);
     final colors = context.kiduna;
 
@@ -63,7 +68,8 @@ class RealmConstellation extends StatelessWidget {
               ),
             ),
             for (final cluster in composition.clusters)
-              if (cluster.label.isNotEmpty)
+              if (cluster.label.isNotEmpty &&
+                  composition.placements.length >= 8)
                 Positioned(
                   left: dx(cluster.left) - 90,
                   top: dy(cluster.top - cluster.radiusY) - 18,
@@ -238,7 +244,6 @@ class _RealmNodeState extends State<_RealmNode> {
     final nameColor = isActive
         ? Color.lerp(accent, colors.cream, 0.76)!
         : Color.lerp(accent, colors.cream, 0.42)!;
-    final badgeSize = _motifBadgeSize(band);
     final isFar = band == FieldBand.far;
     final showLabels = !isFar || isActive;
     final nameFontSize = band == FieldBand.near ? 12.0 : 10.0;
@@ -337,40 +342,6 @@ class _RealmNodeState extends State<_RealmNode> {
                       ),
                     ),
                     _CrestReflection(size: widget.crestSize),
-                    if (realm.motif.isNotEmpty)
-                      Positioned(
-                        right: (widget.crestSize * 1.2 - widget.crestSize) / 2,
-                        bottom:
-                            (widget.crestSize * 1.2 - widget.crestSize) / 2 +
-                            widget.crestSize * 0.07,
-                        child: Container(
-                          constraints: BoxConstraints(minWidth: badgeSize),
-                          height: badgeSize,
-                          padding: const EdgeInsets.symmetric(horizontal: 3),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: Color.lerp(accent, colors.cream, 0.3)!,
-                            ),
-                            color: colors.field,
-                            boxShadow: [
-                              BoxShadow(
-                                color: accent.withValues(alpha: 0.5),
-                                blurRadius: 9,
-                              ),
-                            ],
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            realm.motif,
-                            style: TextStyle(
-                              fontSize: badgeSize * 0.55,
-                              height: 1,
-                              color: colors.cream,
-                            ),
-                          ),
-                        ),
-                      ),
                   ],
                 ),
               ),
@@ -425,16 +396,6 @@ class _RealmNodeState extends State<_RealmNode> {
     return node;
   }
 
-  double _motifBadgeSize(FieldBand band) {
-    switch (band) {
-      case FieldBand.near:
-        return 18;
-      case FieldBand.middle:
-        return 15;
-      case FieldBand.far:
-        return 12;
-    }
-  }
 }
 
 class _HoverFacts extends StatelessWidget {
@@ -668,6 +629,8 @@ class _ConstellationPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (composition.placements.length < 8) return;
+
     for (final cluster in composition.clusters) {
       final center = _at(cluster.left, cluster.top, size);
       final rect = Rect.fromCenter(

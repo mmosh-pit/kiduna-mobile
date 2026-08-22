@@ -15,12 +15,14 @@ class FieldChromePanels extends StatelessWidget {
     required this.controller,
     required this.bounds,
     required this.opacity,
+    this.realmNames = const {},
   });
 
   final FieldState state;
   final FieldController controller;
   final Size bounds;
   final double opacity;
+  final Map<String, String> realmNames;
 
   double _clampLeft(double left) =>
       left.clamp(8.0, (bounds.width - 40).clamp(8.0, double.infinity));
@@ -46,6 +48,7 @@ class FieldChromePanels extends StatelessWidget {
           ),
           child: NavigationPanel(
             realmPath: state.realmPath,
+            realmNames: realmNames,
             onBreadcrumbTap: controller.navigateToBreadcrumb,
           ),
         ),

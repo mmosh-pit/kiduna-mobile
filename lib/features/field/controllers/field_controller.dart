@@ -452,19 +452,34 @@ class FieldController extends Notifier<FieldState> {
       return;
     }
     final targetId = state.realmPath[index];
-    final realm = realmAtlas[targetId];
-    if (realm == null) {
-      return;
+    final atlasRealm = realmAtlas[targetId];
+
+    final String name;
+    final String typeLabel;
+    final String emblem;
+    final String purpose;
+
+    if (atlasRealm != null) {
+      name = atlasRealm.name;
+      typeLabel = atlasRealm.type.label;
+      emblem = atlasRealm.type == AtlasRealmType.institution ||
+              atlasRealm.type == AtlasRealmType.ecosystem
+          ? 'conceptual'
+          : atlasRealm.type.emblemKey;
+      purpose = atlasRealm.purpose;
+    } else {
+      final ecoState = ref.read(ecosystemControllerProvider);
+      final known = ecoState.knownNames[targetId];
+      name = known ?? targetId;
+      typeLabel = 'Realm';
+      emblem = 'conceptual';
+      purpose = '';
     }
-    final emblem =
-        realm.type == AtlasRealmType.institution ||
-            realm.type == AtlasRealmType.ecosystem
-        ? 'conceptual'
-        : realm.type.emblemKey;
+
     state = state.copyWith(
       currentRealm: FieldRealm(
-        name: realm.name,
-        type: realm.type.label,
+        name: name,
+        type: typeLabel,
         emblemAsset: AppAssets.realmEmblem(emblem),
       ),
       currentRealmId: targetId,
@@ -473,10 +488,8 @@ class FieldController extends Notifier<FieldState> {
       inspectOpen: false,
       realmPath: state.realmPath.sublist(0, index + 1),
       kiTopic: KiTopic(
-        title: 'Inside ${realm.name}',
-        body:
-            'Alice is now inside ${realm.name}, a ${realm.type.label}. '
-            '${realm.purpose}',
+        title: 'Inside $name',
+        body: 'Alice is now inside $name, a $typeLabel. $purpose',
         invitation:
             'Possible Actions shows what can be done here. Inspect any '
             'nested Realm or use the breadcrumb to go back.',
@@ -652,10 +665,17 @@ class FieldController extends Notifier<FieldState> {
         type: realm.typeLabel,
         emblemAsset: AppAssets.realmEmblem(realm.typeLabel),
       ),
-      currentRealmId: realm.id,
       openActions:
           state.openActions.where((item) => item != 'realm').toList(),
     );
+
+    final eco = ref.read(ecosystemControllerProvider.notifier);
+    final parentId = realm.parentId;
+    if (parentId != null) {
+      unawaited(eco.loadChildren(parentId));
+    } else {
+      unawaited(eco.load());
+    }
 
     final statusNote = realm.type == 'institution'
         ? ' Status: ${realm.status}.'
