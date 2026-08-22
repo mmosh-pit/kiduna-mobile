@@ -346,7 +346,7 @@ class _KbDetailPanelState extends ConsumerState<KbDetailPanel> {
       withData: true,
     );
     if (!mounted) return;
-    if (picked == null || picked.isEmpty) return;
+    if (picked.isEmpty) return;
 
     final files = <({String name, List<int> bytes})>[];
     for (final f in picked) {

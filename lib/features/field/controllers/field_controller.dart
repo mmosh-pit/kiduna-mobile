@@ -757,10 +757,10 @@ class FieldController extends Notifier<FieldState> {
         allowedExtensions: ['md'],
         withData: true,
       );
-      if (result == null || result.files.isEmpty) return;
+      if (result.isEmpty) return;
 
-      final bytes = result.files.first.bytes;
-      if (bytes == null) return;
+      final bytes = await result.first.readAsBytes();
+      if (bytes.isEmpty) return;
 
       final content = String.fromCharCodes(bytes);
       if (content.trim().isEmpty) return;
