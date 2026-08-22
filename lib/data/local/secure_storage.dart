@@ -17,7 +17,24 @@ class SecureStorage {
 
   static final SecureStorage instance = SecureStorage._();
 
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  final FlutterSecureStorage _storage = const FlutterSecureStorage(
+    aOptions: AndroidOptions(
+      preferencesKeyPrefix: 'kiduna',
+    ),
+    iOptions: IOSOptions(
+      accessibility: KeychainAccessibility.first_unlock,
+    ),
+    mOptions: MacOsOptions(
+      usesDataProtectionKeychain: false,
+      accessibility: KeychainAccessibility.first_unlock,
+    ),
+    lOptions: LinuxOptions(),
+    wOptions: WindowsOptions(),
+    webOptions: WebOptions(
+      dbName: 'kiduna_secure_storage',
+      publicKey: 'kiduna',
+    ),
+  );
 
   // ── Internal read/write/delete ─────────────────────────────────────────
 
