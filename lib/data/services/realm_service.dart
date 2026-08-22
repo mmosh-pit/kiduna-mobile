@@ -124,8 +124,8 @@ class RealmService {
       final response = await _dio.get<Map<String, dynamic>>(
         ApiEndpoints.realms,
         queryParameters: {
-          if (type != null) 'type': type,
-          if (parentId != null) 'parentId': parentId,
+          'type': ?type,
+          'parentId': ?parentId,
           if (tags != null && tags.isNotEmpty) 'tags': tags.join(','),
         },
         options: authToken != null

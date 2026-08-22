@@ -220,7 +220,7 @@ class _KbDetailPanelState extends ConsumerState<KbDetailPanel> {
                     child: ListView.separated(
                       shrinkWrap: true,
                       itemCount: items.length,
-                      separatorBuilder: (_, __) =>
+                      separatorBuilder: (_, _) =>
                           const SizedBox(height: 5),
                       itemBuilder: (_, index) {
                         final item = items[index];

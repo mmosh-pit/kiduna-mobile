@@ -50,7 +50,7 @@ class GdrivePickerService {
       clientId.toJS,
       ((JSObject result) {
         final error = (result as _JSSignInResult).error;
-        final token = (result as _JSSignInResult).token;
+        final token = (result).token;
 
         if (error != null) {
           AppLogger.warning(
@@ -104,7 +104,7 @@ class GdrivePickerService {
       apiKey.toJS,
       ((JSObject result) {
         final error = (result as _JSPickerResult).error;
-        final jsFiles = (result as _JSPickerResult).files;
+        final jsFiles = (result).files;
 
         if (error != null) {
           AppLogger.warning(

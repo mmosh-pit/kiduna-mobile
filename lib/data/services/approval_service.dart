@@ -144,7 +144,7 @@ class ApprovalService {
         ApiEndpoints.approvalApprove(approvalId),
         data: {
           'wallet': wallet,
-          if (editedAction != null) 'editedAction': editedAction,
+          'editedAction': ?editedAction,
         },
         options: Options(
           sendTimeout: const Duration(seconds: 5),
@@ -186,7 +186,7 @@ class ApprovalService {
         ApiEndpoints.approvalReject(approvalId),
         data: {
           'wallet': wallet,
-          if (reason != null) 'reason': reason,
+          'reason': ?reason,
         },
       );
       AppLogger.info(

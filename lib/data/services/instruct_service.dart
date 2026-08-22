@@ -51,10 +51,10 @@ class InstructService {
         'name': name,
         'content': content,
         'wallet': wallet,
-        if (goal != null) 'goal': goal,
-        if (realmId != null) 'realmId': realmId,
-        if (connectedKbId != null) 'connectedKBId': connectedKbId,
-        if (connectedKbName != null) 'connectedKBName': connectedKbName,
+        'goal': ?goal,
+        'realmId': ?realmId,
+        'connectedKBId': ?connectedKbId,
+        'connectedKBName': ?connectedKbName,
       },
     );
     return InstructModel.fromJson(response.data ?? {});
@@ -97,7 +97,7 @@ class InstructService {
       '${ApiEndpoints.prompts}/generate',
       data: {
         'goal': goal,
-        if (knowledgeBaseName != null) 'knowledgeBaseName': knowledgeBaseName,
+        'knowledgeBaseName': ?knowledgeBaseName,
       },
     );
     return response.data?['content'] as String? ?? '';
@@ -113,7 +113,7 @@ class InstructService {
       '${ApiEndpoints.prompts}/validate-goal',
       data: {
         'goal': goal,
-        if (name != null) 'name': name,
+        'name': ?name,
       },
     );
     final data = response.data ?? {};
