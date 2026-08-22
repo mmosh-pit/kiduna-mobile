@@ -55,9 +55,7 @@ class SecureStorage {
   Future<void> saveToken(String token) async {
     try {
       await _write(_Keys.token, token);
-      if (kDebugMode) {
-        debugPrint('🔑 [Storage] Token saved (${token.length} chars)');
-      }
+      AppLogger.debug('Token saved (${token.length} chars)', tag: 'Storage');
     } catch (e, st) {
       AppLogger.error('Failed to save token', tag: 'Storage', error: e, stackTrace: st);
       throw const CacheException('Failed to save authentication token');
@@ -67,11 +65,10 @@ class SecureStorage {
   Future<String?> getToken() async {
     try {
       final token = await _read(_Keys.token);
-      if (kDebugMode) {
-        debugPrint(
-          '🔑 [Storage] Token read: ${token != null ? "${token.length} chars" : "null"}',
-        );
-      }
+      AppLogger.debug(
+        'Token read: ${token != null ? "${token.length} chars" : "null"}',
+        tag: 'Storage',
+      );
       return token;
     } catch (e, st) {
       AppLogger.error('Failed to read token', tag: 'Storage', error: e, stackTrace: st);
@@ -82,9 +79,7 @@ class SecureStorage {
   Future<void> deleteToken() async {
     try {
       await _delete(_Keys.token);
-      if (kDebugMode) {
-        debugPrint('🔑 [Storage] Token deleted');
-      }
+      AppLogger.debug('Token deleted', tag: 'Storage');
     } catch (e, st) {
       AppLogger.error('Failed to delete token', tag: 'Storage', error: e, stackTrace: st);
     }
@@ -126,8 +121,6 @@ class SecureStorage {
   Future<void> clearAll() async {
     await deleteToken();
     await deleteUser();
-    if (kDebugMode) {
-      debugPrint('🔑 [Storage] All auth data cleared');
-    }
+    AppLogger.debug('All auth data cleared', tag: 'Storage');
   }
 }

@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/errors/exceptions.dart';
 import '../../../core/utils/logger.dart';
 import '../../../data/models/realm_model.dart';
 import '../../../data/services/realm_service.dart';
@@ -15,6 +14,7 @@ class EcosystemState {
     this.realms = const [],
     this.isLoading = false,
     this.error,
+    this.knownNames = const {},
   });
 
   /// The genesis Ecosystem Realm visible to everyone.
@@ -27,6 +27,9 @@ class EcosystemState {
   final List<RealmModel> realms;
   final bool isLoading;
   final String? error;
+
+  /// Accumulated realm id → name map across navigations.
+  final Map<String, String> knownNames;
 
   /// All Realms in display order: genesis first, then organizations, then others.
   List<RealmModel> get all => [
@@ -41,6 +44,7 @@ class EcosystemState {
     List<RealmModel>? realms,
     bool? isLoading,
     String? error,
+    Map<String, String>? knownNames,
   }) {
     return EcosystemState(
       genesis: genesis ?? this.genesis,
@@ -48,6 +52,7 @@ class EcosystemState {
       realms: realms ?? this.realms,
       isLoading: isLoading ?? this.isLoading,
       error: error,
+      knownNames: knownNames ?? this.knownNames,
     );
   }
 }
@@ -80,10 +85,12 @@ class EcosystemController extends Notifier<EcosystemState> {
       );
     }
 
-    // 2. Fetch caller's Realms (auth required) — may fail with 401.
+    // 2. Fetch ecosystem's direct children (auth required) — may fail with 401.
     List<RealmModel> allRealms = [];
     try {
-      allRealms = await RealmService.instance.fetchRealms();
+      allRealms = await RealmService.instance.fetchRealms(
+        parentId: ecosystem?.id,
+      );
     } catch (e) {
       AppLogger.warning(
         'Realms fetch failed (may need auth): $e',
@@ -99,10 +106,53 @@ class EcosystemController extends Notifier<EcosystemState> {
         .where((r) => r.type != 'organization' && r.type != 'ecosystem')
         .toList();
 
+    final names = <String, String>{
+      ...state.knownNames,
+      if (ecosystem != null) ecosystem.id: ecosystem.name,
+      for (final r in allRealms) r.id: r.name,
+    };
+
     state = EcosystemState(
       genesis: ecosystem,
       organizations: organizations,
       realms: otherRealms,
+      knownNames: names,
+    );
+  }
+
+  /// Fetch children of a specific realm by its id.
+  Future<void> loadChildren(String parentId) async {
+    state = state.copyWith(isLoading: true);
+
+    List<RealmModel> allRealms = [];
+    try {
+      allRealms = await RealmService.instance.fetchRealms(
+        parentId: parentId,
+      );
+    } catch (e) {
+      AppLogger.warning(
+        'Children fetch failed: $e',
+        tag: 'EcosystemController',
+      );
+    }
+
+    final organizations = allRealms
+        .where((r) => r.type == 'organization')
+        .toList();
+    final otherRealms = allRealms
+        .where((r) => r.type != 'organization' && r.type != 'ecosystem')
+        .toList();
+
+    final names = <String, String>{
+      ...state.knownNames,
+      for (final r in allRealms) r.id: r.name,
+    };
+
+    state = state.copyWith(
+      organizations: organizations,
+      realms: otherRealms,
+      isLoading: false,
+      knownNames: names,
     );
   }
 

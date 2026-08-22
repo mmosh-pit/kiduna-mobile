@@ -11,9 +11,10 @@ import '../../../shared/widgets/app_header.dart';
 import '../../../shared/widgets/section_bar.dart';
 import '../../../shared/widgets/section_placeholder.dart';
 import '../../exchange/screens/exchange_screen.dart';
+import '../controllers/ecosystem_controller.dart';
 import '../controllers/field_controller.dart';
-import '../widgets/advanced_actions_panel.dart';
 import '../widgets/field_background.dart';
+import '../widgets/advanced_actions_panel.dart';
 import '../widgets/field_chrome_panels.dart';
 import '../widgets/field_panel.dart';
 import '../widgets/field_working_panels.dart';
@@ -190,6 +191,23 @@ class FieldStack extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(fieldControllerProvider);
     final controller = ref.read(fieldControllerProvider.notifier);
+    final ecoState = ref.watch(ecosystemControllerProvider);
+    final realmNames = ecoState.knownNames;
+
+    ref.listen<String>(
+      fieldControllerProvider.select((s) => s.currentRealmId),
+      (previous, next) {
+        if (previous != next) {
+          final eco = ref.read(ecosystemControllerProvider.notifier);
+          if (next == 'kinship-duna') {
+            eco.load();
+          } else {
+            eco.loadChildren(next);
+          }
+        }
+      },
+    );
+
     final realm = state.currentRealm;
     final opacity = (state.fieldFocus / 100).clamp(0.0, 1.0);
 
@@ -215,6 +233,7 @@ class FieldStack extends ConsumerWidget {
                     child: RealmConstellation(
                       currentRealmId: state.currentRealmId,
                       selectedRealmId: state.selectedRealmId,
+                      apiRealms: [...ecoState.organizations, ...ecoState.realms],
                       onSelect: controller.selectAtlasRealm,
                       showHoverDetails: true,
                     ),
@@ -233,6 +252,7 @@ class FieldStack extends ConsumerWidget {
                 controller: controller,
                 bounds: bounds,
                 opacity: opacity,
+                realmNames: realmNames,
               ),
               FieldWorkingPanels(
                 state: state,

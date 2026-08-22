@@ -137,6 +137,12 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
     if (_hasHandle) {
       final h = _handle.text.trim();
       if (h.isEmpty) return 'Handle is required.';
+      if (h.contains(' ')) {
+        return 'Handle cannot contain spaces — use underscores, dots, or hyphens instead.';
+      }
+      if (h != h.toLowerCase()) {
+        return 'Handle must be lowercase — capital letters are not allowed.';
+      }
       if (!_handleRe.hasMatch(h)) {
         return 'Handle can only contain lowercase letters, numbers, dots, hyphens, and underscores (max 25 chars).';
       }
