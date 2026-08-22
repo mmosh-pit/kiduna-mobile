@@ -1973,6 +1973,7 @@ class _ExitButton extends StatelessWidget {
   Future<void> _confirmLeave(BuildContext context) async {
     final leave = await showDialog<bool>(
       context: context,
+      useRootNavigator: false,
       barrierColor: Colors.black.withValues(alpha: 0.72),
       builder: (context) => Dialog(
         backgroundColor: Colors.transparent,
