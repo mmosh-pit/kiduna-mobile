@@ -265,6 +265,84 @@ class AuthService {
     }
   }
 
+  // ─── KIDUNA Token ──────────────────────────────────────────────────
+
+  /// Get current KIDUNA token price.
+  Future<Map<String, dynamic>> getKidunaRate() async {
+    try {
+      final response = await _authDio.get('/kiduna/rate');
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e, st) {
+      _handleDioError(e, st, 'getKidunaRate');
+      return {'tokenPrice': 0.00001, 'currency': 'KIDUNA', 'priceCurrency': 'USDC'};
+    }
+  }
+
+  /// Initiate KIDUNA purchase via Stripe onramp.
+  Future<Map<String, dynamic>> purchaseKiduna({
+    required double usdcAmount,
+  }) async {
+    try {
+      final token = await SecureStorage.instance.getToken();
+      final response = await _authDio.post(
+        '/kiduna/purchase',
+        data: {'usdcAmount': usdcAmount},
+        options: token != null && token.isNotEmpty
+            ? Options(headers: {'Authorization': 'Bearer $token'})
+            : null,
+      );
+      final body = response.data as Map<String, dynamic>;
+      if (body.containsKey('error')) {
+        throw ValidationException(
+          body['error'] as String? ?? 'Purchase failed.',
+        );
+      }
+      return body['data'] as Map<String, dynamic>? ?? {};
+    } on DioException catch (e, st) {
+      _handleDioError(e, st, 'purchaseKiduna');
+      return {};
+    }
+  }
+
+  /// Get user's current KIDUNA balance.
+  Future<Map<String, dynamic>> getKidunaBalance() async {
+    try {
+      final token = await SecureStorage.instance.getToken();
+      final response = await _authDio.get(
+        '/kiduna/balance',
+        options: token != null && token.isNotEmpty
+            ? Options(headers: {'Authorization': 'Bearer $token'})
+            : null,
+      );
+      final body = response.data as Map<String, dynamic>;
+      return body['data'] as Map<String, dynamic>? ?? {};
+    } on DioException catch (e, st) {
+      _handleDioError(e, st, 'getKidunaBalance');
+      return {'balance': 0, 'totalPurchased': 0, 'totalSpent': 0};
+    }
+  }
+
+  /// Verify Stripe onramp session and credit KIDUNA if payment complete.
+  /// This is a fallback for when the webhook hasn't arrived yet.
+  Future<Map<String, dynamic>> verifyOnrampSession({
+    required String sessionId,
+  }) async {
+    try {
+      final token = await SecureStorage.instance.getToken();
+      final response = await _authDio.post(
+        '/stripe/verify-onramp',
+        data: {'sessionId': sessionId},
+        options: token != null && token.isNotEmpty
+            ? Options(headers: {'Authorization': 'Bearer $token'})
+            : null,
+      );
+      return response.data as Map<String, dynamic>? ?? {};
+    } on DioException catch (e, st) {
+      _handleDioError(e, st, 'verifyOnrampSession');
+      return {};
+    }
+  }
+
   // ─── Forgot password ─────────────────────────────────────────────
 
   Future<void> requestPasswordReset({required String email}) async {
