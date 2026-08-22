@@ -7,10 +7,12 @@ class NavigationPanel extends StatelessWidget {
   const NavigationPanel({
     super.key,
     required this.realmPath,
+    this.realmNames = const {},
     this.onBreadcrumbTap,
   });
 
   final List<String> realmPath;
+  final Map<String, String> realmNames;
   final ValueChanged<int>? onBreadcrumbTap;
 
   @override
@@ -37,7 +39,7 @@ class NavigationPanel extends StatelessWidget {
                     ),
                   ),
                 _BreadcrumbChip(
-                  label: realmAtlas[realmPath[i]]?.name ?? realmPath[i],
+                  label: realmAtlas[realmPath[i]]?.name ?? realmNames[realmPath[i]] ?? realmPath[i],
                   isCurrent: i == realmPath.length - 1,
                   onTap: onBreadcrumbTap != null && i < realmPath.length - 1
                       ? () => onBreadcrumbTap!(i)

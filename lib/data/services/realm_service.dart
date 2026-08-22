@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-
 import '../../core/errors/exceptions.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/api_endpoints.dart';
@@ -138,10 +137,11 @@ class RealmService {
       if (body == null) return [];
 
       final list = body['realms'] as List<dynamic>? ?? [];
-      return list
+      final realms = list
           .whereType<Map<String, dynamic>>()
           .map(RealmModel.fromJson)
           .toList();
+      return realms;
     } on DioException catch (e) {
       if (e.error is AppException) throw e.error!;
       AppLogger.error(
@@ -169,12 +169,7 @@ class RealmService {
       final eco = body['ecosystem'] as Map<String, dynamic>?;
       if (eco == null) return null;
 
-      final ecosystem = RealmModel.fromJson(eco);
-      AppLogger.info(
-        'Ecosystem loaded: ${ecosystem.name}',
-        tag: 'RealmService',
-      );
-      return ecosystem;
+      return RealmModel.fromJson(eco);
     } on DioException catch (e) {
       if (e.error is AppException) throw e.error!;
       AppLogger.error(

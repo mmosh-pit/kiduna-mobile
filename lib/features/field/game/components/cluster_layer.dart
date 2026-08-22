@@ -93,6 +93,7 @@ class ClusterLayer extends PositionComponent {
     }
     for (final cluster in clusters) {
       if (cluster.isBranch || !_isVisible(cluster)) continue;
+      if ((realmCounts[cluster.id] ?? 0) < 3) continue;
 
       final rect = rectFor(cluster);
       final accent = cluster.accent;
@@ -117,6 +118,7 @@ class ClusterLayer extends PositionComponent {
     for (var i = 0; i < clusters.length; i++) {
       final cluster = clusters[i];
       if (cluster.isBranch || !_isVisible(cluster)) continue;
+      if ((realmCounts[cluster.id] ?? 0) < 3) continue;
 
       final rect = rectFor(cluster);
       final accent = cluster.accent;
