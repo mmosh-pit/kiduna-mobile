@@ -46,7 +46,10 @@ class RealmConstellation extends StatelessWidget {
     final colors = context.kiduna;
 
     if (composition.placements.isEmpty) {
-      return Center(child: _EmptyRealmField(colors: colors));
+      final isRoot = currentRealmId == 'kinship-duna';
+      return Center(
+        child: _EmptyRealmField(colors: colors, isRoot: isRoot),
+      );
     }
 
     return LayoutBuilder(
@@ -118,12 +121,17 @@ class RealmConstellation extends StatelessWidget {
 }
 
 class _EmptyRealmField extends StatelessWidget {
-  const _EmptyRealmField({required this.colors});
+  const _EmptyRealmField({required this.colors, required this.isRoot});
 
   final KidunaColors colors;
+  final bool isRoot;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final title = isRoot ? l10n.noRealmsFound : l10n.noNestedRealmsVisible;
+    final detail = isRoot ? l10n.noRealmsFoundDetail : l10n.useNavigationOrAskKi;
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(9),
       child: BackdropFilter(
@@ -140,7 +148,7 @@ class _EmptyRealmField extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                context.l10n.noNestedRealmsVisible,
+                title,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontFamily: AppTheme.displayFontFamily,
@@ -152,7 +160,7 @@ class _EmptyRealmField extends StatelessWidget {
               ),
               const SizedBox(height: 7),
               Text(
-                context.l10n.useNavigationOrAskKi,
+                detail,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontFamily: 'Avenir',

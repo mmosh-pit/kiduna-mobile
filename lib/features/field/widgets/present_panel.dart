@@ -19,6 +19,7 @@ class _PresentPanelState extends ConsumerState<PresentPanel> {
   late TextEditingController _name;
   late TextEditingController _purpose;
   late String _type;
+  bool _isEcosystem = false;
   bool _initialized = false;
 
   @override
@@ -28,7 +29,8 @@ class _PresentPanelState extends ConsumerState<PresentPanel> {
       final realm = ref.read(fieldControllerProvider).currentRealm;
       _name = TextEditingController(text: realm.name);
       _purpose = TextEditingController(text: _realmPurpose());
-      _type = realm.type;
+      _isEcosystem = realm.type == 'Ecosystem';
+      _type = _isEcosystem ? 'Ecosystem' : realm.type;
       _initialized = true;
     }
   }
@@ -70,12 +72,41 @@ class _PresentPanelState extends ConsumerState<PresentPanel> {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: FieldDropdown(
-                  label: l10n.typeLabel,
-                  value: _type,
-                  options: _presentTypes,
-                  onChanged: (value) => setState(() => _type = value),
-                ),
+                child: _isEcosystem
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          FieldLabel(text: l10n.typeLabel),
+                          const SizedBox(height: 6),
+                          Container(
+                            height: 37,
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            alignment: Alignment.centerLeft,
+                            decoration: BoxDecoration(
+                              color: const Color.fromRGBO(6, 3, 4, 0.66),
+                              border: Border.all(
+                                color: colors.camel.withValues(alpha: 0.24),
+                              ),
+                              borderRadius: BorderRadius.circular(
+                                context.metrics.radiusMd,
+                              ),
+                            ),
+                            child: Text(
+                              _type,
+                              style: text.caption.copyWith(
+                                color: colors.quiet,
+                                height: 1.4,
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    : FieldDropdown(
+                        label: l10n.typeLabel,
+                        value: _type,
+                        options: _presentTypes,
+                        onChanged: (value) => setState(() => _type = value),
+                      ),
               ),
             ],
           ),
@@ -201,7 +232,6 @@ class _PresentPanelState extends ConsumerState<PresentPanel> {
   }
 
   static const List<String> _presentTypes = [
-    'Ecosystem',
     'Organization',
     'Alliance',
     'Community',

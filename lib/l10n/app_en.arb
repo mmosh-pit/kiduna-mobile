@@ -595,6 +595,8 @@
   "hideRealm": "Hide",
   "noRealmsYet": "No nested Realms yet",
   "noRealmsYetDetail": "Use 'Form a New Realm' to create one inside this Realm.",
+  "noRealmsFound": "No Realms found",
+  "noRealmsFoundDetail": "Use 'Form a New Realm' to create your first Realm.",
 
   "gameTitle": "Medieval Poker",
   "gameSubtitle": "Choose your path to glory",
