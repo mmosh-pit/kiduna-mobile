@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/errors/exceptions.dart';
 import '../../core/utils/logger.dart';
@@ -18,43 +17,37 @@ class SecureStorage {
 
   static final SecureStorage instance = SecureStorage._();
 
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
-
-  // Web-only — SharedPreferences (backed by localStorage on web).
-  SharedPreferences? _prefs;
-
-  Future<SharedPreferences> _getPrefs() async {
-    _prefs ??= await SharedPreferences.getInstance();
-    return _prefs!;
-  }
+  final FlutterSecureStorage _storage = const FlutterSecureStorage(
+    aOptions: AndroidOptions(
+      preferencesKeyPrefix: 'kiduna',
+    ),
+    iOptions: IOSOptions(
+      accessibility: KeychainAccessibility.first_unlock,
+    ),
+    mOptions: MacOsOptions(
+      usesDataProtectionKeychain: false,
+      accessibility: KeychainAccessibility.first_unlock,
+    ),
+    lOptions: LinuxOptions(),
+    wOptions: WindowsOptions(),
+    webOptions: WebOptions(
+      dbName: 'kiduna_secure_storage',
+      publicKey: 'kiduna',
+    ),
+  );
 
   // ── Internal read/write/delete ─────────────────────────────────────────
 
   Future<void> _write(String key, String value) async {
-    if (kIsWeb) {
-      final prefs = await _getPrefs();
-      await prefs.setString(key, value);
-    } else {
-      await _native.write(key: key, value: value);
-    }
+    await _storage.write(key: key, value: value);
   }
 
   Future<String?> _read(String key) async {
-    if (kIsWeb) {
-      final prefs = await _getPrefs();
-      return prefs.getString(key);
-    } else {
-      return _native.read(key: key);
-    }
+    return _storage.read(key: key);
   }
 
   Future<void> _delete(String key) async {
-    if (kIsWeb) {
-      final prefs = await _getPrefs();
-      await prefs.remove(key);
-    } else {
-      await _native.delete(key: key);
-    }
+    await _storage.delete(key: key);
   }
 
   // ── Token ──────────────────────────────────────────────────────────────
@@ -110,7 +103,7 @@ class SecureStorage {
 
   Future<UserModel?> getUser() async {
     try {
-      final raw = await _storage.read(key: _Keys.user);
+      final raw = await _read(_Keys.user);
       if (raw == null || raw.isEmpty) return null;
       final json = jsonDecode(raw) as Map<String, dynamic>;
       return UserModel.fromJson(json);
