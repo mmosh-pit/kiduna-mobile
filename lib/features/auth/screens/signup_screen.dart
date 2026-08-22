@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/errors/exceptions.dart';
 import '../../../core/extensions/context_extensions.dart';
@@ -18,6 +19,7 @@ import '../widgets/signup_left_panel.dart';
 import '../widgets/signup_step_five.dart';
 import '../widgets/signup_step_four.dart';
 import '../widgets/signup_step_one.dart';
+import '../widgets/signup_step_seven.dart';
 import '../widgets/signup_step_six.dart';
 import '../widgets/signup_step_three.dart';
 import '../widgets/signup_step_two.dart';
@@ -50,6 +52,9 @@ class _SignupScreenState extends State<SignupScreen> {
 
   // Invite preview info (shown on Step 6 after code validation)
   Map<String, dynamic>? _invitePreviewInfo;
+
+  // KIDUNA token price (loaded from backend)
+  double _tokenPrice = 0.00001;
 
   @override
   void initState() {
@@ -435,10 +440,10 @@ class _SignupScreenState extends State<SignupScreen> {
           'Signup complete — joined $realmName (lineage=${result['lineageBuilt']})',
           tag: 'Auth',
         );
-        _navigateToDashboard();
+        _loadTokenPriceAndGoToStep7();
       } else if (result['already_member'] == true) {
-        AppLogger.info('Already a member — proceeding to dashboard', tag: 'Auth');
-        _navigateToDashboard();
+        AppLogger.info('Already a member — proceeding to token purchase', tag: 'Auth');
+        _loadTokenPriceAndGoToStep7();
       } else {
         _onError('Failed to join. Please try again.');
       }
@@ -467,6 +472,129 @@ class _SignupScreenState extends State<SignupScreen> {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  // ── Step 7 helpers ──────────────────────────────────────────────────────
+
+  Future<void> _loadTokenPriceAndGoToStep7() async {
+    try {
+      final rate = await AuthService.instance.getKidunaRate();
+      if (mounted) {
+        setState(() {
+          _tokenPrice = (rate['tokenPrice'] as num?)?.toDouble() ?? 0.00001;
+        });
+      }
+    } catch (_) {
+      // Use default price
+    }
+    if (mounted) _goToStep(7);
+  }
+
+  // Stripe session ID — stored for verification polling
+  String? _stripeSessionId;
+  String? _stripeUrl;
+  bool _waitingForPayment = false;
+
+  Future<void> _purchaseKiduna(double usdcAmount) async {
+    setState(() => _isLoading = true);
+
+    try {
+      final result =
+          await AuthService.instance.purchaseKiduna(usdcAmount: usdcAmount);
+      if (!mounted) return;
+
+      final stripeUrl = result['stripeUrl'] as String?;
+      _stripeSessionId = result['stripeSessionId'] as String?;
+      _stripeUrl = stripeUrl;
+
+      if (stripeUrl != null && stripeUrl.isNotEmpty) {
+        // Open Stripe onramp in external browser
+        final uri = Uri.parse(stripeUrl);
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+
+        if (!mounted) return;
+        setState(() {
+          _isLoading = false;
+          _waitingForPayment = true;
+        });
+        _showMessage(
+          'Complete the payment in your browser. Once done, click "I\'ve Paid" below.',
+          MessageType.success,
+        );
+      } else {
+        _onError('Failed to start purchase. Please try again.');
+      }
+    } on ValidationException catch (e) {
+      if (!mounted) return;
+      _onError(e.message ?? 'Purchase failed.');
+    } on NetworkException {
+      if (!mounted) return;
+      _onError('No internet connection.');
+    } catch (e, st) {
+      AppLogger.error('Unexpected error in purchaseKiduna', error: e, stackTrace: st);
+      if (!mounted) return;
+      _onError('Something went wrong. Please try again.');
+    } finally {
+      if (mounted && !_waitingForPayment) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _retryPayment() async {
+    if (_stripeUrl == null || _stripeUrl!.isEmpty) {
+      _onError('No payment session found. Please start a new purchase.');
+      return;
+    }
+    final uri = Uri.parse(_stripeUrl!);
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  Future<void> _verifyPayment() async {
+    if (_stripeSessionId == null) {
+      _onError('No payment session found. Please try again.');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      // Step 1: Call verify-onramp to trigger server-side verification
+      // This handles the case where webhook hasn't arrived yet
+      await AuthService.instance.verifyOnrampSession(
+        sessionId: _stripeSessionId!,
+      );
+      if (!mounted) return;
+
+      // Step 2: Check balance
+      final balance = await AuthService.instance.getKidunaBalance();
+      if (!mounted) return;
+
+      final currentBalance = (balance['balance'] as num?)?.toDouble() ?? 0;
+      if (currentBalance > 0) {
+        _showMessage(
+          'Payment confirmed! You received ${_formatKidunaCompact(currentBalance)} KIDUNA.',
+          MessageType.success,
+        );
+        setState(() => _waitingForPayment = false);
+        await Future.delayed(const Duration(seconds: 2));
+        if (mounted) _navigateToDashboard();
+      } else {
+        _showMessage(
+          'Payment is being processed. Please wait a moment and try again.',
+          MessageType.error,
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      _onError('Could not verify payment. Please try again.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  String _formatKidunaCompact(double amount) {
+    if (amount >= 1000000) return '${(amount / 1000000).toStringAsFixed(2)}M';
+    if (amount >= 1000) return '${(amount / 1000).toStringAsFixed(2)}K';
+    return amount.toStringAsFixed(0);
   }
 
   Widget _buildCurrentStep() {
@@ -529,6 +657,19 @@ class _SignupScreenState extends State<SignupScreen> {
           inviteCodeController: _inviteCodeController,
           isLoading: _isLoading,
           previewInfo: _invitePreviewInfo,
+        );
+      case 7:
+        return SignupStepSeven(
+          key: const ValueKey(7),
+          onPurchase: _purchaseKiduna,
+          onSkip: _navigateToDashboard,
+          onBack: () => _goToStep(6),
+          onError: _onError,
+          tokenPrice: _tokenPrice,
+          isLoading: _isLoading,
+          waitingForPayment: _waitingForPayment,
+          onVerifyPayment: _verifyPayment,
+          onRetryPayment: _retryPayment,
         );
       default:
         return const SizedBox.shrink();
@@ -597,7 +738,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       KidunaProgressBar(
-                        totalSteps: 6,
+                        totalSteps: 7,
                         currentStep: _currentStep,
                       ),
                       const SizedBox(height: 28),
