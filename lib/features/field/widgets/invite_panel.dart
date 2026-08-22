@@ -53,17 +53,6 @@ class _InvitePanelState extends ConsumerState<InvitePanel> {
     super.dispose();
   }
 
-  void _askField(String label, String question) {
-    widget.askAbout?.call(
-      KiTopic(
-        title: label,
-        body: question,
-        invitation:
-            'Ki can explain this field or help Alice decide what belongs here.',
-      ),
-    );
-  }
-
   Future<void> _prepare() async {
     final name = _name.text.trim();
     if (name.isEmpty) {
@@ -136,53 +125,21 @@ class _InvitePanelState extends ConsumerState<InvitePanel> {
               label: '${l10n.nameYouUseForThem} *',
               controller: _name,
               hint: l10n.whatYouMostCommonlyCallThem,
-              onAskKi: () => _askField(
-                '${l10n.nameYouUseForThem} *',
-                'Use the name Alice naturally uses for this person so the '
-                    'invitation feels unmistakably personal.',
-              ),
             ),
             FieldDropdown(
               label: l10n.expiration,
               value: _expiration,
               options: FieldFixtures.expirations,
               onChanged: (value) => setState(() => _expiration = value),
-              onAskKi: () => _askField(
-                l10n.expiration,
-                'Expiration limits how long this one-person invitation can '
-                'be used.',
-              ),
             ),
             _RoleMultiSelect(
               roles: _roles,
               onChanged: (next) => setState(() => _roles = next),
-              onAskKi: () => _askField(
-                l10n.proposedRole,
-                'A proposed role describes the access and responsibility '
-                'Alice intends to offer. It is not active until the '
-                'invitation is accepted.',
-              ),
-              onAskRole: (role) => widget.askAbout?.call(
-                KiTopic(
-                  title: '$role in this Realm',
-                  body:
-                      'Ki can explain what the $role role may see and do in the '
-                      'current Realm before Alice includes it.',
-                  invitation:
-                      'Ask Ki to compare $role with another role or explain its '
-                      'authority in this context.',
-                ),
-              ),
             ),
             FieldTextInput(
               label: l10n.privateHandshakeOptional,
               controller: _handshake,
               hint: l10n.shareASecretWordOrPhrase,
-              onAskKi: () => _askField(
-                l10n.privateHandshakeOptional,
-                'A handshake is a secret Alice and the invited person already '
-                'share, helping them recognize each other at the threshold.',
-              ),
             ),
             _FullWidth(
               child: FieldTextInput(
@@ -191,12 +148,6 @@ class _InvitePanelState extends ConsumerState<InvitePanel> {
                 hint: l10n.invitationNotesHint,
                 maxLines: 5,
                 minHeight: 104,
-                onAskKi: () => _askField(
-                  l10n.notes,
-                  'Notes help Ki welcome this person appropriately. They '
-                  'remain Personal to Alice unless she deliberately '
-                  'shares them.',
-                ),
               ),
             ),
           ],
@@ -367,14 +318,10 @@ class _RoleMultiSelect extends StatefulWidget {
   const _RoleMultiSelect({
     required this.roles,
     required this.onChanged,
-    this.onAskKi,
-    this.onAskRole,
   });
 
   final List<String> roles;
   final ValueChanged<List<String>> onChanged;
-  final VoidCallback? onAskKi;
-  final ValueChanged<String>? onAskRole;
 
   @override
   State<_RoleMultiSelect> createState() => _RoleMultiSelectState();
@@ -402,7 +349,6 @@ class _RoleMultiSelectState extends State<_RoleMultiSelect> {
         width: width,
         roles: widget.roles,
         onChanged: widget.onChanged,
-        onAskRole: widget.onAskRole,
         onClose: _close,
       ),
     );
@@ -427,7 +373,7 @@ class _RoleMultiSelectState extends State<_RoleMultiSelect> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        FieldLabel(text: context.l10n.proposedRole, onAskKi: widget.onAskKi),
+        FieldLabel(text: context.l10n.proposedRole),
         const SizedBox(height: 6),
         CompositedTransformTarget(
           link: _link,
@@ -465,14 +411,12 @@ class _RoleDropdownOverlay extends StatefulWidget {
     required this.roles,
     required this.onChanged,
     required this.onClose,
-    this.onAskRole,
   });
 
   final LayerLink link;
   final double width;
   final List<String> roles;
   final ValueChanged<List<String>> onChanged;
-  final ValueChanged<String>? onAskRole;
   final VoidCallback onClose;
 
   @override
@@ -539,9 +483,6 @@ class _RoleDropdownOverlayState extends State<_RoleDropdownOverlay> {
                       role: role,
                       checked: _selected.contains(role),
                       onToggle: () => _toggleRole(role),
-                      onAsk: widget.onAskRole != null
-                          ? () => widget.onAskRole!(role)
-                          : null,
                       text: text,
                       colors: colors,
                     ),
@@ -560,7 +501,6 @@ class _RoleRow extends StatelessWidget {
     required this.role,
     required this.checked,
     required this.onToggle,
-    required this.onAsk,
     required this.text,
     required this.colors,
   });
@@ -568,7 +508,6 @@ class _RoleRow extends StatelessWidget {
   final String role;
   final bool checked;
   final VoidCallback onToggle;
-  final VoidCallback? onAsk;
   final KidunaText text;
   final KidunaColors colors;
 
@@ -602,26 +541,6 @@ class _RoleRow extends StatelessWidget {
                 style: text.caption.copyWith(color: colors.text, height: 1.4),
               ),
             ),
-            if (onAsk != null)
-              GestureDetector(
-                onTap: onAsk,
-                child: Container(
-                  width: 26,
-                  height: 26,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: colors.sky.withValues(alpha: 0.06),
-                    border: Border.all(
-                      color: colors.sky.withValues(alpha: 0.28),
-                    ),
-                  ),
-                  child: Text(
-                    '→',
-                    style: text.micro.copyWith(color: colors.sky, height: 1),
-                  ),
-                ),
-              ),
           ],
         ),
       ),

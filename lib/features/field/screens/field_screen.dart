@@ -12,6 +12,7 @@ import '../../../shared/widgets/section_bar.dart';
 import '../../../shared/widgets/section_placeholder.dart';
 import '../../exchange/screens/exchange_screen.dart';
 import '../controllers/ecosystem_controller.dart';
+import '../data/field_composition.dart';
 import '../controllers/field_controller.dart';
 import '../widgets/field_background.dart';
 import '../widgets/advanced_actions_panel.dart';
@@ -219,26 +220,11 @@ class FieldStack extends ConsumerWidget {
           return Stack(
             children: [
               const _FieldCanvas(),
-              Positioned.fill(
-                child: InteractiveViewer(
-                  scaleEnabled: false,
-                  boundaryMargin: const EdgeInsets.all(200),
-                  child: Padding(
-                    padding: const EdgeInsets.only(
-                      top: 96,
-                      left: 26,
-                      right: 26,
-                      bottom: 28,
-                    ),
-                    child: RealmConstellation(
-                      currentRealmId: state.currentRealmId,
-                      selectedRealmId: state.selectedRealmId,
-                      apiRealms: [...ecoState.organizations, ...ecoState.realms],
-                      onSelect: controller.selectAtlasRealm,
-                      showHoverDetails: true,
-                    ),
-                  ),
-                ),
+              _EcosystemContent(
+                ecoState: ecoState,
+                currentRealmId: state.currentRealmId,
+                selectedRealmId: state.selectedRealmId,
+                onSelect: controller.selectAtlasRealm,
               ),
               _RealmIdentity(
                 realm: realm,
@@ -297,6 +283,92 @@ class _FieldCanvas extends StatelessWidget {
       child: ColoredBox(
         color: context.kiduna.field,
         child: const FieldBackground(),
+      ),
+    );
+  }
+}
+
+/// Shows a loader while the API is fetching, an error/empty state on failure
+/// or no data, and the constellation when realms are available.
+class _EcosystemContent extends ConsumerWidget {
+  const _EcosystemContent({
+    required this.ecoState,
+    required this.currentRealmId,
+    required this.selectedRealmId,
+    required this.onSelect,
+  });
+
+  final EcosystemState ecoState;
+  final String currentRealmId;
+  final String? selectedRealmId;
+  final ValueChanged<FieldPlacement> onSelect;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.kiduna;
+    final apiRealms = [...ecoState.organizations, ...ecoState.realms];
+
+    if (ecoState.isLoading) {
+      return Positioned.fill(
+        child: Center(
+          child: SizedBox(
+            width: 32,
+            height: 32,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.5,
+              color: colors.sky,
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (ecoState.error != null) {
+      return Positioned.fill(
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.cloud_off_rounded, size: 36, color: colors.quiet),
+              const SizedBox(height: 12),
+              Text(
+                ecoState.error!,
+                style: context.kidunaText.caption.copyWith(color: colors.muted),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              GestureDetector(
+                onTap: () => ref.read(ecosystemControllerProvider.notifier).retry(),
+                child: Text(
+                  'Retry',
+                  style: context.kidunaText.label.copyWith(color: colors.sky),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Positioned.fill(
+      child: InteractiveViewer(
+        scaleEnabled: false,
+        boundaryMargin: const EdgeInsets.all(200),
+        child: Padding(
+          padding: const EdgeInsets.only(
+            top: 96,
+            left: 26,
+            right: 26,
+            bottom: 28,
+          ),
+          child: RealmConstellation(
+            currentRealmId: currentRealmId,
+            selectedRealmId: selectedRealmId,
+            apiRealms: apiRealms,
+            onSelect: onSelect,
+            showHoverDetails: true,
+          ),
+        ),
       ),
     );
   }

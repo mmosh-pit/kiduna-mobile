@@ -2,59 +2,22 @@ import 'package:flutter/material.dart';
 
 import '../../../core/extensions/context_extensions.dart';
 
-/// CSS `.fieldTitle` — label text + 24px circular "→" ask-Ki button.
+/// CSS `.fieldTitle` — label text for form fields.
 class FieldLabel extends StatelessWidget {
-  const FieldLabel({super.key, required this.text, this.onAskKi});
+  const FieldLabel({super.key, required this.text});
 
   final String text;
-  final VoidCallback? onAskKi;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.kiduna;
     return ConstrainedBox(
       constraints: const BoxConstraints(minHeight: 26),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              text,
-              style: context.kidunaText.label.copyWith(color: colors.cream),
-            ),
-          ),
-          const SizedBox(width: 8),
-          _AskKiButton(onPressed: onAskKi),
-        ],
-      ),
-    );
-  }
-}
-
-class _AskKiButton extends StatelessWidget {
-  const _AskKiButton({required this.onPressed});
-
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.kiduna;
-    return GestureDetector(
-      onTap: onPressed,
-      child: Container(
-        width: 24,
-        height: 24,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: colors.sky.withValues(alpha: 0.055),
-          border: Border.all(color: colors.sky.withValues(alpha: 0.28)),
-        ),
+      child: Align(
+        alignment: Alignment.centerLeft,
         child: Text(
-          '→',
-          style: context.kidunaText.micro.copyWith(
-            color: colors.sky,
-            height: 1,
-          ),
+          text,
+          style: context.kidunaText.label.copyWith(color: colors.cream),
         ),
       ),
     );
@@ -110,7 +73,6 @@ class FieldTextInput extends StatelessWidget {
     this.maxLines = 1,
     this.maxLength,
     this.minHeight,
-    this.onAskKi,
   });
 
   final String label;
@@ -119,7 +81,6 @@ class FieldTextInput extends StatelessWidget {
   final int maxLines;
   final int? maxLength;
   final double? minHeight;
-  final VoidCallback? onAskKi;
 
   @override
   Widget build(BuildContext context) {
@@ -127,7 +88,7 @@ class FieldTextInput extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        FieldLabel(text: label, onAskKi: onAskKi),
+        FieldLabel(text: label),
         const SizedBox(height: 6),
         if (maxLength != null)
           ListenableBuilder(
@@ -182,14 +143,12 @@ class FieldDropdown extends StatelessWidget {
     required this.value,
     required this.options,
     required this.onChanged,
-    this.onAskKi,
   });
 
   final String label;
   final String value;
   final List<String> options;
   final ValueChanged<String> onChanged;
-  final VoidCallback? onAskKi;
 
   @override
   Widget build(BuildContext context) {
@@ -201,7 +160,7 @@ class FieldDropdown extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        FieldLabel(text: label, onAskKi: onAskKi),
+        FieldLabel(text: label),
         const SizedBox(height: 6),
         SizedBox(
           height: 37,

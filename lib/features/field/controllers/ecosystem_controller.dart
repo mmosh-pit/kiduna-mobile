@@ -72,7 +72,7 @@ class EcosystemController extends Notifier<EcosystemState> {
   /// of the realms fetch (which requires auth and may 401 if the user hasn't
   /// fully authenticated yet).
   Future<void> load() async {
-    state = state.copyWith(isLoading: true);
+    state = state.copyWith(isLoading: true, error: null);
 
     // 1. Fetch genesis ecosystem (public, no auth) — always works.
     RealmModel? ecosystem;
@@ -87,6 +87,7 @@ class EcosystemController extends Notifier<EcosystemState> {
 
     // 2. Fetch ecosystem's direct children (auth required) — may fail with 401.
     List<RealmModel> allRealms = [];
+    String? fetchError;
     try {
       allRealms = await RealmService.instance.fetchRealms(
         parentId: ecosystem?.id,
@@ -96,6 +97,9 @@ class EcosystemController extends Notifier<EcosystemState> {
         'Realms fetch failed (may need auth): $e',
         tag: 'EcosystemController',
       );
+      if (ecosystem == null) {
+        fetchError = 'Unable to load realms. Please try again.';
+      }
     }
 
     // Separate organizations from other Realms
@@ -116,15 +120,17 @@ class EcosystemController extends Notifier<EcosystemState> {
       genesis: ecosystem,
       organizations: organizations,
       realms: otherRealms,
+      error: fetchError,
       knownNames: names,
     );
   }
 
   /// Fetch children of a specific realm by its id.
   Future<void> loadChildren(String parentId) async {
-    state = state.copyWith(isLoading: true);
+    state = state.copyWith(isLoading: true, error: null);
 
     List<RealmModel> allRealms = [];
+    String? fetchError;
     try {
       allRealms = await RealmService.instance.fetchRealms(
         parentId: parentId,
@@ -134,6 +140,7 @@ class EcosystemController extends Notifier<EcosystemState> {
         'Children fetch failed: $e',
         tag: 'EcosystemController',
       );
+      fetchError = 'Unable to load realms. Please try again.';
     }
 
     final organizations = allRealms
@@ -152,6 +159,7 @@ class EcosystemController extends Notifier<EcosystemState> {
       organizations: organizations,
       realms: otherRealms,
       isLoading: false,
+      error: fetchError,
       knownNames: names,
     );
   }

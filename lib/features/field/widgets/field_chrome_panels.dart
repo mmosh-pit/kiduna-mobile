@@ -43,8 +43,8 @@ class FieldChromePanels extends StatelessWidget {
           width: navWidth,
           opacity: opacity,
           initialOffset: Offset(
-            _clampLeft((bounds.width - navWidth) / 2),
-            (bounds.height * 0.3).clamp(8.0, double.infinity),
+            _clampLeft(bounds.width - navWidth - 22),
+            22,
           ),
           child: NavigationPanel(
             realmPath: state.realmPath,
@@ -60,10 +60,7 @@ class FieldChromePanels extends StatelessWidget {
           opacity: opacity,
           accent: true,
           initialMode: FieldPanelMode.collapsed,
-          initialOffset: Offset(
-            _clampLeft((bounds.width - 540) / 2),
-            (bounds.height * 0.3).clamp(8.0, double.infinity),
-          ),
+          initialOffset: const Offset(22, 110),
           minimizedOffset: const Offset(22, 110),
           child: const PossibleActions(),
         ),
