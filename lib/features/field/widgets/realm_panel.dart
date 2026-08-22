@@ -89,7 +89,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
   bool get _isCell => _type == 'Cell';
   bool get _isDyad => _type == 'Dyad';
   bool get _isCouncil => _type == 'Council';
-  bool get _hasHandle => _isAlliance || _isInstitution || _isCommunity || _isProgram || _isProject || _isConcept || _isCell || _isDyad || _isCouncil;
+  bool get _hasHandle => _isOrganization || _isAlliance || _isInstitution || _isCommunity || _isProgram || _isProject || _isConcept || _isCell || _isDyad || _isCouncil;
   bool get _requiresTheme => _isOrganization || _isAlliance || _isInstitution || _isCommunity || _isProgram || _isProject || _isConcept || _isCell || _isDyad || _isCouncil;
 
   void _autoSuggestHandle() {
@@ -257,6 +257,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
         final realm = await RealmService.instance.createRealm(
           name: nameText, type: 'organization',
           parentId: parentId,
+          handle: _handle.text.trim(),
           purpose: _purpose.text.trim(),
           email: _email.text.trim(),
           config: {
@@ -709,13 +710,14 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
                 builder: (context, _) {
                   final nameOk = _name.text.trim().isNotEmpty;
                   bool canCreate;
-                  if (_isAlliance || _isInstitution || _isCommunity || _isProgram || _isProject || _isConcept || _isCell || _isDyad || _isCouncil) {
+                  if (_isOrganization) {
                     final handleOk = _handle.text.trim().isNotEmpty && _handleAvailable != false;
-                    canCreate = nameOk && handleOk && !_submitting;
-                  } else if (_isOrganization) {
                     final purposeOk = _purpose.text.trim().length >= 10;
                     final emailOk = _email.text.trim().isNotEmpty;
-                    canCreate = nameOk && purposeOk && emailOk && !_submitting;
+                    canCreate = nameOk && handleOk && purposeOk && emailOk && !_submitting;
+                  } else if (_isAlliance || _isInstitution || _isCommunity || _isProgram || _isProject || _isConcept || _isCell || _isDyad || _isCouncil) {
+                    final handleOk = _handle.text.trim().isNotEmpty && _handleAvailable != false;
+                    canCreate = nameOk && handleOk && !_submitting;
                   } else {
                     canCreate = nameOk && !_submitting;
                   }
