@@ -571,6 +571,7 @@ class FieldController extends Notifier<FieldState> {
         emblemAsset: AppAssets.realmEmblem(emblem),
       ),
       currentRealmId: realm.id,
+      enteredRealmId: realm.id,
       clearSelection: true,
       actionsVisible: true,
       inspectOpen: false,
