@@ -8,7 +8,6 @@ import '../../../l10n/app_localizations.dart';
 import '../../../shared/layouts/responsive_layout.dart';
 import '../../../shared/widgets/app_header.dart';
 import '../../../shared/widgets/ki_agent.dart';
-import '../../../shared/widgets/user_menu_actions.dart';
 import '../controllers/ecosystem_controller.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -38,7 +37,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       backgroundColor: colors.field,
       body: Column(
         children: [
-          AppHeader(trailing: UserMenuActions(ref: ref)),
+          const AppHeader(),
           Expanded(
             child: ResponsiveLayout(
               desktop: (_) => _ContentWide(activeTab: _activeTab),

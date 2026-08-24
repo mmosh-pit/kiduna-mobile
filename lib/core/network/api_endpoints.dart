@@ -246,4 +246,7 @@ abstract class ApiEndpoints {
   /// `GET /tokens/presales/{id}/purchases` — purchase history (auth required).
   static String presalePurchases(String id) =>
       '/tokens/presales/$id/purchases';
+
+  /// `GET /api/usage/{wallet}` — current-month compute usage (agent API).
+  static String computeUsage(String wallet) => '/api/usage/$wallet';
 }

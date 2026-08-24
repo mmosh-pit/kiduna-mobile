@@ -136,4 +136,23 @@ class ChatService {
       );
     }
   }
+
+  /// Current-month compute usage for a wallet — tokens consumed, request
+  /// count, and cost. Served by the agent API, not kinship-backend.
+  Future<Map<String, dynamic>> fetchComputeUsage({
+    required String wallet,
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.computeUsage(wallet),
+      );
+      return response.data ?? {};
+    } on DioException catch (e) {
+      AppLogger.warning(
+        'Compute usage fetch failed: ${e.message}',
+        tag: 'ChatService',
+      );
+      return {};
+    }
+  }
 }

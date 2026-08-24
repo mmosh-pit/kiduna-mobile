@@ -685,7 +685,7 @@ class _SignupScreenState extends State<SignupScreen> {
       backgroundColor: colors.deep,
       body: Column(
         children: [
-          const AppHeader(),
+          const AppHeader(showUserMenu: false),
           Expanded(
             child: isMobile
                 ? _buildMobileLayout(colors)

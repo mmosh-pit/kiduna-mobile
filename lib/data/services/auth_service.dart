@@ -322,6 +322,48 @@ class AuthService {
     }
   }
 
+  /// Fetch paginated compute usage history (what KIDUNA was spent on).
+  Future<Map<String, dynamic>> getComputeUsageHistory({
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    try {
+      final token = await SecureStorage.instance.getToken();
+      final response = await _authDio.get(
+        '/kiduna/usage-history',
+        queryParameters: {'limit': limit, 'offset': offset},
+        options: token != null && token.isNotEmpty
+            ? Options(headers: {'Authorization': 'Bearer $token'})
+            : null,
+      );
+      return response.data as Map<String, dynamic>? ?? {};
+    } on DioException catch (e, st) {
+      _handleDioError(e, st, 'getComputeUsageHistory');
+      return {};
+    }
+  }
+
+  /// Fetch paginated KIDUNA purchase history.
+  Future<Map<String, dynamic>> getComputePurchaseHistory({
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    try {
+      final token = await SecureStorage.instance.getToken();
+      final response = await _authDio.get(
+        '/kiduna/purchase-history',
+        queryParameters: {'limit': limit, 'offset': offset},
+        options: token != null && token.isNotEmpty
+            ? Options(headers: {'Authorization': 'Bearer $token'})
+            : null,
+      );
+      return response.data as Map<String, dynamic>? ?? {};
+    } on DioException catch (e, st) {
+      _handleDioError(e, st, 'getComputePurchaseHistory');
+      return {};
+    }
+  }
+
   /// Verify Stripe onramp session and credit KIDUNA if payment complete.
   /// This is a fallback for when the webhook hasn't arrived yet.
   Future<Map<String, dynamic>> verifyOnrampSession({

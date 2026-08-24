@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/utils/logger.dart';
 import '../../../data/services/auth_service.dart';
+import '../../../data/services/chat_service.dart';
 import '../../auth/controllers/auth_controller.dart';
 
 @immutable
@@ -12,6 +13,10 @@ class ComputeState {
     this.totalPurchased = 0,
     this.totalSpent = 0,
     this.tokenPrice = 0.00001,
+    this.tokensUsed = 0,
+    this.requestCount = 0,
+    this.chargedCost = 0,
+    this.period = '',
     this.isLoading = false,
     this.error,
   });
@@ -20,6 +25,19 @@ class ComputeState {
   final double totalPurchased;
   final double totalSpent;
   final double tokenPrice;
+
+  /// Current-month LLM tokens consumed (input + output).
+  final int tokensUsed;
+
+  /// Current-month chat requests.
+  final int requestCount;
+
+  /// Current-month cost charged, in USD.
+  final double chargedCost;
+
+  /// Billing period the above stats cover, as 'YYYY-MM'.
+  final String period;
+
   final bool isLoading;
   final String? error;
 
@@ -31,6 +49,10 @@ class ComputeState {
     double? totalPurchased,
     double? totalSpent,
     double? tokenPrice,
+    int? tokensUsed,
+    int? requestCount,
+    double? chargedCost,
+    String? period,
     bool? isLoading,
     String? error,
     bool clearError = false,
@@ -40,6 +62,10 @@ class ComputeState {
       totalPurchased: totalPurchased ?? this.totalPurchased,
       totalSpent: totalSpent ?? this.totalSpent,
       tokenPrice: tokenPrice ?? this.tokenPrice,
+      tokensUsed: tokensUsed ?? this.tokensUsed,
+      requestCount: requestCount ?? this.requestCount,
+      chargedCost: chargedCost ?? this.chargedCost,
+      period: period ?? this.period,
       isLoading: isLoading ?? this.isLoading,
       error: clearError ? null : (error ?? this.error),
     );
@@ -50,8 +76,12 @@ class ComputeController extends Notifier<ComputeState> {
   @override
   ComputeState build() => const ComputeState();
 
-  /// Load KIDUNA balance and token price from the backend.
-  Future<void> loadBalance() async {
+  /// Load KIDUNA balance, token price, and current-month usage stats.
+  ///
+  /// The stats come from the agent API rather than kinship-backend, so a
+  /// failure there must not blank out the balance — it is fetched separately
+  /// and defaults to zero.
+  Future<void> loadBalance({String? wallet}) async {
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
@@ -71,6 +101,22 @@ class ComputeController extends Notifier<ComputeState> {
         totalSpent: (balance['totalSpent'] as num?)?.toDouble() ?? 0,
         isLoading: false,
       );
+
+      // Usage stats are best-effort — a failure here leaves the balance intact.
+      final address =
+          wallet ?? ref.read(authControllerProvider).user?.wallet ?? '';
+      if (address.isNotEmpty) {
+        final usage =
+            await ChatService.instance.fetchComputeUsage(wallet: address);
+        if (usage.isNotEmpty) {
+          state = state.copyWith(
+            tokensUsed: (usage['used'] as num?)?.toInt() ?? 0,
+            requestCount: (usage['requestCount'] as num?)?.toInt() ?? 0,
+            chargedCost: (usage['chargedCost'] as num?)?.toDouble() ?? 0,
+            period: usage['period'] as String? ?? '',
+          );
+        }
+      }
 
       AppLogger.info(
         'Compute loaded: balance=${state.balance}, price=${state.tokenPrice}',

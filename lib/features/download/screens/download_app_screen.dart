@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/extensions/context_extensions.dart';
 import '../../../shared/widgets/app_header.dart';
-import '../../../shared/widgets/user_menu_actions.dart';
 
 /// Shown on web after login/signup — directs users to download native apps.
-class DownloadAppScreen extends ConsumerWidget {
+class DownloadAppScreen extends StatelessWidget {
   const DownloadAppScreen({super.key});
 
   static const _appStoreUrl =
@@ -29,7 +27,7 @@ class DownloadAppScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final colors = context.kiduna;
     final text = context.kidunaText;
 
@@ -37,7 +35,7 @@ class DownloadAppScreen extends ConsumerWidget {
       backgroundColor: colors.deep,
       body: Column(
         children: [
-          AppHeader(trailing: UserMenuActions(ref: ref)),
+          const AppHeader(),
           Expanded(
             child: Center(
               child: SingleChildScrollView(
