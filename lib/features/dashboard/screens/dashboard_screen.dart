@@ -12,6 +12,7 @@ import '../../../shared/layouts/responsive_layout.dart';
 import '../../../shared/widgets/app_header.dart';
 import '../../../shared/widgets/ki_agent.dart';
 import '../controllers/ecosystem_controller.dart';
+import '../../../features/ki_chat/controllers/ki_chat_controller.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -29,6 +30,106 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     // Load ecosystem early so realmId is available for chat API
     Future.microtask(() {
       ref.read(ecosystemControllerProvider.notifier).loadEcosystem();
+    });
+  }
+
+  void _handleTabChange(int index) {
+    if (_activeTab == 1 && index != 1) {
+      final ki = ref.read(kiChatControllerProvider.notifier);
+      if (ki.hasGameContext) {
+        _showLeaveGameDialog(index);
+        return;
+      }
+    }
+    setState(() => _activeTab = index);
+  }
+
+  void _showLeaveGameDialog(int targetTab) {
+    final colors = context.kiduna;
+    showDialog<bool>(
+      context: context,
+      barrierColor: Colors.transparent,
+      builder: (ctx) {
+        final screenWidth = MediaQuery.of(ctx).size.width;
+        return Stack(
+          children: [
+            // Dark overlay — left side only
+            Positioned(
+              left: 0, top: 0, bottom: 0,
+              width: screenWidth * 0.7,
+              child: GestureDetector(
+                onTap: () => Navigator.of(ctx).pop(),
+                child: Container(color: Colors.black.withValues(alpha: 0.72)),
+              ),
+            ),
+            // Popup centered in left side
+            Positioned(
+              left: 0, top: 0, bottom: 0,
+              width: screenWidth * 0.7,
+              child: Center(
+                child: Material(
+                  color: Colors.transparent,
+                  child: Container(
+                    width: 340,
+                    padding: const EdgeInsets.all(22),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1B140C),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: const Color(0xFF6B5533), width: 1.5),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('Leave the game?',
+                          style: TextStyle(fontFamily: 'GoudyHeavyface', fontSize: 22, color: colors.gold)),
+                        const SizedBox(height: 8),
+                        Text("You'll forfeit your seat and progress.",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: colors.cream.withValues(alpha: 0.7), fontSize: 14)),
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () => Navigator.of(ctx).pop(false),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  decoration: BoxDecoration(color: const Color(0xFF2A6B4F), borderRadius: BorderRadius.circular(10)),
+                                  child: Center(child: Text('Keep Playing',
+                                    style: TextStyle(color: colors.cream, fontWeight: FontWeight.w600, fontSize: 15))),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () => Navigator.of(ctx).pop(true),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  decoration: BoxDecoration(color: const Color(0xFFB3261E), borderRadius: BorderRadius.circular(10)),
+                                  child: Center(child: Text('Leave',
+                                    style: TextStyle(color: colors.cream, fontWeight: FontWeight.w600, fontSize: 15))),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    ).then((leave) {
+      if (leave == true) {
+        final ki = ref.read(kiChatControllerProvider.notifier);
+        ki.clearGameContext();
+        ki.clearLocalTips();
+        setState(() => _activeTab = targetTab);
+      }
     });
   }
 
@@ -51,7 +152,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       ),
       bottomNavigationBar: _BottomTabBar(
         activeTab: _activeTab,
-        onTabChanged: (index) => setState(() => _activeTab = index),
+        onTabChanged: _handleTabChange,
       ),
     );
   }

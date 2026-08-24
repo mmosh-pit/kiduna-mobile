@@ -1,53 +1,275 @@
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/extensions/context_extensions.dart';
 import '../../../games/medieval_poker/flame/medieval_poker_game.dart';
 import '../../../games/medieval_poker/flame/poker_hud.dart';
 import '../../../games/medieval_poker/medieval_poker_leaderboard_screen.dart';
 import '../../../games/medieval_poker/medieval_poker_lobby_screen.dart';
+import '../../../features/ki_chat/controllers/ki_chat_controller.dart';
 import '../../../l10n/app_localizations.dart';
+
+// ── Game tip constants ───────────────────────────────────────────────
+
+const _tipWelcome =
+    'Welcome! You get 3 hole cards — discard one after the flop. '
+    'Got a pair? Bet. Nothing matches? Fold early and save your chips.';
+
+const _tipHeatingUp =
+    '🔥 You\'re Heating Up! Fire Cards are unlocked. Bet big and play '
+    'them now — raise to pressure opponents before you Cool Off.';
+
+const _tipTilted =
+    'You\'re Tilted — Power Cards are locked. Check or fold weak hands. '
+    'Only call or bet if you have a strong pair or better.';
+
+const _tipPowerCard =
+    'An opponent targeted you! Play a Counter Card if you have one. '
+    'No counter? Check if you can, fold if the bet is too high.';
+
+const _tipWin =
+    '🏆 Great win! Next time — raise when you have Two Pair or better, '
+    'check with one Pair, fold with nothing.';
+
+const _tipLose =
+    'Tough loss! Remember — fold early with weak cards, call only with '
+    'pairs, and raise only when you\'re confident. Patience wins.';
+
+// ── Hand evaluation helpers ──────────────────────────────────────────
+
+String _cardText(dynamic card) {
+  try {
+    return '${card.rankLabel}${card.suit.glyph}';
+  } catch (_) {
+    try { return card.toString(); } catch (_) { return '?'; }
+  }
+}
+
+String _evaluateHand(List<String> holeRanks, List<String> boardRanks) {
+  final allRanks = [...holeRanks, ...boardRanks];
+  final counts = <String, int>{};
+  for (final r in allRanks) {
+    counts[r] = (counts[r] ?? 0) + 1;
+  }
+  final pairs = counts.values.where((c) => c == 2).length;
+  final trips = counts.values.where((c) => c == 3).length;
+  final quads = counts.values.where((c) => c >= 4).length;
+
+  if (quads > 0) return 'Four of a Kind — very strong! Raise big.';
+  if (trips > 0 && pairs > 0) return 'Full House — very strong! Raise big.';
+  if (trips > 0) return 'Three of a Kind — strong hand. Raise.';
+  if (pairs >= 2) return 'Two Pair — decent hand. Call or small raise.';
+  if (pairs == 1) {
+    for (final r in holeRanks) {
+      if (allRanks.where((x) => x == r).length >= 2) {
+        final name = const {
+          'A': 'Ace', 'K': 'King', 'Q': 'Queen',
+          'J': 'Jack', 'T': '10',
+        }[r] ?? r;
+        return 'Pair of ${name}s — moderate hand. Consider calling.';
+      }
+    }
+    return 'Pair on the board — weak hand. Consider folding.';
+  }
+  if (holeRanks.any(['A', 'K', 'Q', 'J'].contains)) {
+    return 'High Card only, but you have face cards. Risky — consider checking.';
+  }
+  return 'High Card only — weak hand. Fold to save chips.';
+}
 
 /// Game feature entry — shows mode selection or active poker game.
 ///
 /// Designed to sit inside the [DashboardScreen] left panel.
 /// Ki chat stays visible on the right for all states.
-class GameScreen extends StatefulWidget {
+class GameScreen extends ConsumerStatefulWidget {
   const GameScreen({super.key});
 
   @override
-  State<GameScreen> createState() => _GameScreenState();
+  ConsumerState<GameScreen> createState() => _GameScreenState();
 }
 
 enum _GameView { modeSelector, singlePlayer, lobby, leaderboard }
 
-class _GameScreenState extends State<GameScreen> {
+class _GameScreenState extends ConsumerState<GameScreen> {
   _GameView _view = _GameView.modeSelector;
+  bool _showExitConfirm = false;
+
+  /// Stored so the game survives exit-dialog rebuilds.
+  _PokerTableView? _pokerView;
+
+  @override
+  void dispose() {
+    final ki = ref.read(kiChatControllerProvider.notifier);
+    ki.clearGameContext();
+    ki.clearLocalTips();
+    super.dispose();
+  }
 
   void _goToModeSelector() {
-    setState(() => _view = _GameView.modeSelector);
+    final ki = ref.read(kiChatControllerProvider.notifier);
+    ki.clearGameContext();
+    ki.clearLocalTips();
+    setState(() {
+      _showExitConfirm = false;
+      _pokerView = null;
+      _view = _GameView.modeSelector;
+    });
+  }
+
+  void _startSinglePlayer() {
+    setState(() {
+      _pokerView = _PokerTableView(
+        key: GlobalKey(),
+        onExit: () => setState(() => _showExitConfirm = true),
+      );
+      _view = _GameView.singlePlayer;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return switch (_view) {
-      _GameView.modeSelector => _ModeSelector(
-          onSinglePlayer: () => setState(() => _view = _GameView.singlePlayer),
-          onPlayOnline: () => setState(() => _view = _GameView.lobby),
-        ),
-      _GameView.singlePlayer => _PokerTableView(onExit: _goToModeSelector),
-      _GameView.lobby => _LobbyView(
-          onBack: _goToModeSelector,
-          onLeaderboard: () => setState(() => _view = _GameView.leaderboard),
-        ),
-      _GameView.leaderboard => _LeaderboardView(onBack: () {
-          setState(() => _view = _GameView.lobby);
-        }),
-    };
+    // Non-game views
+    if (_view == _GameView.modeSelector) {
+      return _ModeSelector(
+        onSinglePlayer: _startSinglePlayer,
+        onPlayOnline: () => setState(() => _view = _GameView.lobby),
+      );
+    }
+    if (_view == _GameView.lobby) {
+      return _LobbyView(
+        onBack: _goToModeSelector,
+        onLeaderboard: () => setState(() => _view = _GameView.leaderboard),
+      );
+    }
+    if (_view == _GameView.leaderboard) {
+      return _LeaderboardView(
+        onBack: () => setState(() => _view = _GameView.lobby),
+      );
+    }
+
+    // Single player — reuse the SAME _pokerView (game not recreated)
+    return Stack(
+      children: [
+        if (_pokerView != null) _pokerView!,
+        if (_showExitConfirm)
+          _ExitOverlay(
+            onKeepPlaying: () => setState(() => _showExitConfirm = false),
+            onLeave: _goToModeSelector,
+          ),
+      ],
+    );
   }
 }
 
-/// Lobby wrapper — shows the lobby inside the left panel.
+// ── Exit confirmation overlay (X button) ─────────────────────────────
+
+class _ExitOverlay extends StatelessWidget {
+  const _ExitOverlay({required this.onKeepPlaying, required this.onLeave});
+
+  final VoidCallback onKeepPlaying;
+  final VoidCallback onLeave;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.kiduna;
+
+    return Positioned.fill(
+      child: Material(
+        color: Colors.black.withValues(alpha: 0.72),
+        child: Center(
+          child: Container(
+            width: 340,
+            padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1B140C),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: const Color(0xFF6B5533),
+                width: 1.5,
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Leave the game?',
+                  style: TextStyle(
+                    fontFamily: 'GoudyHeavyface',
+                    fontSize: 22,
+                    color: colors.gold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "You'll forfeit your seat and progress.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: colors.cream.withValues(alpha: 0.7),
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: onKeepPlaying,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2A6B4F),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Center(
+                            child: Text(
+                              'Keep Playing',
+                              style: TextStyle(
+                                color: colors.cream,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: onLeave,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFB3261E),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Center(
+                            child: Text(
+                              'Leave',
+                              style: TextStyle(
+                                color: colors.cream,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Lobby wrapper ────────────────────────────────────────────────────
+
 class _LobbyView extends StatelessWidget {
   const _LobbyView({required this.onBack, required this.onLeaderboard});
 
@@ -79,7 +301,8 @@ class _LobbyView extends StatelessWidget {
   }
 }
 
-/// Leaderboard wrapper — shows inside left panel with back button.
+// ── Leaderboard wrapper ──────────────────────────────────────────────
+
 class _LeaderboardView extends StatelessWidget {
   const _LeaderboardView({required this.onBack});
 
@@ -108,7 +331,8 @@ class _LeaderboardView extends StatelessWidget {
   }
 }
 
-/// Mode selection — Single Player vs Play Online.
+// ── Mode selector ────────────────────────────────────────────────────
+
 class _ModeSelector extends StatelessWidget {
   const _ModeSelector({
     required this.onSinglePlayer,
@@ -246,39 +470,164 @@ class _ModeButton extends StatelessWidget {
   }
 }
 
-/// Active poker game — uses the LEGACY [MedievalPokerGame] + [PokerHud]
-/// for proper animations and pacing (AI thinking delays, card dealing
-/// animations, "X is thinking..." banners). Same engine as kinship-app.
-class _PokerTableView extends StatefulWidget {
-  const _PokerTableView({required this.onExit});
+// ── Poker table with Ki tips ─────────────────────────────────────────
+
+/// Active poker game — uses [MedievalPokerGame] + [PokerHud] for proper
+/// animations. Sends instant local tips to Ki chat on game events.
+class _PokerTableView extends ConsumerStatefulWidget {
+  const _PokerTableView({super.key, required this.onExit});
 
   final VoidCallback onExit;
 
   @override
-  State<_PokerTableView> createState() => _PokerTableViewState();
+  ConsumerState<_PokerTableView> createState() => _PokerTableViewState();
 }
 
-class _PokerTableViewState extends State<_PokerTableView> {
-  MedievalPokerGame? _game;
+class _PokerTableViewState extends ConsumerState<_PokerTableView> {
+  late final MedievalPokerGame _game;
+
+  bool _sentWelcome = false;
+  bool _wasHeatingUp = false;
+  bool _wasTilted = false;
+  bool _wasGameOver = false;
+  bool _hadPowerPrompt = false;
+  bool _wasPlayerTurn = false;
 
   @override
   void initState() {
     super.initState();
     _game = MedievalPokerGame(opponentCount: 3);
+    _game.view.addListener(_onViewChanged);
+
+    // Welcome tip — once, after the first frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_sentWelcome && mounted) {
+        _sentWelcome = true;
+        _tip(_tipWelcome);
+        // Mark game as active so tab-switch confirmation works.
+        ref.read(kiChatControllerProvider.notifier)
+            .setGameContext('Game in progress');
+      }
+    });
+  }
+
+  // ── helpers ──
+
+  void _tip(String text) {
+    if (!mounted) return;
+    ref.read(kiChatControllerProvider.notifier).addLocalTip(text);
+  }
+
+  String _buildCardContext() {
+    try {
+      final human = _game.engine.players.firstWhere((p) => p.isHuman);
+      final hole = human.hole.map(_cardText).join(' ');
+      final board = _game.engine.community.map(_cardText).join(' ');
+      final pot = _game.engine.pot;
+      final parts = <String>[];
+      if (hole.isNotEmpty) parts.add('Your cards: $hole');
+      if (board.isNotEmpty) parts.add('Board: $board');
+      parts.add('Pot: $pot coins');
+      return parts.join('. ');
+    } catch (_) {
+      return '';
+    }
+  }
+
+  String _buildCardTip() {
+    try {
+      final human = _game.engine.players.firstWhere((p) => p.isHuman);
+      final holeCards = human.hole.map(_cardText).toList();
+      if (holeCards.isEmpty) return '';
+      final boardCards = _game.engine.community.map(_cardText).toList();
+      final pot = _game.engine.pot;
+
+      final holeRanks = human.hole.map((c) {
+        try { return c.rankLabel as String; } catch (_) { return '?'; }
+      }).toList();
+      final boardRanks = _game.engine.community.map((c) {
+        try { return c.rankLabel as String; } catch (_) { return '?'; }
+      }).toList();
+
+      final eval = _evaluateHand(holeRanks, boardRanks);
+      final buf = StringBuffer('Your cards: ${holeCards.join(" ")}');
+      if (boardCards.isNotEmpty) buf.write('. Board: ${boardCards.join(" ")}');
+      buf.write('. Pot: $pot coins. $eval');
+      return buf.toString();
+    } catch (_) {
+      return '';
+    }
+  }
+
+  // ── game event listener ──
+
+  void _onViewChanged() {
+    if (!mounted) return;
+    final v = _game.view.value;
+    final ki = ref.read(kiChatControllerProvider.notifier);
+
+    // Heating Up
+    if (v.banner.contains('Heating Up') && !_wasHeatingUp) {
+      _wasHeatingUp = true;
+      _tip(_tipHeatingUp);
+    } else if (!v.banner.contains('Heating Up')) {
+      _wasHeatingUp = false;
+    }
+
+    // Tilted
+    if (v.banner.contains('Tilted') && !_wasTilted) {
+      _wasTilted = true;
+      _tip(_tipTilted);
+    } else if (!v.banner.contains('Tilted')) {
+      _wasTilted = false;
+    }
+
+    // Power Card counter prompt
+    if (v.showPower &&
+        v.powerTitle.contains('Respond') &&
+        !_hadPowerPrompt) {
+      _hadPowerPrompt = true;
+      _tip(_tipPowerCard);
+    } else if (!v.showPower) {
+      _hadPowerPrompt = false;
+    }
+
+    // Player's turn — card evaluation
+    if (v.showActions && !_wasPlayerTurn) {
+      _wasPlayerTurn = true;
+      final ctx = _buildCardContext();
+      if (ctx.isNotEmpty) ki.setGameContext(ctx);
+      final tip = _buildCardTip();
+      if (tip.isNotEmpty) _tip(tip);
+    } else if (!v.showActions) {
+      _wasPlayerTurn = false;
+    }
+
+    // Game Over
+    if (v.gameOver && !_wasGameOver) {
+      _wasGameOver = true;
+      ki.clearGameContext();
+      _tip(v.won ? _tipWin : _tipLose);
+    }
+  }
+
+  @override
+  void dispose() {
+    _game.view.removeListener(_onViewChanged);
+    final ki = ref.read(kiChatControllerProvider.notifier);
+    ki.clearGameContext();
+    ki.clearLocalTips();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final game = _game;
-    if (game == null) {
-      return const SizedBox.shrink();
-    }
     return ClipRect(
       child: GameWidget<MedievalPokerGame>(
-        game: game,
+        game: _game,
         overlayBuilderMap: {
           'hud': (context, g) => PokerHud(
-                game: game,
+                game: _game,
                 onExit: widget.onExit,
               ),
         },
