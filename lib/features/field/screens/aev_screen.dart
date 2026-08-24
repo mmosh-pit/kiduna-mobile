@@ -254,8 +254,10 @@ class _AevFieldState extends ConsumerState<_AevField> {
                 bounds: bounds,
                 width: 256,
                 initialOffset: Offset(
-                  constraints.maxWidth - 256 - 22,
-                  22,
+                  (constraints.maxWidth > 1020)
+                      ? 644
+                      : constraints.maxWidth - 278,
+                  160,
                 ),
                 child: const ComputeCard(),
               ),

@@ -16,6 +16,7 @@ import '../data/field_composition.dart';
 import '../controllers/field_controller.dart';
 import '../widgets/field_background.dart';
 import '../widgets/advanced_actions_panel.dart';
+import '../widgets/compute_card.dart';
 import '../widgets/field_chrome_panels.dart';
 import '../widgets/field_panel.dart';
 import '../widgets/field_working_panels.dart';
@@ -245,6 +246,17 @@ class FieldStack extends ConsumerWidget {
                 controller: controller,
                 bounds: bounds,
                 opacity: opacity,
+              ),
+              FieldPanel(
+                label: context.l10n.compute,
+                bounds: bounds,
+                width: 256,
+                opacity: opacity,
+                initialOffset: Offset(
+                  (bounds.width - 256 - 22).clamp(8.0, double.infinity),
+                  22,
+                ),
+                child: const ComputeCard(),
               ),
               if (state.selectedPlacement != null)
                 FieldPanel(

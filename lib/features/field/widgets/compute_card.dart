@@ -1,24 +1,102 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../../config/env.dart';
 import '../../../core/extensions/context_extensions.dart';
-import '../data/field_fixtures.dart';
+import '../../../core/utils/logger.dart';
+import '../../compute/controllers/compute_controller.dart';
+import '../../compute/screens/buy_kiduna_screen.dart';
+import '../../compute/widgets/kiduna_purchase_panel.dart';
 
-/// The Compute panel body: the Source's Compute balance, exchange rates, and a
-/// link to Resources. Values are fixtures; Resources routing is added with that
-/// Surface.
-class ComputeCard extends StatelessWidget {
+/// The Compute panel body: the Source's live KIDUNA balance, exchange rate,
+/// total value, and a "Buy More KIDUNA" action.
+///
+/// On desktop the buy action opens the web purchase page in the browser.
+/// On web it pushes the purchase screen in-app.
+class ComputeCard extends ConsumerStatefulWidget {
   const ComputeCard({super.key});
+
+  @override
+  ConsumerState<ComputeCard> createState() => _ComputeCardState();
+}
+
+class _ComputeCardState extends ConsumerState<ComputeCard>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(computeControllerProvider.notifier).loadBalance();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Refresh the balance when the user returns from the browser purchase.
+    if (state == AppLifecycleState.resumed && mounted) {
+      ref.read(computeControllerProvider.notifier).refresh();
+    }
+  }
+
+  Future<void> _openBuyPage() async {
+    if (kIsWeb) {
+      // Already on web — push the screen in-app.
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => const BuyKidunaScreen(),
+        ),
+      );
+      if (mounted) {
+        ref.read(computeControllerProvider.notifier).refresh();
+      }
+      return;
+    }
+
+    // Desktop/mobile — open the web purchase page in the browser.
+    // No token in the URL: the web app resolves auth from its own session
+    // and prompts for sign-in when there isn't one.
+    final base = Env.webAppUrl.isNotEmpty
+        ? Env.webAppUrl
+        : 'https://mobile.kiduna.dev';
+
+    AppLogger.info('Opening buy page: $base/buy-kiduna', tag: 'Compute');
+
+    final uri = Uri.parse('$base/buy-kiduna');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  String _formatUsd(double value) {
+    if (value >= 1000) return '\$${value.toStringAsFixed(0)}';
+    if (value >= 1) return '\$${value.toStringAsFixed(2)}';
+    return '\$${value.toStringAsFixed(4)}';
+  }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.kiduna;
     final text = context.kidunaText;
+    final compute = ref.watch(computeControllerProvider);
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 11, 14, 11),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
+          // ── Header + balance ─────────────────────────────────
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -28,50 +106,89 @@ class ComputeCard extends StatelessWidget {
                 style: text.eyebrowSmall.copyWith(color: colors.gold),
               ),
               Flexible(
-                child: Text(
-                  FieldFixtures.computeBalance,
-                  textAlign: TextAlign.right,
-                  style: text.body.copyWith(color: colors.cream),
-                ),
+                child: compute.isLoading
+                    ? SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 1.6,
+                          color: colors.gold,
+                        ),
+                      )
+                    : Text(
+                        '${KidunaPurchasePanel.formatKiduna(compute.balance)} KIDUNA',
+                        textAlign: TextAlign.right,
+                        style: text.body.copyWith(color: colors.cream),
+                      ),
               ),
             ],
           ),
+
           const SizedBox(height: 10),
-          const Row(
+
+          // ── Rate + total value ───────────────────────────────
+          Row(
             children: [
               Expanded(
                 child: _Rate(
-                  label: FieldFixtures.computeRateLabel,
-                  value: FieldFixtures.computeRateValue,
+                  label: '1 KIDUNA',
+                  value: '\$${compute.tokenPrice}',
                 ),
               ),
-              SizedBox(width: 7),
+              const SizedBox(width: 7),
               Expanded(
                 child: _Rate(
-                  label: FieldFixtures.computeTotalLabel,
-                  value: FieldFixtures.computeTotalValue,
+                  label: 'Total value',
+                  value: _formatUsd(compute.totalValueUsd),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+
+          const SizedBox(height: 10),
+
+          // ── Buy button ───────────────────────────────────────
           Semantics(
             button: true,
-            label: context.l10n.openResources,
+            label: 'Buy More KIDUNA',
             child: InkWell(
-              onTap: () {},
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    context.l10n.openResources,
-                    style: text.label.copyWith(color: colors.sky),
-                  ),
-                  Icon(Icons.north_east, size: 12, color: colors.sky),
-                ],
+              onTap: _openBuyPage,
+              borderRadius: BorderRadius.circular(6),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: colors.gold.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(6),
+                  border:
+                      Border.all(color: colors.gold.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.add_circle_outline,
+                        size: 13, color: colors.gold),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Buy More KIDUNA',
+                      style: text.label.copyWith(
+                        color: colors.gold,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
+
+          if (compute.error != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              compute.error!,
+              style: text.micro.copyWith(color: colors.error),
+            ),
+          ],
         ],
       ),
     );

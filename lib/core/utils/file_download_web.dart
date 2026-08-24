@@ -18,3 +18,19 @@ bool triggerDownload({
   html.Url.revokeObjectUrl(url);
   return true;
 }
+
+/// Web-only: attempts to close the current browser tab.
+///
+/// Browsers only permit `window.close()` on windows that were opened by
+/// script (`window.open`). A tab the user opened — or one launched by an
+/// external app — cannot be closed programmatically, so this returns false
+/// and the caller should fall back to asking the user to close it manually.
+bool closeWindow() {
+  try {
+    html.window.close();
+    // If the tab is still here a moment later the close was blocked.
+    return html.window.closed ?? false;
+  } catch (_) {
+    return false;
+  }
+}
