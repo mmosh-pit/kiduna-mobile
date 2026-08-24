@@ -42,7 +42,11 @@ jobs:
             pkg-config \
             libgtk-3-dev \
             liblzma-dev \
-            libstdc++-12-dev
+            libstdc++-12-dev \
+            libgstreamer1.0-dev \
+            libgstreamer-plugins-base1.0-dev \
+            gstreamer1.0-plugins-good \
+            gstreamer1.0-plugins-bad
 
       - run: flutter pub get
 
@@ -204,8 +208,6 @@ jobs:
       - name: Stage release assets
         run: |
           mkdir -p release-assets
-          cp artifacts/android-apk/app-release.apk release-assets/app-release.apk
-          cp artifacts/android-aab/app-release.aab release-assets/app-release.aab
           cp artifacts/linux/linux-bundle.zip release-assets/linux-bundle.zip
           cp artifacts/web/web-bundle.zip release-assets/web-bundle.zip
           cp artifacts/windows/windows-bundle.zip release-assets/windows-bundle.zip

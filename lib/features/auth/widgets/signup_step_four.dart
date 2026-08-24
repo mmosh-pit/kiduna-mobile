@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../shared/animations/slide_in_animation.dart';
 import '../../../shared/widgets/kiduna_primary_button.dart';
-import '../../../shared/widgets/kiduna_text_field.dart';
 
 class SignupStepFour extends StatefulWidget {
   const SignupStepFour({
@@ -84,7 +83,7 @@ class _SignupStepFourState extends State<SignupStepFour> {
               ),
               children: [
                 TextSpan(
-                  text: 'Step 4 of 6',
+                  text: 'Step 4 of 7',
                   style: TextStyle(
                     color: colors.text,
                     fontWeight: FontWeight.w700,

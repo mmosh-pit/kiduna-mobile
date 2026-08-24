@@ -2,17 +2,16 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/extensions/context_extensions.dart';
-import '../../../games/medieval_poker/flame/table_renderer.dart';
-import '../../../games/medieval_poker/session/card_zoom.dart';
-import '../../../games/medieval_poker/session/game_session.dart';
-import '../../../games/medieval_poker/session/local_session.dart';
-import '../../../games/medieval_poker/session/paced_session.dart';
-import '../../../games/medieval_poker/session/session_hud.dart';
+import '../../../games/medieval_poker/flame/medieval_poker_game.dart';
+import '../../../games/medieval_poker/flame/poker_hud.dart';
+import '../../../games/medieval_poker/medieval_poker_leaderboard_screen.dart';
+import '../../../games/medieval_poker/medieval_poker_lobby_screen.dart';
 import '../../../l10n/app_localizations.dart';
 
 /// Game feature entry — shows mode selection or active poker game.
 ///
 /// Designed to sit inside the [DashboardScreen] left panel.
+/// Ki chat stays visible on the right for all states.
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
 
@@ -20,31 +19,104 @@ class GameScreen extends StatefulWidget {
   State<GameScreen> createState() => _GameScreenState();
 }
 
+enum _GameView { modeSelector, singlePlayer, lobby, leaderboard }
+
 class _GameScreenState extends State<GameScreen> {
-  bool _isPlaying = false;
+  _GameView _view = _GameView.modeSelector;
 
-  void _startSinglePlayer() {
-    setState(() => _isPlaying = true);
-  }
-
-  void _exitGame() {
-    setState(() => _isPlaying = false);
+  void _goToModeSelector() {
+    setState(() => _view = _GameView.modeSelector);
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isPlaying) {
-      return _PokerTableView(onExit: _exitGame);
-    }
-    return _ModeSelector(onSinglePlayer: _startSinglePlayer);
+    return switch (_view) {
+      _GameView.modeSelector => _ModeSelector(
+          onSinglePlayer: () => setState(() => _view = _GameView.singlePlayer),
+          onPlayOnline: () => setState(() => _view = _GameView.lobby),
+        ),
+      _GameView.singlePlayer => _PokerTableView(onExit: _goToModeSelector),
+      _GameView.lobby => _LobbyView(
+          onBack: _goToModeSelector,
+          onLeaderboard: () => setState(() => _view = _GameView.leaderboard),
+        ),
+      _GameView.leaderboard => _LeaderboardView(onBack: () {
+          setState(() => _view = _GameView.lobby);
+        }),
+    };
   }
 }
 
-/// Mode selection — Single Player vs Online.
+/// Lobby wrapper — shows the lobby inside the left panel.
+class _LobbyView extends StatelessWidget {
+  const _LobbyView({required this.onBack, required this.onLeaderboard});
+
+  final VoidCallback onBack;
+  final VoidCallback onLeaderboard;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(8, 8, 0, 0),
+            child: IconButton(
+              onPressed: onBack,
+              icon: Icon(
+                Icons.arrow_back_rounded,
+                color: context.kiduna.cream.withValues(alpha: 0.7),
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          child: MedievalPokerLobbyScreen(onLeaderboard: onLeaderboard),
+        ),
+      ],
+    );
+  }
+}
+
+/// Leaderboard wrapper — shows inside left panel with back button.
+class _LeaderboardView extends StatelessWidget {
+  const _LeaderboardView({required this.onBack});
+
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(8, 8, 0, 0),
+            child: IconButton(
+              onPressed: onBack,
+              icon: Icon(
+                Icons.arrow_back_rounded,
+                color: context.kiduna.cream.withValues(alpha: 0.7),
+              ),
+            ),
+          ),
+        ),
+        const Expanded(child: MedievalPokerLeaderboardScreen()),
+      ],
+    );
+  }
+}
+
+/// Mode selection — Single Player vs Play Online.
 class _ModeSelector extends StatelessWidget {
-  const _ModeSelector({required this.onSinglePlayer});
+  const _ModeSelector({
+    required this.onSinglePlayer,
+    required this.onPlayOnline,
+  });
 
   final VoidCallback onSinglePlayer;
+  final VoidCallback onPlayOnline;
 
   @override
   Widget build(BuildContext context) {
@@ -53,7 +125,7 @@ class _ModeSelector extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
 
     return Container(
-      color: colors.deep,
+      color: colors.field,
       padding: const EdgeInsets.all(32),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -80,17 +152,8 @@ class _ModeSelector extends StatelessWidget {
           _ModeButton(
             icon: Icons.public,
             label: l10n.playOnlineLabel,
-            subtitle: l10n.comingSoon,
-            onTap: null,
-            enabled: false,
-          ),
-          const SizedBox(height: 16),
-          _ModeButton(
-            icon: Icons.emoji_events,
-            label: l10n.leaderboardLabel,
-            subtitle: l10n.comingSoon,
-            onTap: null,
-            enabled: false,
+            subtitle: 'Create or join a room by code',
+            onTap: onPlayOnline,
           ),
         ],
       ),
@@ -183,12 +246,9 @@ class _ModeButton extends StatelessWidget {
   }
 }
 
-/// Active poker game — wraps Elias's LocalSession + TableRenderer.
-///
-/// Uses [LayoutBuilder] + scoped [MediaQuery] so the game's HUD overlays
-/// (dialogs, panels, prompts) respect the container size instead of the
-/// full window size. A [Navigator] overlay scope ensures [showDialog]
-/// renders within the game panel, not full-screen.
+/// Active poker game — uses the LEGACY [MedievalPokerGame] + [PokerHud]
+/// for proper animations and pacing (AI thinking delays, card dealing
+/// animations, "X is thinking..." banners). Same engine as kinship-app.
 class _PokerTableView extends StatefulWidget {
   const _PokerTableView({required this.onExit});
 
@@ -199,79 +259,31 @@ class _PokerTableView extends StatefulWidget {
 }
 
 class _PokerTableViewState extends State<_PokerTableView> {
-  late LocalSession _local;
-  late GameSession _session;
-  late TableRenderer _renderer;
-  final CardZoomController _cardZoom = CardZoomController();
-  final GlobalKey<NavigatorState> _navKey = GlobalKey<NavigatorState>();
-  int _generation = 0;
+  MedievalPokerGame? _game;
 
   @override
   void initState() {
     super.initState();
-    _create();
-  }
-
-  void _create() {
-    _local = LocalSession(opponentCount: 3);
-    _session = PacedSession(_local);
-    _renderer = TableRenderer(session: _session, cardZoom: _cardZoom);
-    _local.start();
-  }
-
-  void _playAgain() {
-    setState(() {
-      _session.dispose();
-      _generation++;
-      _create();
-    });
-  }
-
-  @override
-  void dispose() {
-    _session.dispose();
-    _cardZoom.dispose();
-    super.dispose();
+    _game = MedievalPokerGame(opponentCount: 3);
   }
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // Scope MediaQuery so game overlays use container size, not window.
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            size: Size(constraints.maxWidth, constraints.maxHeight),
-            padding: EdgeInsets.zero,
-          ),
-          child: ClipRect(
-            // Nested Navigator so showDialog renders within this panel,
-            // not across the full window.
-            child: Navigator(
-              key: _navKey,
-              onGenerateRoute: (_) => MaterialPageRoute<void>(
-                builder: (_) => Scaffold(
-                  backgroundColor: Colors.black,
-                  resizeToAvoidBottomInset: false,
-                  body: GameWidget<TableRenderer>(
-                    key: ValueKey(_generation),
-                    game: _renderer,
-                    overlayBuilderMap: {
-                      'hud': (context, game) => SessionHud(
-                            session: _session,
-                            onExit: widget.onExit,
-                            onPlayAgain: _playAgain,
-                            cardZoom: _cardZoom,
-                          ),
-                    },
-                    initialActiveOverlays: const ['hud'],
-                  ),
-                ),
+    final game = _game;
+    if (game == null) {
+      return const SizedBox.shrink();
+    }
+    return ClipRect(
+      child: GameWidget<MedievalPokerGame>(
+        game: game,
+        overlayBuilderMap: {
+          'hud': (context, g) => PokerHud(
+                game: game,
+                onExit: widget.onExit,
               ),
-            ),
-          ),
-        );
-      },
+        },
+        initialActiveOverlays: const ['hud'],
+      ),
     );
   }
 }

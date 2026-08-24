@@ -411,7 +411,7 @@ class _CardFace extends StatelessWidget {
       assets[i],
       fit: BoxFit.contain,
       filterQuality: FilterQuality.high,
-      errorBuilder: (_, __, ___) => _tryAsset(i + 1),
+      errorBuilder: (_, _, _) => _tryAsset(i + 1),
     );
   }
 }
@@ -1457,13 +1457,13 @@ class _PowerThumb extends StatelessWidget {
         height: h,
         fit: BoxFit.cover,
         filterQuality: FilterQuality.medium,
-        errorBuilder: (_, __, ___) => Image.asset(
+        errorBuilder: (_, _, _) => Image.asset(
           'assets/medieval_poker/items/$id.png',
           width: w,
           height: h,
           fit: BoxFit.cover,
           filterQuality: FilterQuality.medium,
-          errorBuilder: (_, __, ___) => SizedBox(
+          errorBuilder: (_, _, _) => SizedBox(
             width: w,
             height: h,
             child: const Center(
@@ -1895,7 +1895,7 @@ class _RulesOverlayState extends State<_RulesOverlay> {
                                 maxScale: 4,
                                 child: Image.asset(path,
                                     fit: BoxFit.contain,
-                                    errorBuilder: (_, __, ___) => const Center(
+                                    errorBuilder: (_, _, _) => const Center(
                                           child: Text('Reference unavailable',
                                               style: TextStyle(
                                                   color: Colors.white54)),
@@ -1973,6 +1973,7 @@ class _ExitButton extends StatelessWidget {
   Future<void> _confirmLeave(BuildContext context) async {
     final leave = await showDialog<bool>(
       context: context,
+      useRootNavigator: false,
       barrierColor: Colors.black.withValues(alpha: 0.72),
       builder: (context) => Dialog(
         backgroundColor: Colors.transparent,

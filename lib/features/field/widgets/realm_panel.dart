@@ -759,8 +759,9 @@ class _HandleField extends StatelessWidget {
     final colors = context.kiduna; final textTheme = context.kidunaText; final l10n = context.l10n;
     final inputStyle = textTheme.caption.copyWith(color: colors.text, height: 1.4);
     Widget? suffixWidget;
-    if (checking) suffixWidget = SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 1.5, color: colors.quiet));
-    else if (available == true) suffixWidget = Icon(Icons.check_circle, size: 16, color: colors.sky);
+    if (checking) {
+      suffixWidget = SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 1.5, color: colors.quiet));
+    } else if (available == true) suffixWidget = Icon(Icons.check_circle, size: 16, color: colors.sky);
     else if (available == false) suffixWidget = Icon(Icons.cancel, size: 16, color: colors.gold);
     final border = OutlineInputBorder(borderRadius: BorderRadius.circular(context.metrics.radiusMd),
       borderSide: BorderSide(color: available == false ? colors.gold : colors.camel.withValues(alpha: 0.24)));

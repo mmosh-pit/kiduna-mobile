@@ -25,7 +25,7 @@ class GravityService {
       final response = await _dio.get<Map<String, dynamic>>(
         ApiEndpoints.gravity(walletAddress),
         queryParameters: {
-          if (currentRealmId != null) 'current_realm': currentRealmId,
+          'current_realm': ?currentRealmId,
         },
       );
 
@@ -114,7 +114,7 @@ class GravityService {
           'wallet_address': wallet,
           'realm_id': realmId,
           'action': action,
-          if (level != null) 'level': level,
+          'level': ?level,
         },
       );
     } on DioException catch (e) {

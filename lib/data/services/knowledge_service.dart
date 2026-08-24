@@ -86,8 +86,8 @@ class KnowledgeService {
         data: {
           'name': name,
           'wallet': wallet,
-          if (platformId != null) 'platform_id': platformId,
-          if (realmId != null) 'realmId': realmId,
+          'platform_id': ?platformId,
+          'realmId': ?realmId,
           'privacy': privacy,
         },
       );
@@ -115,8 +115,8 @@ class KnowledgeService {
       final response = await _dio.patch<Map<String, dynamic>>(
         ApiEndpoints.knowledgeById(kbId),
         data: {
-          if (name != null) 'name': name,
-          if (privacy != null) 'privacy': privacy,
+          'name': ?name,
+          'privacy': ?privacy,
         },
       );
 
@@ -222,7 +222,7 @@ class KnowledgeService {
         data: {
           'title': title,
           'content': content,
-          if (sourceUrl != null) 'source_url': sourceUrl,
+          'source_url': ?sourceUrl,
         },
       );
       AppLogger.info('Ingested text into KB $kbId', tag: 'KnowledgeService');
@@ -255,7 +255,7 @@ class KnowledgeService {
           'fileName': fileName,
           'wallet': wallet,
           'is_folder': isFolder,
-          if (mimeType != null) 'mimeType': mimeType,
+          'mimeType': ?mimeType,
         },
       );
 
@@ -289,8 +289,8 @@ class KnowledgeService {
         data: {
           'query': query,
           'wallet': wallet,
-          if (kbIds != null) 'kb_ids': kbIds,
-          if (limit != null) 'limit': limit,
+          'kb_ids': ?kbIds,
+          'limit': ?limit,
         },
       );
 

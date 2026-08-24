@@ -81,7 +81,7 @@ class _SignupStepOneState extends State<SignupStepOne> {
               ),
               children: [
                 TextSpan(
-                  text: 'Step 1 of 6',
+                  text: 'Step 1 of 7',
                   style: TextStyle(
                     color: colors.text,
                     fontWeight: FontWeight.w700,

@@ -220,7 +220,7 @@ class _KbDetailPanelState extends ConsumerState<KbDetailPanel> {
                     child: ListView.separated(
                       shrinkWrap: true,
                       itemCount: items.length,
-                      separatorBuilder: (_, __) =>
+                      separatorBuilder: (_, _) =>
                           const SizedBox(height: 5),
                       itemBuilder: (_, index) {
                         final item = items[index];
@@ -346,7 +346,7 @@ class _KbDetailPanelState extends ConsumerState<KbDetailPanel> {
       withData: true,
     );
     if (!mounted) return;
-    if (picked == null || picked.isEmpty) return;
+    if (picked.isEmpty) return;
 
     final files = <({String name, List<int> bytes})>[];
     for (final f in picked) {

@@ -86,7 +86,7 @@ class ToolConnectionService {
           'wallet': wallet,
           'tool_name': toolName,
           'credentials': credentials,
-          if (realmId != null) 'realmId': realmId,
+          'realmId': ?realmId,
         },
       );
 

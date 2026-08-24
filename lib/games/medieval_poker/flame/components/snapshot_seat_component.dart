@@ -27,14 +27,13 @@ class SnapshotSeatComponent extends PositionComponent {
   static const _cardGap = 4.0;
 
   SnapshotSeatComponent({
-    required SeatSnapshot seat,
+    required this._seat,
     required this.baseHoleCount,
     this.atlas,
     this.cardZoom,
     Vector2? cardSize,
     super.position,
-  })  : _seat = seat,
-        cardSize = cardSize ?? Vector2(42, 58),
+  })  : cardSize = cardSize ?? Vector2(42, 58),
         super(anchor: Anchor.center) {
     final rowWidth =
         baseHoleCount * this.cardSize.x + (baseHoleCount - 1) * _cardGap;
