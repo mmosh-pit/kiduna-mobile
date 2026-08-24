@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/utils/logger.dart';
 import '../../../data/services/auth_service.dart';
+import '../../auth/controllers/auth_controller.dart';
 
 @immutable
 class ComputeState {
@@ -90,3 +91,27 @@ class ComputeController extends Notifier<ComputeState> {
 
 final computeControllerProvider =
     NotifierProvider<ComputeController, ComputeState>(ComputeController.new);
+
+/// Roles that chat for free — the backend skips the balance check for these,
+/// so the client must not block them either.
+const _freeChatRoles = {'wizard', 'genesis', 'mage'};
+
+/// Whether Ki chat should be blocked for lack of KIDUNA.
+///
+/// Mirrors the backend rule in `chatmessages.py`: free roles always pass,
+/// everyone else needs a balance above zero. This is a UX guard only — the
+/// backend still enforces it, so a stale or bypassed client changes nothing.
+///
+/// Returns false while the balance is still loading, so the composer isn't
+/// blocked on a value we haven't fetched yet.
+final chatBlockedProvider = Provider<bool>((ref) {
+  final compute = ref.watch(computeControllerProvider);
+  if (compute.isLoading) return false;
+
+  final role = (ref.watch(authControllerProvider).user?.role ?? 'member')
+      .trim()
+      .toLowerCase();
+  if (_freeChatRoles.contains(role)) return false;
+
+  return compute.balance <= 0;
+});

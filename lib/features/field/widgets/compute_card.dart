@@ -1,13 +1,9 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 
-import '../../../config/env.dart';
 import '../../../core/extensions/context_extensions.dart';
-import '../../../core/utils/logger.dart';
 import '../../compute/controllers/compute_controller.dart';
-import '../../compute/screens/buy_kiduna_screen.dart';
+import '../../compute/open_buy_kiduna.dart';
 import '../../compute/widgets/kiduna_purchase_panel.dart';
 
 /// The Compute panel body: the Source's live KIDUNA balance, exchange rate,
@@ -50,32 +46,9 @@ class _ComputeCardState extends ConsumerState<ComputeCard>
   }
 
   Future<void> _openBuyPage() async {
-    if (kIsWeb) {
-      // Already on web — push the screen in-app.
-      await Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => const BuyKidunaScreen(),
-        ),
-      );
-      if (mounted) {
-        ref.read(computeControllerProvider.notifier).refresh();
-      }
-      return;
-    }
-
-    // Desktop/mobile — open the web purchase page in the browser.
-    // No token in the URL: the web app resolves auth from its own session
-    // and prompts for sign-in when there isn't one.
-    final base = Env.webAppUrl.isNotEmpty
-        ? Env.webAppUrl
-        : 'https://mobile.kiduna.dev';
-
-    AppLogger.info('Opening buy page: $base/buy-kiduna', tag: 'Compute');
-
-    final uri = Uri.parse('$base/buy-kiduna');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
+    await openBuyKidunaPage(context);
+    if (!mounted) return;
+    ref.read(computeControllerProvider.notifier).refresh();
   }
 
   String _formatUsd(double value) {
