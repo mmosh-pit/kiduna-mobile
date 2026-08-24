@@ -209,6 +209,7 @@ class _FieldStackState extends ConsumerState<FieldStack> {
   FieldGame? _game;
   Key _gameKey = UniqueKey();
   bool _showEmptyState = false;
+  bool _gameReady = false;
 
   @override
   void didChangeDependencies() {
@@ -242,13 +243,13 @@ class _FieldStackState extends ConsumerState<FieldStack> {
       onReady: () {
         final insideRealm = currentRealmId.isNotEmpty &&
             currentRealmId != 'kinship-duna';
-        if (insideRealm) {
-          final isEmpty = _game?.snapshot?.realms.isEmpty ?? true;
-          if (isEmpty != _showEmptyState) {
-            setState(() {
-              _showEmptyState = isEmpty;
-            });
-          }
+        final isEmpty = insideRealm &&
+            (_game?.snapshot?.realms.isEmpty ?? true);
+        if (isEmpty != _showEmptyState || !_gameReady) {
+          setState(() {
+            _showEmptyState = isEmpty;
+            _gameReady = true;
+          });
         }
       },
     );
@@ -259,6 +260,7 @@ class _FieldStackState extends ConsumerState<FieldStack> {
       _game = _createGame();
       _gameKey = UniqueKey();
       _showEmptyState = false;
+      _gameReady = false;
     });
   }
 
@@ -332,7 +334,7 @@ class _FieldStackState extends ConsumerState<FieldStack> {
     }
     final d = event.scrollDelta;
     final k = HardwareKeyboard.instance;
-    if (k.isControlPressed || k.isMetaPressed) {
+    if (!k.isShiftPressed) {
       if (d.dy == 0) return;
       game.zoomAt(
         Vector2(event.localPosition.dx, event.localPosition.dy),
@@ -387,6 +389,15 @@ class _FieldStackState extends ConsumerState<FieldStack> {
                       child: GameWidget(key: _gameKey, game: _game!),
                     ),
                   ),
+                if (!_gameReady || ecoState.isLoading)
+                  Center(
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: context.kiduna.sky,
+                    ),
+                  ),
+                if (_showEmptyState)
+                  const Center(child: _EmptyRealmState()),
                 _RealmIdentity(
                   realm: realm,
                   inspectOpen: state.inspectOpen,
@@ -407,8 +418,6 @@ class _FieldStackState extends ConsumerState<FieldStack> {
                   bounds: bounds,
                   opacity: opacity,
                 ),
-                if (_showEmptyState)
-                  const Center(child: _EmptyRealmState()),
                 if (state.selectedPlacement != null)
                   Positioned(
                     key: ValueKey('popup-${state.selectedRealmId}'),
