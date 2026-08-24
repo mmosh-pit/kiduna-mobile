@@ -260,7 +260,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       backgroundColor: colors.deep,
       body: Column(
         children: [
-          const AppHeader(),
+          const AppHeader(showUserMenu: false),
           Expanded(
             child: isMobile ? _buildMobileLayout() : _buildDesktopLayout(),
           ),

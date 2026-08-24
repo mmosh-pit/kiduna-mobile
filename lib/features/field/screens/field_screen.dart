@@ -87,8 +87,8 @@ class _FieldScreenState extends State<FieldScreen> {
       case SectionIndex.exchange:
         // Presale exchange UI with Ki chat.
         return ResponsiveLayout(
-          desktop: (_) => const _ContentKiWide(content: ExchangeScreen()),
-          mobile: (_) => const _ContentKiNarrow(content: ExchangeScreen()),
+          desktop: (_) => const ContentKiWide(content: ExchangeScreen()),
+          mobile: (_) => const ContentKiNarrow(content: ExchangeScreen()),
         );
       default:
         // Other sections: placeholder with Ki chat.
@@ -96,8 +96,8 @@ class _FieldScreenState extends State<FieldScreen> {
           sectionName: kSections[_activeSection].label,
         );
         return ResponsiveLayout(
-          desktop: (_) => _ContentKiWide(content: placeholder),
-          mobile: (_) => _ContentKiNarrow(content: placeholder),
+          desktop: (_) => ContentKiWide(content: placeholder),
+          mobile: (_) => ContentKiNarrow(content: placeholder),
         );
     }
   }
@@ -105,8 +105,8 @@ class _FieldScreenState extends State<FieldScreen> {
 
 /// Desktop layout for non-Studio sections: content + boundary + Ki side by side.
 /// Mirrors _FieldKiWide but accepts any content widget instead of _FieldStack.
-class _ContentKiWide extends ConsumerWidget {
-  const _ContentKiWide({required this.content});
+class ContentKiWide extends ConsumerWidget {
+  const ContentKiWide({super.key, required this.content});
 
   final Widget content;
 
@@ -138,8 +138,8 @@ class _ContentKiWide extends ConsumerWidget {
 
 /// Mobile layout for non-Studio sections: content on top, Ki below.
 /// Mirrors _FieldKiNarrow but accepts any content widget.
-class _ContentKiNarrow extends StatelessWidget {
-  const _ContentKiNarrow({required this.content});
+class ContentKiNarrow extends StatelessWidget {
+  const ContentKiNarrow({super.key, required this.content});
 
   final Widget content;
 

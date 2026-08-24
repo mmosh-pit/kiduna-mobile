@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../compute/controllers/compute_controller.dart';
 import '../../compute/open_buy_kiduna.dart';
+import '../../compute/screens/compute_details_screen.dart';
 import '../../compute/widgets/kiduna_purchase_panel.dart';
 
 /// The Compute panel body: the Source's live KIDUNA balance, exchange rate,
@@ -43,6 +44,14 @@ class _ComputeCardState extends ConsumerState<ComputeCard>
     if (state == AppLifecycleState.resumed && mounted) {
       ref.read(computeControllerProvider.notifier).refresh();
     }
+  }
+
+  Future<void> _openDetails() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const ComputeDetailsScreen()),
+    );
+    if (!mounted) return;
+    ref.read(computeControllerProvider.notifier).refresh();
   }
 
   Future<void> _openBuyPage() async {
@@ -151,6 +160,25 @@ class _ComputeCardState extends ConsumerState<ComputeCard>
                     ),
                   ],
                 ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 8),
+          Semantics(
+            button: true,
+            label: 'View compute details',
+            child: InkWell(
+              onTap: _openDetails,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'View Details',
+                    style: text.label.copyWith(color: colors.sky),
+                  ),
+                  Icon(Icons.north_east, size: 12, color: colors.sky),
+                ],
               ),
             ),
           ),

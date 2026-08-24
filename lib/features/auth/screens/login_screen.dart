@@ -112,7 +112,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       backgroundColor: colors.deep,
       body: Column(
         children: [
-          const AppHeader(),
+          const AppHeader(showUserMenu: false),
           Expanded(
             child: isMobile
                 ? _buildMobileLayout(isLoading, apiError)
