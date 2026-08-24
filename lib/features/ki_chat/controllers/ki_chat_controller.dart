@@ -21,6 +21,7 @@ class KiChatState {
     this.streamingBuffer = '',
     this.error,
     this.historyLoaded = false,
+    this.outOfBalance = false,
   });
 
   final List<ChatMessageModel> messages;
@@ -30,6 +31,9 @@ class KiChatState {
   final String? error;
   final bool historyLoaded;
 
+  /// True when the backend rejected the last send for lack of KIDUNA.
+  final bool outOfBalance;
+
   KiChatState copyWith({
     List<ChatMessageModel>? messages,
     bool? isLoading,
@@ -37,6 +41,7 @@ class KiChatState {
     String? streamingBuffer,
     String? error,
     bool? historyLoaded,
+    bool? outOfBalance,
     bool clearError = false,
     bool clearStreamingBuffer = false,
   }) {
@@ -49,6 +54,7 @@ class KiChatState {
           : (streamingBuffer ?? this.streamingBuffer),
       error: clearError ? null : (error ?? this.error),
       historyLoaded: historyLoaded ?? this.historyLoaded,
+      outOfBalance: outOfBalance ?? this.outOfBalance,
     );
   }
 }
@@ -206,6 +212,10 @@ class KiChatController extends Notifier<KiChatState> {
             error: e,
             stackTrace: st,
           );
+          if (e is InsufficientBalanceException) {
+            _handleOutOfBalance(e, userMessage);
+            return;
+          }
           state = state.copyWith(
             isStreaming: false,
             error: 'Stream error: [${e.runtimeType}] $e',
@@ -233,6 +243,9 @@ class KiChatController extends Notifier<KiChatState> {
         },
         cancelOnError: true,
       );
+    } on InsufficientBalanceException catch (e) {
+      if (!ref.mounted) return;
+      _handleOutOfBalance(e, userMessage);
     } catch (e, st) {
       if (!ref.mounted) return;
       AppLogger.error(
@@ -246,6 +259,29 @@ class KiChatController extends Notifier<KiChatState> {
         error: 'Send error: [${e.runtimeType}] $e',
       );
     }
+  }
+
+  /// The backend refused the send because the wallet is out of KIDUNA.
+  /// Drops the optimistic user bubble — Ki never saw the message — and flags
+  /// the state so the composer can offer a top-up.
+  void _handleOutOfBalance(
+    InsufficientBalanceException e,
+    ChatMessageModel userMessage,
+  ) {
+    AppLogger.info('Chat blocked: out of KIDUNA', tag: 'KiChat');
+    _subscription = null;
+    state = state.copyWith(
+      messages: state.messages.where((m) => m.id != userMessage.id).toList(),
+      isStreaming: false,
+      outOfBalance: true,
+      error: e.message ?? 'You have no KIDUNA left.',
+      clearStreamingBuffer: true,
+    );
+  }
+
+  /// Called after a successful top-up so the composer unlocks.
+  void clearOutOfBalance() {
+    state = state.copyWith(outOfBalance: false, clearError: true);
   }
 
   void cancelStream() {

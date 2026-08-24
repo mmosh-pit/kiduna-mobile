@@ -12,6 +12,7 @@ import 'core/utils/logger.dart';
 import 'data/local/secure_storage.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/auth/screens/signup_screen.dart';
+import 'features/compute/screens/buy_kiduna_screen.dart';
 import 'l10n/app_localizations.dart';
 
 /// Extracts an invite code from the URL on web.
@@ -75,6 +76,27 @@ String? _extractInviteCodeFromUrl() {
 /// Used by SignupScreen to prefill Step 6.
 String? pendingInviteCode;
 
+/// True when the app is launched at /buy-kiduna (web).
+/// Auth is resolved from the existing browser session, never from the URL.
+bool isBuyKidunaRoute = false;
+
+/// Detects the /buy-kiduna route.
+void _detectBuyKidunaRoute() {
+  if (!kIsWeb) return;
+  try {
+    final uri = Uri.base;
+    final full = uri.toString();
+    if (uri.path.contains('/buy-kiduna') ||
+        uri.fragment.contains('/buy-kiduna') ||
+        full.contains('/buy-kiduna')) {
+      isBuyKidunaRoute = true;
+      AppLogger.info('Buy KIDUNA route detected', tag: 'App');
+    }
+  } catch (e) {
+    AppLogger.warning('Failed to detect buy-kiduna route: $e', tag: 'App');
+  }
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -85,8 +107,11 @@ Future<void> main() async {
   assert(Env.isConfigured, 'Missing .env config. Copy .env.example to .env.');
   AppLogger.info('Environment loaded: ${Env.env}', tag: 'App');
 
-  // Extract invite code from URL before anything renders
-  pendingInviteCode = _extractInviteCodeFromUrl();
+  // Route detection from URL before anything renders
+  _detectBuyKidunaRoute();
+  if (!isBuyKidunaRoute) {
+    pendingInviteCode = _extractInviteCodeFromUrl();
+  }
 
   ApiClient.instance.init(tokenProvider: SecureStorage.instance.getToken);
 
@@ -95,6 +120,16 @@ Future<void> main() async {
 
 class KidunaApp extends StatelessWidget {
   const KidunaApp({super.key});
+
+  Widget _resolveHome() {
+    if (isBuyKidunaRoute) {
+      return const BuyKidunaScreen();
+    }
+    if (pendingInviteCode != null) {
+      return const SignupScreen();
+    }
+    return const LoginScreen();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -105,9 +140,7 @@ class KidunaApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
-      home: pendingInviteCode != null
-          ? const SignupScreen()
-          : const LoginScreen(),
+      home: _resolveHome(),
     );
   }
 }

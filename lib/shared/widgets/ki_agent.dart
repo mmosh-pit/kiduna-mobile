@@ -5,6 +5,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../config/assets.dart';
 import '../../core/extensions/context_extensions.dart';
 import '../../data/models/chat_message_model.dart';
+import '../../features/compute/controllers/compute_controller.dart';
+import '../../features/compute/open_buy_kiduna.dart';
 import '../../features/ki_chat/controllers/ally_controller.dart';
 import '../../features/ki_chat/controllers/ki_chat_controller.dart';
 import 'ki_composer.dart';
@@ -25,6 +27,18 @@ class KiAgent extends ConsumerStatefulWidget {
 class _KiAgentState extends ConsumerState<KiAgent> {
   final TextEditingController _composerController = TextEditingController();
   bool _historyRequested = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // The chat gates on KIDUNA balance, so load it here rather than relying
+    // on the Compute panel being mounted — it isn't on every surface.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(computeControllerProvider.notifier).loadBalance();
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -95,14 +109,17 @@ class _KiAgentState extends ConsumerState<KiAgent> {
                 ),
               ),
             const SizedBox(height: 8),
-            KiComposer(
-              controller: _composerController,
-              onSend: _sendMessage,
-              enabled:
-                  !chatState.isStreaming &&
-                  !chatState.isLoading &&
-                  allyState.ally != null,
-            ),
+            if (chatState.outOfBalance || ref.watch(chatBlockedProvider))
+              _OutOfKidunaBar(ref: ref)
+            else
+              KiComposer(
+                controller: _composerController,
+                onSend: _sendMessage,
+                enabled:
+                    !chatState.isStreaming &&
+                    !chatState.isLoading &&
+                    allyState.ally != null,
+              ),
           ],
         ),
       ),
@@ -320,6 +337,74 @@ class _WelcomeContent extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Replaces the composer when the wallet has run out of KIDUNA. The backend
+/// blocks these sends, so a disabled input would only invite retries that are
+/// guaranteed to fail — point at a top-up instead.
+class _OutOfKidunaBar extends StatelessWidget {
+  const _OutOfKidunaBar({required this.ref});
+
+  final WidgetRef ref;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.kiduna;
+    final text = context.kidunaText;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colors.gold.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: colors.gold.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.bolt_outlined, size: 18, color: colors.gold),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'You are out of KIDUNA. Top up to keep chatting with Ki.',
+              style: text.caption.copyWith(
+                color: colors.muted,
+                fontSize: 12,
+                height: 1.4,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          GestureDetector(
+            onTap: () async {
+              await openBuyKidunaPage(context);
+              if (!context.mounted) return;
+              // Balance may have changed while the browser tab was open.
+              await ref.read(computeControllerProvider.notifier).refresh();
+              if (!context.mounted) return;
+              if (ref.read(computeControllerProvider).balance > 0) {
+                ref.read(kiChatControllerProvider.notifier).clearOutOfBalance();
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color: colors.gold.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: colors.gold.withValues(alpha: 0.4)),
+              ),
+              child: Text(
+                'Buy KIDUNA',
+                style: text.label.copyWith(
+                  color: colors.gold,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

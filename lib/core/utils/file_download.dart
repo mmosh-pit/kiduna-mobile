@@ -40,3 +40,10 @@ abstract class FileDownload {
     return '$fileName copied to clipboard';
   }
 }
+
+/// Attempt to close the current browser tab/window.
+///
+/// Returns true only when the tab actually closed. Browsers block
+/// `window.close()` for tabs not opened by script, so callers should show a
+/// "please close this tab" message when this returns false.
+bool closeWebWindow() => platform.closeWindow();

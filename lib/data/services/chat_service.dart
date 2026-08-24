@@ -56,7 +56,10 @@ class ChatService {
       );
 
       if (statusCode == 402) {
-        throw const ServerException('Token limit exceeded');
+        // Backend rejected the request: no KIDUNA left to pay for compute.
+        throw const InsufficientBalanceException(
+          'You have no KIDUNA left. Buy more to keep chatting with Ki.',
+        );
       }
       if (statusCode >= 400) {
         throw ServerException('Chat stream returned $statusCode');

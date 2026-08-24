@@ -8,3 +8,6 @@ bool triggerDownload({
 }) {
   return false;
 }
+
+/// Non-web stub — nothing to close. Returns false.
+bool closeWindow() => false;

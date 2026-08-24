@@ -2,45 +2,63 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/extensions/context_extensions.dart';
-import '../../../shared/animations/slide_in_animation.dart';
 import '../../../shared/widgets/kiduna_gold_button.dart';
 
-class SignupStepSeven extends StatefulWidget {
-  const SignupStepSeven({
+/// Reusable KIDUNA purchase UI — swap input, fee breakdown, token info,
+/// confirmation checkbox, and buy button. Also renders the waiting state
+/// while the Stripe onramp is open.
+class KidunaPurchasePanel extends StatefulWidget {
+  const KidunaPurchasePanel({
     super.key,
-    required this.onPurchase,
-    required this.onSkip,
-    required this.onBack,
-    required this.onError,
     required this.tokenPrice,
-    this.isLoading = false,
-    this.waitingForPayment = false,
+    required this.onPurchase,
+    required this.onError,
+    this.currentBalance,
     this.onVerifyPayment,
     this.onRetryPayment,
+    this.onSkip,
+    this.isLoading = false,
+    this.waitingForPayment = false,
+    this.initialAmount = '100',
   });
 
-  final ValueChanged<double> onPurchase;
-  final VoidCallback onSkip;
-  final VoidCallback onBack;
-  final ValueChanged<String> onError;
   final double tokenPrice;
-  final bool isLoading;
-  final bool waitingForPayment;
+  final ValueChanged<double> onPurchase;
+  final ValueChanged<String> onError;
+  final double? currentBalance;
   final VoidCallback? onVerifyPayment;
   final VoidCallback? onRetryPayment;
+  final VoidCallback? onSkip;
+  final bool isLoading;
+  final bool waitingForPayment;
+  final String initialAmount;
+
+  static String formatKiduna(double amount) {
+    if (amount >= 1000000000) {
+      return '${(amount / 1000000000).toStringAsFixed(2)}B';
+    }
+    if (amount >= 1000000) {
+      return '${(amount / 1000000).toStringAsFixed(2)}M';
+    }
+    if (amount >= 1000) {
+      return '${(amount / 1000).toStringAsFixed(2)}K';
+    }
+    return amount.toStringAsFixed(0);
+  }
 
   @override
-  State<SignupStepSeven> createState() => _SignupStepSevenState();
+  State<KidunaPurchasePanel> createState() => _KidunaPurchasePanelState();
 }
 
-class _SignupStepSevenState extends State<SignupStepSeven> {
-  final _usdcController = TextEditingController(text: '100');
+class _KidunaPurchasePanelState extends State<KidunaPurchasePanel> {
+  late final TextEditingController _usdcController;
   double _kidunaAmount = 0;
   bool _confirmed = false;
 
   @override
   void initState() {
     super.initState();
+    _usdcController = TextEditingController(text: widget.initialAmount);
     _recalculate();
     _usdcController.addListener(_recalculate);
   }
@@ -59,7 +77,7 @@ class _SignupStepSevenState extends State<SignupStepSeven> {
   }
 
   double get _usdcAmount => double.tryParse(_usdcController.text) ?? 0;
-  double get _estimatedFee => _usdcAmount * 0.06; // ~6% Stripe fee
+  double get _estimatedFee => _usdcAmount * 0.06;
   double get _totalCharge => _usdcAmount + _estimatedFee;
 
   void _onBuyPressed() {
@@ -75,80 +93,54 @@ class _SignupStepSevenState extends State<SignupStepSeven> {
     widget.onPurchase(_usdcAmount);
   }
 
-  String _formatKiduna(double amount) {
-    if (amount >= 1000000000) {
-      return '${(amount / 1000000000).toStringAsFixed(2)}B';
-    }
-    if (amount >= 1000000) {
-      return '${(amount / 1000000).toStringAsFixed(2)}M';
-    }
-    if (amount >= 1000) {
-      return '${(amount / 1000).toStringAsFixed(2)}K';
-    }
-    return amount.toStringAsFixed(0);
-  }
-
   @override
   Widget build(BuildContext context) {
     final colors = context.kiduna;
     final text = context.kidunaText;
 
-    return SlideInAnimation(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _BackButton(onPressed: widget.onBack),
-          const SizedBox(height: 4),
-          RichText(
-            text: TextSpan(
-              style: text.body.copyWith(
-                color: colors.muted,
-                fontSize: 13,
-                height: 1.5,
-              ),
-              children: [
-                TextSpan(
-                  text: 'Step 7 of 7',
-                  style: TextStyle(
-                    color: colors.text,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const TextSpan(text: ' · Get KIDUNA Tokens'),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          if (widget.waitingForPayment)
-            _buildWaitingPanel(colors, text)
-          else
-            _buildSwapPanel(colors, text),
-        ],
-      ),
-    );
+    if (widget.waitingForPayment) {
+      return _buildWaitingPanel(colors, text);
+    }
+    return _buildSwapPanel(colors, text);
   }
-
-  // ═══════════════════════════════════════════════════════════════
-  // SWAP PANEL — input + review details + confirm + buy
-  // ═══════════════════════════════════════════════════════════════
 
   Widget _buildSwapPanel(dynamic colors, dynamic text) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Purchase KIDUNA tokens to power your AI chat compute. '
-          'Pay with your card — we handle the conversion.',
-          style: text.body.copyWith(
-            color: colors.muted,
-            fontSize: 15,
-            height: 1.6,
+        if (widget.currentBalance != null) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: colors.gold.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: colors.gold.withValues(alpha: 0.15)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Current Balance',
+                  style: text.caption.copyWith(
+                    color: colors.muted,
+                    fontSize: 12,
+                  ),
+                ),
+                Text(
+                  '${KidunaPurchasePanel.formatKiduna(widget.currentBalance!)} KIDUNA',
+                  style: text.body.copyWith(
+                    color: colors.gold,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 20),
+          const SizedBox(height: 16),
+        ],
 
-        // ── You Pay ────────────────────────────────────────────
         _SwapCard(
           label: 'You Pay',
           child: Row(
@@ -159,9 +151,7 @@ class _SignupStepSevenState extends State<SignupStepSeven> {
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [
-                    FilteringTextInputFormatter.allow(
-                      RegExp(r'^\d*\.?\d{0,2}'),
-                    ),
+                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
                   ],
                   style: text.h2.copyWith(color: colors.text, fontSize: 28),
                   cursorColor: colors.sky,
@@ -181,7 +171,6 @@ class _SignupStepSevenState extends State<SignupStepSeven> {
           ),
         ),
 
-        // ── Swap arrow ─────────────────────────────────────────
         Center(
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 6),
@@ -191,22 +180,20 @@ class _SignupStepSevenState extends State<SignupStepSeven> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: colors.deep,
-                border:
-                    Border.all(color: colors.camel.withValues(alpha: 0.3)),
+                border: Border.all(color: colors.camel.withValues(alpha: 0.3)),
               ),
               child: Icon(Icons.swap_vert, size: 18, color: colors.gold),
             ),
           ),
         ),
 
-        // ── You Receive ────────────────────────────────────────
         _SwapCard(
           label: 'You Receive',
           child: Row(
             children: [
               Expanded(
                 child: Text(
-                  _formatKiduna(_kidunaAmount),
+                  KidunaPurchasePanel.formatKiduna(_kidunaAmount),
                   style: text.h2.copyWith(color: colors.gold, fontSize: 28),
                 ),
               ),
@@ -217,7 +204,6 @@ class _SignupStepSevenState extends State<SignupStepSeven> {
 
         const SizedBox(height: 16),
 
-        // ── Cost breakdown ─────────────────────────────────────
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(14),
@@ -243,10 +229,7 @@ class _SignupStepSevenState extends State<SignupStepSeven> {
                 isMuted: true,
               ),
               const SizedBox(height: 8),
-              Container(
-                height: 1,
-                color: colors.camel.withValues(alpha: 0.15),
-              ),
+              Container(height: 1, color: colors.camel.withValues(alpha: 0.15)),
               const SizedBox(height: 8),
               _ReviewRow(
                 label: 'Total Charge',
@@ -258,7 +241,8 @@ class _SignupStepSevenState extends State<SignupStepSeven> {
               const SizedBox(height: 8),
               _ReviewRow(
                 label: 'You Receive',
-                value: '${_formatKiduna(_kidunaAmount)} KIDUNA',
+                value:
+                    '${KidunaPurchasePanel.formatKiduna(_kidunaAmount)} KIDUNA',
                 colors: colors,
                 text: text,
                 isGold: true,
@@ -278,7 +262,6 @@ class _SignupStepSevenState extends State<SignupStepSeven> {
 
         const SizedBox(height: 12),
 
-        // ── About KIDUNA ───────────────────────────────────────
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(12),
@@ -325,7 +308,6 @@ class _SignupStepSevenState extends State<SignupStepSeven> {
 
         const SizedBox(height: 14),
 
-        // ── Confirmation checkbox ──────────────────────────────
         GestureDetector(
           onTap: () => setState(() => _confirmed = !_confirmed),
           behavior: HitTestBehavior.opaque,
@@ -370,29 +352,27 @@ class _SignupStepSevenState extends State<SignupStepSeven> {
 
         const SizedBox(height: 18),
 
-        // ── Buy button ─────────────────────────────────────────
         KidunaGoldButton(
           label: widget.isLoading ? 'Processing...' : 'Buy with Card',
           onPressed: widget.isLoading || !_confirmed ? null : _onBuyPressed,
         ),
-        const SizedBox(height: 14),
-        Center(
-          child: TextButton(
-            onPressed: widget.isLoading ? null : widget.onSkip,
-            style: TextButton.styleFrom(
-              foregroundColor: colors.muted,
-              textStyle: text.body.copyWith(fontSize: 13),
+
+        if (widget.onSkip != null) ...[
+          const SizedBox(height: 14),
+          Center(
+            child: TextButton(
+              onPressed: widget.isLoading ? null : widget.onSkip,
+              style: TextButton.styleFrom(
+                foregroundColor: colors.muted,
+                textStyle: text.body.copyWith(fontSize: 13),
+              ),
+              child: const Text('Skip for now →'),
             ),
-            child: const Text('Skip for now →'),
           ),
-        ),
+        ],
       ],
     );
   }
-
-  // ═══════════════════════════════════════════════════════════════
-  // WAITING PANEL
-  // ═══════════════════════════════════════════════════════════════
 
   Widget _buildWaitingPanel(dynamic colors, dynamic text) {
     return Column(
@@ -455,10 +435,6 @@ class _SignupStepSevenState extends State<SignupStepSeven> {
     );
   }
 }
-
-// ═══════════════════════════════════════════════════════════════════
-// Shared Widgets
-// ═══════════════════════════════════════════════════════════════════
 
 class _SwapCard extends StatelessWidget {
   const _SwapCard({required this.label, required this.child});
@@ -608,33 +584,6 @@ class _InfoBullet extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _BackButton extends StatelessWidget {
-  const _BackButton({required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.kiduna;
-
-    return TextButton(
-      onPressed: onPressed,
-      style: TextButton.styleFrom(
-        padding: EdgeInsets.zero,
-        minimumSize: Size.zero,
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        foregroundColor: colors.sky,
-        textStyle: const TextStyle(
-          fontFamily: 'Avenir',
-          fontSize: 13,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-      child: const Text('← Back'),
     );
   }
 }

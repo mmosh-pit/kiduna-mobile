@@ -28,12 +28,14 @@ import '../data/placement.dart' show Placement;
 import '../data/realm_atlas.dart';
 import '../game/enamel_tokens.dart' show DistanceBand, Gravity;
 import '../game/field_game.dart';
-import '../widgets/realm_detail_popup.dart';
+import '../widgets/compute_card.dart';
 import '../widgets/field_chrome_panels.dart';
+import '../widgets/field_panel.dart';
 import '../widgets/field_working_panels.dart';
 import '../widgets/ki_region.dart';
 import '../widgets/nav_mode.dart';
 import '../widgets/realm_context_pill.dart';
+import '../widgets/realm_detail_popup.dart';
 
 /// The main app screen. The header and section bar sit at the top; the active
 /// section's content fills the remaining space with Ki alongside.
@@ -417,6 +419,17 @@ class _FieldStackState extends ConsumerState<FieldStack> {
                   controller: controller,
                   bounds: bounds,
                   opacity: opacity,
+                ),
+                FieldPanel(
+                  label: context.l10n.compute,
+                  bounds: bounds,
+                  width: 256,
+                  opacity: opacity,
+                  initialOffset: Offset(
+                    (bounds.width - 256 - 22).clamp(8.0, double.infinity),
+                    22,
+                  ),
+                  child: const ComputeCard(),
                 ),
                 if (state.selectedPlacement != null)
                   Positioned(
