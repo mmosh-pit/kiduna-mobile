@@ -85,6 +85,8 @@ class AtlasRealm {
     this.visibleTo,
     this.fixture = false,
     this.primaryTheme,
+    this.gravityLevel,
+    this.gravityScore,
   });
 
   final String id;
@@ -106,6 +108,12 @@ class AtlasRealm {
 
   /// Canonical theme from the API (e.g. 'culture-play', 'people-care').
   final String? primaryTheme;
+
+  /// Gravity level from graph API (vital/central/relevant/available/quiet).
+  final String? gravityLevel;
+
+  /// Gravity score from graph API (0.0–1.0).
+  final double? gravityScore;
 }
 
 // Compact constructor mirroring the TS `realm(...)` factory.
@@ -1223,5 +1231,7 @@ AtlasRealm atlasRealmFromModel(RealmModel model) {
     purpose: model.purpose ?? '',
     motif: '',
     primaryTheme: model.primaryTheme,
+    gravityLevel: model.gravityLevel,
+    gravityScore: model.gravityScore,
   );
 }

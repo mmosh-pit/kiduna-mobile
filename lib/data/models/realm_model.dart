@@ -34,6 +34,8 @@ class RealmModel {
     required this.status,
     this.members = const [],
     required this.createdAt,
+    this.gravityLevel,
+    this.gravityScore,
   });
 
   final String id;
@@ -94,6 +96,14 @@ class RealmModel {
   final List<RealmMemberModel> members;
 
   final DateTime createdAt;
+
+  /// Gravity level from the graph API (vital/central/relevant/available/quiet).
+  /// Null when loaded from the table API.
+  final String? gravityLevel;
+
+  /// Gravity score from the graph API (0.0–1.0).
+  /// Null when loaded from the table API.
+  final double? gravityScore;
 
   // ── Config convenience getters for Institution type ──
 

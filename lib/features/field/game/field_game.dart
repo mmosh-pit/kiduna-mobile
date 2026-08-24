@@ -38,6 +38,8 @@ class FieldGame extends FlameGame
     this.source,
     this.nav = NavMode.none,
     this.hideStars = false,
+    this.mousePanEnabled = true,
+    this.scrollPanEnabled = true,
     this.onInspect,
     this.onDeselect,
     this.onReady,
@@ -53,6 +55,8 @@ class FieldGame extends FlameGame
   final FieldSource? source;
   final NavMode nav;
   final bool hideStars;
+  final bool mousePanEnabled;
+  final bool scrollPanEnabled;
   final void Function(Placement)? onInspect;
   final VoidCallback? onDeselect;
   final VoidCallback? onReady;
@@ -69,6 +73,7 @@ class FieldGame extends FlameGame
   ConnectorLayer? _connectors;
   final List<RealmNode> _nodes = [];
   Vector2 _worldSize = Vector2.all(1);
+  bool _cameraInitialized = false;
   static const _orbitsPerScreen = 5;
 
   FieldTraverse? _traverse;
@@ -215,7 +220,31 @@ class FieldGame extends FlameGame
     for (final node in _nodes) {
       node.worldSize = _worldSize;
     }
-    _applyCamera(camera.viewfinder.position, camera.viewfinder.zoom);
+    if (!_cameraInitialized) {
+      var minLeft = 50.0;
+      var maxLeft = 50.0;
+      var minTop = 50.0;
+      var maxTop = 50.0;
+      for (final node in _nodes) {
+        final point = node.placement.position;
+        minLeft = math.min(minLeft, point.left);
+        maxLeft = math.max(maxLeft, point.left);
+        minTop = math.min(minTop, point.top);
+        maxTop = math.max(maxTop, point.top);
+      }
+      final zoom = 1.0;
+      final visible = size / zoom;
+      _applyCamera(
+        Vector2(
+          ((minLeft + maxLeft) / 200 * _worldSize.x) - visible.x / 2,
+          ((minTop + maxTop) / 200 * _worldSize.y) - visible.y / 2,
+        ),
+        zoom,
+      );
+      _cameraInitialized = true;
+    } else {
+      _applyCamera(camera.viewfinder.position, camera.viewfinder.zoom);
+    }
   }
 
   void _applyCamera(Vector2 position, double zoom) {
@@ -351,6 +380,9 @@ class FieldGame extends FlameGame
     _connectors?.reseat(reseated);
     if (_selected != null) {
       _connectors?.select(_selected!.placement.realm.id);
+      if (_selected!.placement.realm.id == realmId && _preSelectPlacement != null) {
+        _preSelectPlacement = reseated.byId(realmId);
+      }
     }
     source?.emit(GravityChanged(realmId, prev, next, DateTime.now()));
   }
@@ -369,6 +401,7 @@ class FieldGame extends FlameGame
   @override
   void onDragUpdate(DragUpdateEvent event) {
     _pressTravel += event.localDelta.length;
+    if (!mousePanEnabled) return;
     panBy(event.localDelta);
   }
 
@@ -417,16 +450,13 @@ class FieldGame extends FlameGame
 
   @override
   void onScroll(PointerScrollInfo info) {
+    if (!scrollPanEnabled) return;
     _pointer = info.eventPosition.widget;
     final d = info.scrollDelta.global;
     final k = HardwareKeyboard.instance;
-    if (k.isControlPressed || k.isMetaPressed) {
+    if (!k.isShiftPressed) {
       if (d.y == 0) return;
-      zoomAt(
-        _pointer,
-        d.y < 0 ? 1 : -1,
-        times: (d.y.abs() / 40).clamp(0.4, 3),
-      );
+      zoomAt(_pointer, d.y < 0 ? 1 : -1, times: (d.y.abs() / 40).clamp(0.4, 3));
       return;
     }
     panBy(-d);
@@ -507,8 +537,7 @@ class FieldGame extends FlameGame
         if (n == _selected) {
           n.contentFade = tFade;
         } else {
-          n.contentFade =
-              (n.placement.gravity.level >= 4 ? 0.6 : 0.35) * tFade;
+          n.contentFade = (n.placement.gravity.level >= 4 ? 0.6 : 0.35) * tFade;
         }
       }
     }

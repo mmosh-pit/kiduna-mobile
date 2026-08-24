@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/extensions/context_extensions.dart';
-import '../../../core/utils/logger.dart';
-import '../../../data/services/gravity_service.dart';
-import '../../auth/controllers/auth_controller.dart';
 import '../controllers/field_controller.dart';
-import '../data/placement.dart';
+import '../data/field_composition.dart';
+import '../data/realm_atlas.dart';
 
 String _gravityLabel(BuildContext context, int level) {
   final l10n = context.l10n;
@@ -26,20 +24,24 @@ class RealmDetailPopup extends ConsumerWidget {
     required this.placement,
     required this.onClose,
     required this.onEnter,
-    required this.onAtlasReload,
+    this.onGravityChanged,
   });
 
-  final Placement placement;
+  final FieldPlacement placement;
   final VoidCallback onClose;
-  final VoidCallback onEnter;
-  final VoidCallback onAtlasReload;
+  final ValueChanged<AtlasRealm> onEnter;
+  final ValueChanged<int>? onGravityChanged;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.kiduna;
     final realm = placement.realm;
-    final accent = placement.cluster.accent;
-    final level = placement.gravity.level;
+    final accent = colors.sky;
+    final level = ref.watch(
+      fieldControllerProvider.select(
+        (s) => s.realmGravity[realm.id] ?? 3,
+      ),
+    );
 
     return Container(
       constraints: const BoxConstraints(maxWidth: 540),
@@ -60,23 +62,21 @@ class RealmDetailPopup extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _Header(
-            typeName: realm.typeName,
+            typeName: realm.type.label,
             levelLabel: _gravityLabel(context, level),
             name: realm.name,
             accent: accent,
             onClose: onClose,
           ),
-          if (realm.reason != null && realm.reason!.isNotEmpty)
-            _WhySection(reason: realm.reason!, accent: accent),
-          _ActionRow(onEnter: onEnter),
-          const _DoorRow(),
+          if (placement.reason.isNotEmpty)
+            _WhySection(reason: placement.reason, accent: accent),
+          _ActionRow(onEnter: () => onEnter(realm)),
           _LevelFooter(
             level: level,
             realmId: realm.id,
             realmName: realm.name,
             accent: accent,
-            onClose: onClose,
-            onAtlasReload: onAtlasReload,
+            onGravityChanged: onGravityChanged,
           ),
         ],
       ),
@@ -103,7 +103,6 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.kiduna;
     final text = context.kidunaText;
-    final typeDisplay = typeName[0].toUpperCase() + typeName.substring(1);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 12, 12),
@@ -114,7 +113,7 @@ class _Header extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  '$typeDisplay · $levelLabel'.toUpperCase(),
+                  '$typeName · $levelLabel'.toUpperCase(),
                   style: text.eyebrowSmall.copyWith(
                     color: accent,
                     letterSpacing: 1.3,
@@ -201,35 +200,11 @@ class _ActionRow extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-      child: Row(
-        children: [
-          Expanded(
-            child: _ActionBtn(
-              label: l10n.enterAction,
-              color: colors.sky,
-              textColor: colors.skyButtonInk,
-              onTap: onEnter,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _ActionBtn(
-              label: l10n.chatAction,
-              color: colors.raised,
-              textColor: colors.cream,
-              onTap: () {},
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _ActionBtn(
-              label: l10n.inspect,
-              color: colors.raised,
-              textColor: colors.cream,
-              onTap: () {},
-            ),
-          ),
-        ],
+      child: _ActionBtn(
+        label: l10n.enterAction,
+        color: colors.sky,
+        textColor: colors.skyButtonInk,
+        onTap: onEnter,
       ),
     );
   }
@@ -274,132 +249,29 @@ class _ActionBtn extends StatelessWidget {
   }
 }
 
-class _DoorRow extends StatelessWidget {
-  const _DoorRow();
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.kiduna;
-    final l10n = context.l10n;
-    final doors = [
-      l10n.organize,
-      l10n.create,
-      l10n.buildAction,
-      l10n.enjoy,
-      l10n.actAction,
-      l10n.govern,
-      l10n.settle,
-    ];
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
-      child: Row(
-        children: [
-          for (var i = 0; i < doors.length; i++)
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.only(left: i > 0 ? 4 : 0),
-                child: GestureDetector(
-                  onTap: () {},
-                  child: MouseRegion(
-                    cursor: SystemMouseCursors.click,
-                    child: Container(
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: colors.surface,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: colors.camel.withValues(alpha: 0.14),
-                        ),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        doors[i],
-                        style: TextStyle(
-                          fontFamily: 'Avenir',
-                          fontSize: 8.5,
-                          fontWeight: FontWeight.w600,
-                          color: colors.muted,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-String _levelApiName(int level) => switch (level) {
-  1 => 'quiet',
-  2 => 'available',
-  3 => 'relevant',
-  4 => 'central',
-  5 => 'vital',
-  _ => 'relevant',
-};
-
-class _LevelFooter extends ConsumerStatefulWidget {
+class _LevelFooter extends ConsumerWidget {
   const _LevelFooter({
     required this.level,
     required this.realmId,
     required this.realmName,
     required this.accent,
-    required this.onClose,
-    required this.onAtlasReload,
+    this.onGravityChanged,
   });
 
   final int level;
   final String realmId;
   final String realmName;
   final Color accent;
-  final VoidCallback onClose;
-  final VoidCallback onAtlasReload;
+  final ValueChanged<int>? onGravityChanged;
 
   @override
-  ConsumerState<_LevelFooter> createState() => _LevelFooterState();
-}
-
-class _LevelFooterState extends ConsumerState<_LevelFooter> {
-  bool _busy = false;
-
-  String? get _wallet =>
-      ref.read(authControllerProvider).user?.wallet;
-
-  Future<void> _applyOverride(Future<void> Function() apiCall) async {
-    if (_busy) return;
-    final wallet = _wallet;
-    if (wallet == null || wallet.isEmpty) return;
-    setState(() => _busy = true);
-    try {
-      await apiCall();
-      if (!mounted) return;
-      widget.onClose();
-      widget.onAtlasReload();
-    } catch (e) {
-      AppLogger.error(
-        'Gravity override failed',
-        tag: 'RealmDetail',
-        error: e,
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _busy = false);
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.kiduna;
     final l10n = context.l10n;
     final controller = ref.read(fieldControllerProvider.notifier);
     final currentLevel = ref.watch(
       fieldControllerProvider.select(
-        (s) => s.realmGravity[widget.realmId] ?? widget.level,
+        (s) => s.realmGravity[realmId] ?? level,
       ),
     );
 
@@ -418,93 +290,47 @@ class _LevelFooterState extends ConsumerState<_LevelFooter> {
             ),
           ),
           const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            height: 30,
-            decoration: BoxDecoration(
-              color: colors.surface,
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(
-                color: colors.camel.withValues(alpha: 0.18),
-              ),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<int>(
-                value: currentLevel,
-                isDense: true,
-                dropdownColor: colors.raised,
-                style: TextStyle(
-                  fontFamily: 'Avenir',
-                  fontSize: 10,
-                  color: colors.cream,
-                ),
-                icon: Icon(
-                  Icons.expand_more,
-                  size: 14,
-                  color: colors.quiet,
-                ),
-                items: List.generate(5, (i) {
-                  final lv = i + 1;
-                  return DropdownMenuItem(
-                    value: lv,
-                    child: Text(_gravityLabel(context, lv)),
-                  );
-                }),
-                onChanged: _busy
-                    ? null
-                    : (v) {
-                        if (v == null || v == currentLevel) return;
-                        controller.setGravity(widget.realmId, v);
-                        final wallet = _wallet;
-                        if (wallet == null || wallet.isEmpty) return;
-                        _applyOverride(
-                          () => GravityService.instance.setLevelOverride(
-                            wallet: wallet,
-                            realmId: widget.realmId,
-                            level: _levelApiName(v),
-                          ),
-                        );
-                      },
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
           Expanded(
-            child: _FooterBtn(
-              icon: Icons.push_pin_outlined,
-              label: l10n.pin,
-              onTap: _busy
-                  ? () {}
-                  : () {
-                      final wallet = _wallet;
-                      if (wallet == null || wallet.isEmpty) return;
-                      _applyOverride(
-                        () => GravityService.instance.pinRealmOverride(
-                          wallet: wallet,
-                          realmId: widget.realmId,
-                          level: _levelApiName(currentLevel),
-                        ),
-                      );
-                    },
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _FooterBtn(
-              icon: Icons.visibility_off_outlined,
-              label: l10n.hideRealm,
-              onTap: _busy
-                  ? () {}
-                  : () {
-                      final wallet = _wallet;
-                      if (wallet == null || wallet.isEmpty) return;
-                      _applyOverride(
-                        () => GravityService.instance.hideRealmOverride(
-                          wallet: wallet,
-                          realmId: widget.realmId,
-                        ),
-                      );
-                    },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              height: 30,
+              decoration: BoxDecoration(
+                color: colors.surface,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: colors.camel.withValues(alpha: 0.18),
+                ),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<int>(
+                  value: currentLevel,
+                  isDense: true,
+                  isExpanded: true,
+                  dropdownColor: colors.raised,
+                  style: TextStyle(
+                    fontFamily: 'Avenir',
+                    fontSize: 10,
+                    color: colors.cream,
+                  ),
+                  icon: Icon(
+                    Icons.expand_more,
+                    size: 14,
+                    color: colors.quiet,
+                  ),
+                  items: List.generate(5, (i) {
+                    final lv = i + 1;
+                    return DropdownMenuItem(
+                      value: lv,
+                      child: Text(_gravityLabel(context, lv)),
+                    );
+                  }),
+                  onChanged: (v) {
+                    if (v == null || v == currentLevel) return;
+                    controller.setGravity(realmId, v);
+                    onGravityChanged?.call(v);
+                  },
+                ),
+              ),
             ),
           ),
         ],
@@ -513,50 +339,3 @@ class _LevelFooterState extends ConsumerState<_LevelFooter> {
   }
 }
 
-class _FooterBtn extends StatelessWidget {
-  const _FooterBtn({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.kiduna;
-    return GestureDetector(
-      onTap: onTap,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(
-              color: colors.camel.withValues(alpha: 0.14),
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 13, color: colors.quiet),
-              const SizedBox(width: 5),
-              Text(
-                label,
-                style: TextStyle(
-                  fontFamily: 'Avenir',
-                  fontSize: 9,
-                  color: colors.muted,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
