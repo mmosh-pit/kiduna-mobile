@@ -62,6 +62,19 @@ class KiChatState {
 class KiChatController extends Notifier<KiChatState> {
   StreamSubscription<SseEvent>? _subscription;
 
+  /// Current game context (cards, board, pot). Set by game_screen when
+  /// a game is active. Cleared when the game ends or player leaves.
+  String _gameContext = '';
+
+  /// Set the current game context (called by game_screen).
+  void setGameContext(String context) => _gameContext = context;
+
+  /// Clear the game context (called when game ends or player leaves).
+  void clearGameContext() => _gameContext = '';
+
+  /// Whether a game is currently active (has card context).
+  bool get hasGameContext => _gameContext.isNotEmpty;
+
   @override
   KiChatState build() {
     ref.onDispose(() {
@@ -110,7 +123,7 @@ class KiChatController extends Notifier<KiChatState> {
       if (!ref.mounted) return;
       state = state.copyWith(
         isLoading: false,
-        error: 'Unable to load conversation history.',
+        messages: const [],
         historyLoaded: true,
       );
     } on AppException catch (e) {
@@ -118,7 +131,7 @@ class KiChatController extends Notifier<KiChatState> {
       AppLogger.error('History load failed', tag: 'KiChat', error: e);
       state = state.copyWith(
         isLoading: false,
-        error: 'Unable to load conversation history.',
+        messages: const [],
         historyLoaded: true,
       );
     }
@@ -150,6 +163,11 @@ class KiChatController extends Notifier<KiChatState> {
     await _subscription?.cancel();
     _subscription = null;
 
+    // Prepend game context if a game is active (so Ki knows the cards).
+    final messageForApi = _gameContext.isNotEmpty
+        ? '[Game context: $_gameContext] $trimmed'
+        : trimmed;
+
     final userMessage = ChatMessageModel(
       id: 'local_${DateTime.now().millisecondsSinceEpoch}',
       role: ChatRole.user,
@@ -166,7 +184,7 @@ class KiChatController extends Notifier<KiChatState> {
     try {
       final stream = ChatService.instance.streamChat(
         presenceId: presenceId,
-        message: trimmed,
+        message: messageForApi,
         userWallet: userWallet,
         userId: _userId,
         realmId: _realmId,
@@ -303,6 +321,25 @@ class KiChatController extends Notifier<KiChatState> {
         state = state.copyWith(isStreaming: false);
       }
     }
+  }
+
+  /// Add a local game tip to the chat — no API call, instant display.
+  void addLocalTip(String tip) {
+    if (tip.trim().isEmpty) return;
+    final tipMessage = ChatMessageModel(
+      id: 'tip_${DateTime.now().millisecondsSinceEpoch}',
+      role: ChatRole.assistant,
+      content: tip,
+    );
+    state = state.copyWith(
+      messages: [...state.messages, tipMessage],
+    );
+  }
+
+  /// Remove all local game tips from chat. Keeps typed messages (API).
+  void clearLocalTips() {
+    final kept = state.messages.where((m) => !m.id.startsWith('tip_')).toList();
+    state = state.copyWith(messages: kept);
   }
 }
 
