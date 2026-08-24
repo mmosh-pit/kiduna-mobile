@@ -298,15 +298,20 @@ class _FieldStackState extends ConsumerState<FieldStack> {
   // ── Trackpad two-finger pan/zoom state ──
   double _trackpadBaseZoom = 1.0;
 
+  bool get _panelsOpen {
+    final state = ref.read(fieldControllerProvider);
+    return state.openActions.isNotEmpty || state.selectedPlacement != null;
+  }
+
   void _onPointerPanZoomStart(PointerPanZoomStartEvent event) {
     final game = _game;
-    if (game == null || !game.isLoaded) return;
+    if (game == null || !game.isLoaded || _panelsOpen) return;
     _trackpadBaseZoom = game.camera.viewfinder.zoom;
   }
 
   void _onPointerPanZoomUpdate(PointerPanZoomUpdateEvent event) {
     final game = _game;
-    if (game == null || !game.isLoaded) return;
+    if (game == null || !game.isLoaded || _panelsOpen) return;
 
     // Two-finger pan — event.panDelta gives the translation delta.
     final pan = event.panDelta;
@@ -334,6 +339,7 @@ class _FieldStackState extends ConsumerState<FieldStack> {
     if (game == null || !game.isLoaded || event is! PointerScrollEvent) {
       return;
     }
+    if (_panelsOpen) return;
     final d = event.scrollDelta;
     final k = HardwareKeyboard.instance;
     if (!k.isShiftPressed) {
@@ -365,6 +371,15 @@ class _FieldStackState extends ConsumerState<FieldStack> {
           } else {
             eco.loadChildren(next);
           }
+          _rebuildGame();
+        }
+      },
+    );
+
+    ref.listen<int>(
+      fieldControllerProvider.select((s) => s.refreshToken),
+      (previous, next) {
+        if (previous != null && next != previous) {
           _rebuildGame();
         }
       },
