@@ -91,26 +91,20 @@ int _massFromScore(double score) {
 }
 
 const _zoneX = <int, (double, double)>{
-  5: (38, 62),
-  4: (28, 72),
-  3: (15, 85),
+  5: (28, 72),
+  4: (20, 80),
+  3: (12, 88),
   2: (8, 92),
   1: (5, 95),
 };
 const _zoneY = <int, (double, double)>{
-  5: (35, 55),
-  4: (25, 65),
-  3: (15, 80),
+  5: (25, 65),
+  4: (18, 72),
+  3: (12, 82),
   2: (8, 88),
   1: (5, 95),
 };
-const _exclusionPx = <int, double>{
-  5: 117.0,
-  4: 82.0,
-  3: 50.0,
-  2: 27.0,
-  1: 12.5,
-};
+const _exclusionPx = <int, double>{5: 90.0, 4: 65.0, 3: 42.0, 2: 24.0, 1: 12.0};
 
 List<FieldPoint> _spreadPositions(List<int> levels) {
   final rng = math.Random(42);
@@ -124,32 +118,43 @@ List<FieldPoint> _spreadPositions(List<int> levels) {
     var gap = exc;
 
     FieldPoint? pos;
-    for (var attempt = 0; attempt < 50; attempt++) {
+    FieldPoint? bestFallback;
+    var bestMinDist = -1.0;
+
+    for (var attempt = 0; attempt < 80; attempt++) {
       final x = xLo + rng.nextDouble() * (xHi - xLo);
       final y = yLo + rng.nextDouble() * (yHi - yLo);
       final candidate = FieldPoint(x, y);
 
       var ok = true;
+      var minDist = double.infinity;
       for (final (p, pExc) in placed) {
         final dx = (candidate.left - p.left) * 12.0;
         final dy = (candidate.top - p.top) * 9.0;
-        if (math.sqrt(dx * dx + dy * dy) < gap + pExc) {
+        final dist = math.sqrt(dx * dx + dy * dy);
+        if (dist < gap + pExc) {
           ok = false;
-          break;
         }
+        if (dist < minDist) minDist = dist;
       }
       if (ok) {
         pos = candidate;
         break;
       }
-      if (attempt == 24) gap *= 0.7;
-      if (attempt == 39) gap *= 0.7;
+      if (minDist > bestMinDist) {
+        bestMinDist = minDist;
+        bestFallback = candidate;
+      }
+      if (attempt == 35) gap *= 0.8;
+      if (attempt == 55) gap *= 0.8;
     }
 
-    pos ??= FieldPoint(
-      xLo + rng.nextDouble() * (xHi - xLo),
-      yLo + rng.nextDouble() * (yHi - yLo),
-    );
+    pos ??=
+        bestFallback ??
+        FieldPoint(
+          xLo + rng.nextDouble() * (xHi - xLo),
+          yLo + rng.nextDouble() * (yHi - yLo),
+        );
     placed.add((pos, exc));
     result.add(pos);
   }
@@ -181,8 +186,7 @@ FieldSnapshot gravityToSnapshot({
       return lb.compareTo(la);
     });
 
-  final levels =
-      sorted.map((r) => _levelToGravityInt[r.level] ?? 1).toList();
+  final levels = sorted.map((r) => _levelToGravityInt[r.level] ?? 1).toList();
   final positions = _spreadPositions(levels);
 
   final realms = <Realm>[];
