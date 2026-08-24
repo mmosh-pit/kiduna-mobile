@@ -79,6 +79,7 @@ class FieldState {
     this.toolVerifying = false,
     this.enteredRealmId,
     this.enteredRealmName,
+    this.refreshToken = 0,
   });
 
   final KiTopic kiTopic;
@@ -159,6 +160,8 @@ class FieldState {
   final String? enteredRealmId;
   final String? enteredRealmName;
 
+  final int refreshToken;
+
   String? get selectedRealmId => selectedPlacement?.realm.id;
 
   FieldState copyWith({
@@ -210,6 +213,7 @@ class FieldState {
     String? enteredRealmId,
     bool clearEnteredRealm = false,
     String? enteredRealmName,
+    int? refreshToken,
   }) {
     return FieldState(
       kiTopic: kiTopic ?? this.kiTopic,
@@ -274,6 +278,7 @@ class FieldState {
       enteredRealmName: clearEnteredRealm
           ? null
           : (enteredRealmName ?? this.enteredRealmName),
+      refreshToken: refreshToken ?? this.refreshToken,
     );
   }
 }
@@ -476,6 +481,7 @@ class FieldController extends Notifier<FieldState> {
       purpose = '';
     }
 
+    final isRoot = targetId == 'kinship-duna';
     state = state.copyWith(
       currentRealm: FieldRealm(
         name: name,
@@ -483,6 +489,8 @@ class FieldController extends Notifier<FieldState> {
         emblemAsset: AppAssets.realmEmblem(emblem),
       ),
       currentRealmId: targetId,
+      enteredRealmId: isRoot ? null : targetId,
+      clearEnteredRealm: isRoot,
       clearSelection: true,
       actionsVisible: true,
       inspectOpen: false,
@@ -661,18 +669,14 @@ class FieldController extends Notifier<FieldState> {
         : '';
 
     state = state.copyWith(
-      currentRealm: FieldRealm(
-        name: realm.name,
-        type: realm.typeLabel,
-        emblemAsset: AppAssets.realmEmblem(realm.typeLabel),
-      ),
       openActions:
           state.openActions.where((item) => item != 'realm').toList(),
+      refreshToken: state.refreshToken + 1,
     );
 
+    final parentId = realm.parentId ?? state.enteredRealmId;
     final eco = ref.read(ecosystemControllerProvider.notifier);
-    final parentId = realm.parentId;
-    if (parentId != null) {
+    if (parentId != null && parentId != 'kinship-duna') {
       unawaited(eco.loadChildren(parentId));
     } else {
       unawaited(eco.load());

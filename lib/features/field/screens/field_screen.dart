@@ -368,6 +368,15 @@ class _FieldStackState extends ConsumerState<FieldStack> {
       },
     );
 
+    ref.listen<int>(
+      fieldControllerProvider.select((s) => s.refreshToken),
+      (previous, next) {
+        if (previous != null && next != previous) {
+          _rebuildGame();
+        }
+      },
+    );
+
     final realm = state.currentRealm;
     final opacity = (state.fieldFocus / 100).clamp(0.0, 1.0);
 
