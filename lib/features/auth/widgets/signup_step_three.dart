@@ -28,14 +28,32 @@ class SignupStepThree extends StatefulWidget {
 }
 
 class _SignupStepThreeState extends State<SignupStepThree> {
+  final _passwordFocus = FocusNode();
   final _confirmFocus = FocusNode();
   bool _showPassword = false;
   bool _showConfirmPassword = false;
 
   @override
   void dispose() {
+    _passwordFocus.dispose();
     _confirmFocus.dispose();
     super.dispose();
+  }
+
+  /// Toggle visibility and hand focus back to the field.
+  ///
+  /// The eye is an IconButton, which takes focus when tapped. Without this
+  /// the field is no longer focused afterwards, so select-all and copy have
+  /// no target and appear to do nothing.
+  void _toggleVisibility({required bool isConfirm}) {
+    setState(() {
+      if (isConfirm) {
+        _showConfirmPassword = !_showConfirmPassword;
+      } else {
+        _showPassword = !_showPassword;
+      }
+    });
+    (isConfirm ? _confirmFocus : _passwordFocus).requestFocus();
   }
 
   void _validate() {
@@ -101,6 +119,7 @@ class _SignupStepThreeState extends State<SignupStepThree> {
             label: 'Set password',
             placeholder: 'At least 12 characters',
             controller: widget.passwordController,
+            focusNode: _passwordFocus,
             required: true,
             obscureText: !_showPassword,
             maxLength: 32,
@@ -108,9 +127,7 @@ class _SignupStepThreeState extends State<SignupStepThree> {
             onSubmitted: (_) => _confirmFocus.requestFocus(),
             suffix: _ToggleVisibilityButton(
               visible: _showPassword,
-              onPressed: () {
-                setState(() => _showPassword = !_showPassword);
-              },
+              onPressed: () => _toggleVisibility(isConfirm: false),
             ),
           ),
           const SizedBox(height: 18),
@@ -126,9 +143,7 @@ class _SignupStepThreeState extends State<SignupStepThree> {
             onSubmitted: (_) => _validate(),
             suffix: _ToggleVisibilityButton(
               visible: _showConfirmPassword,
-              onPressed: () {
-                setState(() => _showConfirmPassword = !_showConfirmPassword);
-              },
+              onPressed: () => _toggleVisibility(isConfirm: true),
             ),
           ),
           const SizedBox(height: 24),

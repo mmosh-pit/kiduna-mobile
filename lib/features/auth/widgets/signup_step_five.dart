@@ -15,6 +15,7 @@ class SignupStepFive extends StatefulWidget {
     required this.onResend,
     required this.onError,
     this.isLoading = false,
+    this.isResending = false,
   });
 
   /// Display string like "+91 6382987509"
@@ -24,6 +25,10 @@ class SignupStepFive extends StatefulWidget {
   final VoidCallback onResend;
   final ValueChanged<String> onError;
   final bool isLoading;
+
+  /// Separate from [isLoading]: the resend link must not report progress
+  /// for a verification happening beside it.
+  final bool isResending;
 
   @override
   State<SignupStepFive> createState() => _SignupStepFiveState();
@@ -128,15 +133,15 @@ class _SignupStepFiveState extends State<SignupStepFive> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Didn\'t get a code? ',
+                  'Didn\'t get it? ',
                   style: text.body.copyWith(
                     color: colors.muted,
                     fontSize: 13,
                   ),
                 ),
                 _LinkButton(
-                  label: widget.isLoading ? 'Sending...' : 'Resend',
-                  onPressed: widget.isLoading ? null : widget.onResend,
+                  label: widget.isResending ? 'Sending...' : 'Resend code',
+                  onPressed: widget.isResending ? null : widget.onResend,
                 ),
               ],
             ),
@@ -191,6 +196,9 @@ class _LinkButton extends StatelessWidget {
         minimumSize: Size.zero,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         foregroundColor: colors.sky,
+        // Explicit: the Material default is an unrelated grey, which
+        // reads as a state change rather than a busy link.
+        disabledForegroundColor: colors.sky.withValues(alpha: 0.5),
         textStyle: const TextStyle(
           fontFamily: 'Avenir',
           fontSize: 13,

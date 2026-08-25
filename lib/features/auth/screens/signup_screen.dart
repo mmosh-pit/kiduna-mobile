@@ -56,6 +56,16 @@ class _SignupScreenState extends State<SignupScreen> {
   // KIDUNA token price (loaded from backend)
   double _tokenPrice = 0.00001;
 
+  // Step 1 consent and step 4 country: held here so stepping back does not
+  // discard them along with the step widget's State.
+  bool _consentChecked = false;
+  String _countryCode = '+1';
+
+  // Tracked apart from _isLoading: both OTP screens show a resend link
+  // alongside a verify button, and a shared flag makes one report the
+  // other's work.
+  bool _isResending = false;
+
   @override
   void initState() {
     super.initState();
@@ -210,7 +220,7 @@ class _SignupScreenState extends State<SignupScreen> {
   // ── Step 2 → resend email OTP ───────────────────────────────────────────
   Future<void> _resendOtp() async {
     final email = _emailController.text.trim();
-    setState(() => _isLoading = true);
+    setState(() => _isResending = true);
 
     try {
       await AuthService.instance.resendOtp(email: email);
@@ -232,7 +242,7 @@ class _SignupScreenState extends State<SignupScreen> {
       _onError('Could not resend code. Please try again.');
     } finally {
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() => _isResending = false);
       }
     }
   }
@@ -379,7 +389,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
   // ── Step 5 → resend SMS OTP ────────────────────────────────────────────
   Future<void> _resendSmsOtp() async {
-    setState(() => _isLoading = true);
+    setState(() => _isResending = true);
 
     try {
       await AuthService.instance.resendSmsOtp(
@@ -405,7 +415,7 @@ class _SignupScreenState extends State<SignupScreen> {
       _onError('Could not resend code. Please try again.');
     } finally {
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() => _isResending = false);
       }
     }
   }
@@ -605,6 +615,8 @@ class _SignupScreenState extends State<SignupScreen> {
           onNext: _generateOtp,
           onLogin: _navigateToLogin,
           onError: _onError,
+          consentChecked: _consentChecked,
+          onConsentChanged: (v) => setState(() => _consentChecked = v),
           nameController: _nameController,
           emailController: _emailController,
           isLoading: _isLoading,
@@ -618,6 +630,7 @@ class _SignupScreenState extends State<SignupScreen> {
           onError: _onError,
           onResend: _resendOtp,
           isLoading: _isLoading,
+          isResending: _isResending,
         );
       case 3:
         return SignupStepThree(
@@ -635,6 +648,8 @@ class _SignupScreenState extends State<SignupScreen> {
           onNext: _generateSmsOtp,
           onBack: () => _goToStep(3),
           onError: _onError,
+          countryCode: _countryCode,
+          onCountryChanged: (v) => setState(() => _countryCode = v),
           mobileController: _mobileController,
           isLoading: _isLoading,
         );
@@ -647,6 +662,7 @@ class _SignupScreenState extends State<SignupScreen> {
           onError: _onError,
           onResend: _resendSmsOtp,
           isLoading: _isLoading,
+          isResending: _isResending,
         );
       case 6:
         return SignupStepSix(

@@ -35,6 +35,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   MessageType _messageType = MessageType.success;
   Timer? _messageTimer;
   bool _isLoading = false;
+  // Tracked apart from _isLoading so the resend link does not
+  // report progress for the verify happening beside it.
+  bool _isResending = false;
   String _otpCode = '';
 
   final _emailController = TextEditingController();
@@ -133,7 +136,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   Future<void> _resendCode() async {
     final email = _emailController.text.trim();
-    setState(() => _isLoading = true);
+    setState(() => _isResending = true);
 
     try {
       await AuthService.instance.requestPasswordReset(email: email);
@@ -152,7 +155,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       _onError('Could not resend code. Please try again.');
     } finally {
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() => _isResending = false);
       }
     }
   }

@@ -12,6 +12,8 @@ class SignupStepFour extends StatefulWidget {
     required this.onNext,
     required this.onBack,
     required this.onError,
+    required this.countryCode,
+    required this.onCountryChanged,
     required this.mobileController,
     this.isLoading = false,
   });
@@ -19,6 +21,11 @@ class SignupStepFour extends StatefulWidget {
   final ValueChanged<String> onNext;
   final VoidCallback onBack;
   final ValueChanged<String> onError;
+  /// Owned by the signup screen so the choice survives stepping back from
+  /// the OTP screen — the number is kept in a controller for the same reason.
+  final String countryCode;
+  final ValueChanged<String> onCountryChanged;
+
   final TextEditingController mobileController;
   final bool isLoading;
 
@@ -27,17 +34,16 @@ class SignupStepFour extends StatefulWidget {
 }
 
 class _SignupStepFourState extends State<SignupStepFour> {
-  String _selectedCountryCode = '+1';
 
 
   CountryPhoneRule get _rule =>
-      findCountryRule(_selectedCountryCode) ?? countryPhoneRules.first;
+      findCountryRule(widget.countryCode) ?? countryPhoneRules.first;
 
   void _validate() {
     if (widget.isLoading) return;
 
     final result = validateMobileNumber(
-      _selectedCountryCode,
+      widget.countryCode,
       widget.mobileController.text,
     );
 
@@ -48,7 +54,7 @@ class _SignupStepFourState extends State<SignupStepFour> {
 
     // Send the normalized digits, not the raw input: the user may have typed
     // spaces, a trunk zero, or the country code again.
-    final countryCodeDigits = _selectedCountryCode.replaceAll('+', '');
+    final countryCodeDigits = widget.countryCode.replaceAll('+', '');
     widget.onNext('$countryCodeDigits|${result.normalized}');
   }
 
@@ -101,21 +107,25 @@ class _SignupStepFourState extends State<SignupStepFour> {
             ),
           ),
           const SizedBox(height: 20),
-          Text(
-            'Mobile number',
-            style: text.caption.copyWith(
-              color: colors.text,
-              fontWeight: FontWeight.w700,
-              fontSize: 12,
-            ),
-          ),
-          Text(
-            ' *',
-            style: text.caption.copyWith(
-              color: colors.error,
-              fontWeight: FontWeight.w700,
-              fontSize: 12,
-            ),
+          Row(
+            children: [
+              Text(
+                'Mobile number',
+                style: text.caption.copyWith(
+                  color: colors.text,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                ),
+              ),
+              Text(
+                ' *',
+                style: text.caption.copyWith(
+                  color: colors.error,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           Container(
@@ -141,7 +151,7 @@ class _SignupStepFourState extends State<SignupStepFour> {
                   ),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
-                      value: _selectedCountryCode,
+                      value: widget.countryCode,
                       dropdownColor: colors.raised,
                       style: text.body.copyWith(
                         color: colors.text,
@@ -166,12 +176,10 @@ class _SignupStepFourState extends State<SignupStepFour> {
                       }).toList(),
                       onChanged: (value) {
                         if (value == null) return;
-                        setState(() {
-                          _selectedCountryCode = value;
-                          // A number valid for the old country is unlikely to
-                          // be valid for the new one.
-                          widget.mobileController.clear();
-                        });
+                        // A number valid for the old country is unlikely to
+                        // be valid for the new one.
+                        widget.mobileController.clear();
+                        widget.onCountryChanged(value);
                       },
                     ),
                   ),
