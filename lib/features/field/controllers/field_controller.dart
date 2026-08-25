@@ -250,16 +250,14 @@ class FieldState {
       toolsLoaded: toolsLoaded ?? this.toolsLoaded,
       skillFormOpen: skillFormOpen ?? this.skillFormOpen,
       approvalsOpen: approvalsOpen ?? this.approvalsOpen,
-      pendingApprovalCount:
-          pendingApprovalCount ?? this.pendingApprovalCount,
+      pendingApprovalCount: pendingApprovalCount ?? this.pendingApprovalCount,
       uploadedSkillData: clearUploadedSkill
           ? null
           : (uploadedSkillData ?? this.uploadedSkillData),
       uploadedToolRegistry: clearUploadedSkill
           ? null
           : (uploadedToolRegistry ?? this.uploadedToolRegistry),
-      skillUploadLoading:
-          skillUploadLoading ?? this.skillUploadLoading,
+      skillUploadLoading: skillUploadLoading ?? this.skillUploadLoading,
       editingSkill: clearEditingSkill
           ? null
           : (editingSkill ?? this.editingSkill),
@@ -333,7 +331,9 @@ class FieldController extends Notifier<FieldState> {
     // Fetch pending approval count and gravity when auth state changes.
     ref.listen(authControllerProvider, (prev, next) {
       final wallet = next.user?.wallet;
-      if (next.user != null && wallet != null && (prev?.user == null || prev?.user?.wallet != wallet)) {
+      if (next.user != null &&
+          wallet != null &&
+          (prev?.user == null || prev?.user?.wallet != wallet)) {
         fetchPendingApprovalCount();
         _loadGravityFromApi(wallet);
       }
@@ -467,7 +467,8 @@ class FieldController extends Notifier<FieldState> {
     if (atlasRealm != null) {
       name = atlasRealm.name;
       typeLabel = atlasRealm.type.label;
-      emblem = atlasRealm.type == AtlasRealmType.institution ||
+      emblem =
+          atlasRealm.type == AtlasRealmType.institution ||
               atlasRealm.type == AtlasRealmType.ecosystem
           ? 'conceptual'
           : atlasRealm.type.emblemKey;
@@ -515,16 +516,22 @@ class FieldController extends Notifier<FieldState> {
 
     final wallet = ref.read(authControllerProvider).user?.wallet;
     if (wallet != null && wallet.isNotEmpty) {
-      const levelNames = {1: 'quiet', 2: 'available', 3: 'relevant', 4: 'central', 5: 'vital'};
+      const levelNames = {
+        1: 'quiet',
+        2: 'available',
+        3: 'relevant',
+        4: 'central',
+        5: 'vital',
+      };
       final levelName = levelNames[clamped] ?? 'relevant';
       GravityService.instance
           .setLevelOverride(wallet: wallet, realmId: realmId, level: levelName)
           .catchError((Object e) {
-        AppLogger.warning(
-          'Failed to persist gravity override',
-          tag: 'FieldController',
-        );
-      });
+            AppLogger.warning(
+              'Failed to persist gravity override',
+              tag: 'FieldController',
+            );
+          });
     }
   }
 
@@ -536,7 +543,13 @@ class FieldController extends Notifier<FieldState> {
       final response = await GravityService.instance.fetchGravity(wallet);
       if (!ref.mounted) return;
 
-      const levelToInt = {'vital': 5, 'central': 4, 'relevant': 3, 'available': 2, 'quiet': 1};
+      const levelToInt = {
+        'vital': 5,
+        'central': 4,
+        'relevant': 3,
+        'available': 2,
+        'quiet': 1,
+      };
       final map = <String, int>{};
       for (final realm in response.realms) {
         map[realm.id] = levelToInt[realm.level] ?? 3;
@@ -614,9 +627,7 @@ class FieldController extends Notifier<FieldState> {
         type: type,
         emblemAsset: AppAssets.realmEmblem(type),
       ),
-      openActions: state.openActions
-          .where((item) => item != 'realm')
-          .toList(),
+      openActions: state.openActions.where((item) => item != 'realm').toList(),
     );
     askAbout(
       KiTopic(
@@ -642,9 +653,7 @@ class FieldController extends Notifier<FieldState> {
         type: 'Organization',
         emblemAsset: AppAssets.realmEmblem('Organization'),
       ),
-      openActions: state.openActions
-          .where((item) => item != 'realm')
-          .toList(),
+      openActions: state.openActions.where((item) => item != 'realm').toList(),
     );
     askAbout(
       KiTopic(
@@ -669,8 +678,7 @@ class FieldController extends Notifier<FieldState> {
         : '';
 
     state = state.copyWith(
-      openActions:
-          state.openActions.where((item) => item != 'realm').toList(),
+      openActions: state.openActions.where((item) => item != 'realm').toList(),
       refreshToken: state.refreshToken + 1,
     );
 
@@ -782,7 +790,7 @@ class FieldController extends Notifier<FieldState> {
         allowedExtensions: ['md'],
         withData: true,
       );
-      if (result == null || result.isEmpty) return;
+      if (result.isEmpty) return;
 
       final bytes = await result.first.readAsBytes();
       if (bytes.isEmpty) return;
@@ -818,10 +826,7 @@ class FieldController extends Notifier<FieldState> {
         skillUploadLoading: false,
       );
     } catch (e) {
-      AppLogger.warning(
-        'Skill upload failed: $e',
-        tag: 'FieldController',
-      );
+      AppLogger.warning('Skill upload failed: $e', tag: 'FieldController');
       if (ref.mounted) {
         state = state.copyWith(skillUploadLoading: false);
       }
@@ -913,7 +918,9 @@ class FieldController extends Notifier<FieldState> {
       thenText: thenText,
       tools: tools,
       requiresApproval: requiresApproval,
-      realmId: state.currentRealmId != 'kinship-duna' ? state.currentRealmId : null,
+      realmId: state.currentRealmId != 'kinship-duna'
+          ? state.currentRealmId
+          : null,
       skillFilePath: '$slug.md',
     );
 
@@ -962,14 +969,16 @@ class FieldController extends Notifier<FieldState> {
       // Generate AI SKILL.md content in the background.
       // Use original skill data (has correct when/then text) with
       // the backend-assigned ID from created.
-      _generateSkillContent(SkillModel(
-        id: created.id,
-        name: skill.name,
-        triggerType: skill.triggerType,
-        whenText: skill.whenText,
-        thenText: skill.thenText,
-        tools: skill.tools,
-      ));
+      _generateSkillContent(
+        SkillModel(
+          id: created.id,
+          name: skill.name,
+          triggerType: skill.triggerType,
+          whenText: skill.whenText,
+          thenText: skill.thenText,
+          tools: skill.tools,
+        ),
+      );
     } on AppException catch (e) {
       AppLogger.warning(
         'Skill sync failed: ${e.message}',
@@ -1381,7 +1390,9 @@ class FieldController extends Notifier<FieldState> {
         wallet: wallet,
         toolName: toolName,
         credentials: enrichedCredentials,
-        realmId: state.currentRealmId != 'kinship-duna' ? state.currentRealmId : null,
+        realmId: state.currentRealmId != 'kinship-duna'
+            ? state.currentRealmId
+            : null,
       );
 
       if (!ref.mounted) {
@@ -1480,16 +1491,11 @@ class FieldController extends Notifier<FieldState> {
     required String recipientName,
     required String role,
     required String expiration,
-    String? handshake,
     String? notes,
   }) async {
-    // Read wallet from auth state.
-    final auth = ref.read(authControllerProvider);
-    final wallet = auth.user?.wallet;
-    if (wallet == null || wallet.isEmpty) {
-      state = state.copyWith(
-        invitationError: 'You must be logged in to send invitations.',
-      );
+    final realmId = state.currentRealmId;
+    if (realmId.isEmpty) {
+      state = state.copyWith(invitationError: 'No realm selected.');
       return;
     }
 
@@ -1497,11 +1503,10 @@ class FieldController extends Notifier<FieldState> {
 
     try {
       final request = InvitationRequest(
-        wallet: wallet,
+        realmId: realmId,
         recipientName: recipientName,
         role: role,
         expiration: expiration,
-        handshake: handshake,
         notes: notes,
       );
 
@@ -1516,8 +1521,8 @@ class FieldController extends Notifier<FieldState> {
               'Ki has prepared a personal invitation, a unique Kinship Link, '
               'and its equivalent Kinship Code for review.',
           invitation:
-              'The optional private handshake remains separate and is never '
-              'included in the invitation, link, or code.',
+              'Copy the message, link, or code and share it with your '
+              'intended recipient.',
         ),
       );
 

@@ -39,10 +39,13 @@ abstract class ApiEndpoints {
   static const String forgotPasswordVerification =
       '/forgot-password-verification';
 
-  // ── Codes (kinship-agent) ─────────────────────────────────────────────
+  // ── Realm Invites (kinship-backend) ────────────────────────────────────
 
-  /// `POST /api/v1/codes` — create an invitation code.
-  static const String codes = '/api/v1/codes';
+  /// `POST /realm-invites/:realmId` — create a realm invitation.
+  static String realmInviteCreate(String realmId) => '/realm-invites/$realmId';
+
+  /// `GET /realm-invites/:realmId` — list invites for a realm.
+  static String realmInviteList(String realmId) => '/realm-invites/$realmId';
 
   // ── Agents (kinship-agent) ────────────────────────────────────────────
 
@@ -124,7 +127,8 @@ abstract class ApiEndpoints {
   /// `GET /api/tools/registry-search` — search public MCP registries.
   static const String toolsRegistrySearch = '/api/tools/registry-search';
 
-  static String skillDownload(String skillId) => '/api/skills/$skillId/download';
+  static String skillDownload(String skillId) =>
+      '/api/skills/$skillId/download';
   // ── Approvals ──────────────────────────────────────────────────
 
   /// `GET /api/approvals` — list approval requests.
@@ -244,8 +248,7 @@ abstract class ApiEndpoints {
   static String presaleBuy(String id) => '/tokens/presales/$id/buy';
 
   /// `GET /tokens/presales/{id}/purchases` — purchase history (auth required).
-  static String presalePurchases(String id) =>
-      '/tokens/presales/$id/purchases';
+  static String presalePurchases(String id) => '/tokens/presales/$id/purchases';
 
   /// `GET /api/usage/{wallet}` — current-month compute usage (agent API).
   static String computeUsage(String wallet) => '/api/usage/$wallet';

@@ -1,31 +1,27 @@
 import 'package:flutter/foundation.dart';
 
-/// Request body for `POST /api/v1/codes` — the six fields from the Invite
-/// panel plus the logged-in user's wallet.
+/// Request body for `POST /realm-invites/:realmId` — the fields from the
+/// Invite panel mapped to the kinship-backend schema.
 @immutable
 class InvitationRequest {
   const InvitationRequest({
-    required this.wallet,
+    required this.realmId,
     required this.recipientName,
     required this.role,
     required this.expiration,
-    this.handshake,
     this.notes,
   });
 
-  final String wallet;
+  final String realmId;
   final String recipientName;
   final String role;
   final String expiration;
-  final String? handshake;
   final String? notes;
 
   Map<String, dynamic> toJson() => {
-    'wallet': wallet,
-    'recipientName': recipientName,
-    'role': role,
-    'expiration': expiration,
-    if (handshake != null && handshake!.isNotEmpty) 'handshake': handshake,
-    if (notes != null && notes!.isNotEmpty) 'notes': notes,
+    'role': role.toLowerCase(),
+    'expires_in': expiration,
+    'invited_name': recipientName,
+    if (notes != null && notes!.isNotEmpty) 'label': notes,
   };
 }
