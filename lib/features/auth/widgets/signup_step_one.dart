@@ -44,7 +44,7 @@ class _SignupStepOneState extends State<SignupStepOne> {
     final email = widget.emailController.text.trim();
 
     if (name.isEmpty) {
-      widget.onError('Please enter your code name.');
+      widget.onError('Please enter your name.');
       return;
     }
     if (email.isEmpty) {
@@ -95,7 +95,7 @@ class _SignupStepOneState extends State<SignupStepOne> {
           ),
           const SizedBox(height: 20),
           KidunaTextField(
-            label: 'Your code name',
+            label: 'Your name',
             placeholder: 'What you want to be called',
             controller: widget.nameController,
             required: true,
