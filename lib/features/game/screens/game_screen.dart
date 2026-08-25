@@ -10,31 +10,59 @@ import '../../../games/medieval_poker/medieval_poker_lobby_screen.dart';
 import '../../../features/ki_chat/controllers/ki_chat_controller.dart';
 import '../../../l10n/app_localizations.dart';
 
-// ── Game tip constants ───────────────────────────────────────────────
+// ── Tips — simple English for any player ─────────────────────────────
 
 const _tipWelcome =
-    'Welcome! You get 3 hole cards — discard one after the flop. '
-    'Got a pair? Bet. Nothing matches? Fold early and save your chips.';
+    'Welcome! You get 3 cards. If two cards have the same number, '
+    'that\'s good — try betting. If nothing matches, save your coins '
+    'and skip this round.';
 
 const _tipHeatingUp =
-    '🔥 You\'re Heating Up! Fire Cards are unlocked. Bet big and play '
-    'them now — raise to pressure opponents before you Cool Off.';
+    '🔥 You won 2 in a row! Special power cards are now available '
+    'in your hand. Use them now — they disappear if you lose.';
 
 const _tipTilted =
-    'You\'re Tilted — Power Cards are locked. Check or fold weak hands. '
-    'Only call or bet if you have a strong pair or better.';
+    'You lost a big round — your power cards are locked for now. '
+    'Play safe, skip weak rounds, and wait for a good hand to '
+    'unlock them again.';
 
 const _tipPowerCard =
-    'An opponent targeted you! Play a Counter Card if you have one. '
-    'No counter? Check if you can, fold if the bet is too high.';
+    'Someone used a special card against you! Look for a shield card '
+    'in your hand to block it. No shield? Just tap Pass and play '
+    'carefully.';
 
 const _tipWin =
-    '🏆 Great win! Next time — raise when you have Two Pair or better, '
-    'check with one Pair, fold with nothing.';
+    '🏆 You won! Tip: when you\'re on a winning streak, use your '
+    'power cards — they\'re strongest when you\'re winning.';
 
 const _tipLose =
-    'Tough loss! Remember — fold early with weak cards, call only with '
-    'pairs, and raise only when you\'re confident. Patience wins.';
+    'Don\'t worry! Tip: skip rounds when your cards are bad. Wait '
+    'for matching cards, then play big.';
+
+const _tipFirstFlop =
+    '3 cards just appeared on the table! These are shared by everyone. '
+    'Match them with your cards to make the best hand.';
+
+const _tipFirstBetting =
+    'Your turn! Tap Check to skip without betting. Tap Bet to put '
+    'coins in. Tap Fold to quit this round and save your coins.';
+
+const _tipSetupCard =
+    'Before the round starts, you can play a setup card for an early '
+    'advantage. Or tap the button to skip.';
+
+const _tipClassSelect =
+    'Pick your class! Each class gives you different power cards. '
+    'Rogue is sneaky, Warrior is strong, Merchant makes money, '
+    'Noble controls the game.';
+
+const _tipDeckBuild =
+    'Build your deck! Tap cards to add or remove them. Pick cards '
+    'that work well together. You need the exact number shown.';
+
+const _tipCourtSelect =
+    'Choose your Court Cards! These are special cards shared by all '
+    'classes. Pick the ones that match your play style.';
 
 // ── Hand evaluation helpers ──────────────────────────────────────────
 
@@ -49,39 +77,34 @@ String _cardText(dynamic card) {
 String _evaluateHand(List<String> holeRanks, List<String> boardRanks) {
   final allRanks = [...holeRanks, ...boardRanks];
   final counts = <String, int>{};
-  for (final r in allRanks) {
-    counts[r] = (counts[r] ?? 0) + 1;
-  }
+  for (final r in allRanks) counts[r] = (counts[r] ?? 0) + 1;
   final pairs = counts.values.where((c) => c == 2).length;
   final trips = counts.values.where((c) => c == 3).length;
   final quads = counts.values.where((c) => c >= 4).length;
 
-  if (quads > 0) return 'Four of a Kind — very strong! Raise big.';
-  if (trips > 0 && pairs > 0) return 'Full House — very strong! Raise big.';
-  if (trips > 0) return 'Three of a Kind — strong hand. Raise.';
-  if (pairs >= 2) return 'Two Pair — decent hand. Call or small raise.';
+  if (quads > 0) return 'You have 4 matching cards — amazing hand! Bet big.';
+  if (trips > 0 && pairs > 0) return 'Full House — 3 matching + 2 matching. Very strong! Bet big.';
+  if (trips > 0) return '3 matching cards — strong hand. Try betting or raising.';
+  if (pairs >= 2) return '2 different pairs — decent hand. You can call or bet small.';
   if (pairs == 1) {
     for (final r in holeRanks) {
       if (allRanks.where((x) => x == r).length >= 2) {
         final name = const {
-          'A': 'Ace', 'K': 'King', 'Q': 'Queen',
-          'J': 'Jack', 'T': '10',
+          'A': 'Ace', 'K': 'King', 'Q': 'Queen', 'J': 'Jack', 'T': '10',
         }[r] ?? r;
-        return 'Pair of ${name}s — moderate hand. Consider calling.';
+        return 'You have a pair of ${name}s. OK hand — try calling if someone bets.';
       }
     }
-    return 'Pair on the board — weak hand. Consider folding.';
+    return 'There\'s a pair on the table but not in your hand. Weak — consider folding.';
   }
   if (holeRanks.any(['A', 'K', 'Q', 'J'].contains)) {
-    return 'High Card only, but you have face cards. Risky — consider checking.';
+    return 'No matches but you have high cards. Risky — tap Check if you can.';
   }
-  return 'High Card only — weak hand. Fold to save chips.';
+  return 'No matches, low cards — weak hand. Tap Fold to save your coins.';
 }
 
-/// Game feature entry — shows mode selection or active poker game.
-///
-/// Designed to sit inside the [DashboardScreen] left panel.
-/// Ki chat stays visible on the right for all states.
+// ── GameScreen ───────────────────────────────────────────────────────
+
 class GameScreen extends ConsumerStatefulWidget {
   const GameScreen({super.key});
 
@@ -94,8 +117,6 @@ enum _GameView { modeSelector, singlePlayer, lobby, leaderboard }
 class _GameScreenState extends ConsumerState<GameScreen> {
   _GameView _view = _GameView.modeSelector;
   bool _showExitConfirm = false;
-
-  /// Stored so the game survives exit-dialog rebuilds.
   _PokerTableView? _pokerView;
 
   @override
@@ -118,6 +139,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   }
 
   void _startSinglePlayer() {
+    // Show welcome tip immediately when player clicks Single Player
+    ref.read(kiChatControllerProvider.notifier).addLocalTip(_tipWelcome);
+    ref.read(kiChatControllerProvider.notifier)
+        .setGameContext('Game in progress');
+
     setState(() {
       _pokerView = _PokerTableView(
         key: GlobalKey(),
@@ -129,7 +155,6 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Non-game views
     if (_view == _GameView.modeSelector) {
       return _ModeSelector(
         onSinglePlayer: _startSinglePlayer,
@@ -148,7 +173,6 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       );
     }
 
-    // Single player — reuse the SAME _pokerView (game not recreated)
     return Stack(
       children: [
         if (_pokerView != null) _pokerView!,
@@ -162,18 +186,16 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   }
 }
 
-// ── Exit confirmation overlay (X button) ─────────────────────────────
+// ── Exit overlay ─────────────────────────────────────────────────────
 
 class _ExitOverlay extends StatelessWidget {
   const _ExitOverlay({required this.onKeepPlaying, required this.onLeave});
-
   final VoidCallback onKeepPlaying;
   final VoidCallback onLeave;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.kiduna;
-
     return Positioned.fill(
       child: Material(
         color: Colors.black.withValues(alpha: 0.72),
@@ -184,31 +206,22 @@ class _ExitOverlay extends StatelessWidget {
             decoration: BoxDecoration(
               color: const Color(0xFF1B140C),
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: const Color(0xFF6B5533),
-                width: 1.5,
-              ),
+              border: Border.all(color: const Color(0xFF6B5533), width: 1.5),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  'Leave the game?',
-                  style: TextStyle(
-                    fontFamily: 'GoudyHeavyface',
-                    fontSize: 22,
-                    color: colors.gold,
-                  ),
-                ),
+                Text('Leave the game?',
+                    style: TextStyle(
+                        fontFamily: 'GoudyHeavyface',
+                        fontSize: 22,
+                        color: colors.gold)),
                 const SizedBox(height: 8),
-                Text(
-                  "You'll forfeit your seat and progress.",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: colors.cream.withValues(alpha: 0.7),
-                    fontSize: 14,
-                  ),
-                ),
+                Text("You'll forfeit your seat and progress.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        color: colors.cream.withValues(alpha: 0.7),
+                        fontSize: 14)),
                 const SizedBox(height: 20),
                 Row(
                   children: [
@@ -218,19 +231,14 @@ class _ExitOverlay extends StatelessWidget {
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF2A6B4F),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
+                              color: const Color(0xFF2A6B4F),
+                              borderRadius: BorderRadius.circular(10)),
                           child: Center(
-                            child: Text(
-                              'Keep Playing',
-                              style: TextStyle(
-                                color: colors.cream,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 15,
-                              ),
-                            ),
-                          ),
+                              child: Text('Keep Playing',
+                                  style: TextStyle(
+                                      color: colors.cream,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 15))),
                         ),
                       ),
                     ),
@@ -241,19 +249,14 @@ class _ExitOverlay extends StatelessWidget {
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFB3261E),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
+                              color: const Color(0xFFB3261E),
+                              borderRadius: BorderRadius.circular(10)),
                           child: Center(
-                            child: Text(
-                              'Leave',
-                              style: TextStyle(
-                                color: colors.cream,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 15,
-                              ),
-                            ),
-                          ),
+                              child: Text('Leave',
+                                  style: TextStyle(
+                                      color: colors.cream,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 15))),
                         ),
                       ),
                     ),
@@ -268,66 +271,53 @@ class _ExitOverlay extends StatelessWidget {
   }
 }
 
-// ── Lobby wrapper ────────────────────────────────────────────────────
+// ── Lobby + Leaderboard ──────────────────────────────────────────────
 
 class _LobbyView extends StatelessWidget {
   const _LobbyView({required this.onBack, required this.onLeaderboard});
-
   final VoidCallback onBack;
   final VoidCallback onLeaderboard;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(8, 8, 0, 0),
-            child: IconButton(
-              onPressed: onBack,
-              icon: Icon(
-                Icons.arrow_back_rounded,
-                color: context.kiduna.cream.withValues(alpha: 0.7),
-              ),
-            ),
+    return Column(children: [
+      Align(
+        alignment: Alignment.centerLeft,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 8, 0, 0),
+          child: IconButton(
+            onPressed: onBack,
+            icon: Icon(Icons.arrow_back_rounded,
+                color: context.kiduna.cream.withValues(alpha: 0.7)),
           ),
         ),
-        Expanded(
-          child: MedievalPokerLobbyScreen(onLeaderboard: onLeaderboard),
-        ),
-      ],
-    );
+      ),
+      Expanded(
+          child: MedievalPokerLobbyScreen(onLeaderboard: onLeaderboard)),
+    ]);
   }
 }
 
-// ── Leaderboard wrapper ──────────────────────────────────────────────
-
 class _LeaderboardView extends StatelessWidget {
   const _LeaderboardView({required this.onBack});
-
   final VoidCallback onBack;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(8, 8, 0, 0),
-            child: IconButton(
-              onPressed: onBack,
-              icon: Icon(
-                Icons.arrow_back_rounded,
-                color: context.kiduna.cream.withValues(alpha: 0.7),
-              ),
-            ),
+    return Column(children: [
+      Align(
+        alignment: Alignment.centerLeft,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 8, 0, 0),
+          child: IconButton(
+            onPressed: onBack,
+            icon: Icon(Icons.arrow_back_rounded,
+                color: context.kiduna.cream.withValues(alpha: 0.7)),
           ),
         ),
-        const Expanded(child: MedievalPokerLeaderboardScreen()),
-      ],
-    );
+      ),
+      const Expanded(child: MedievalPokerLeaderboardScreen()),
+    ]);
   }
 }
 
@@ -338,7 +328,6 @@ class _ModeSelector extends StatelessWidget {
     required this.onSinglePlayer,
     required this.onPlayOnline,
   });
-
   final VoidCallback onSinglePlayer;
   final VoidCallback onPlayOnline;
 
@@ -354,31 +343,23 @@ class _ModeSelector extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
-            l10n.gameTitle,
-            style: text.h4.copyWith(color: colors.gold),
-          ),
+          Text(l10n.gameTitle, style: text.h4.copyWith(color: colors.gold)),
           const SizedBox(height: 8),
-          Text(
-            l10n.gameSubtitle,
-            style: text.caption.copyWith(
-              color: colors.gold.withValues(alpha: 0.6),
-            ),
-          ),
+          Text(l10n.gameSubtitle,
+              style: text.caption
+                  .copyWith(color: colors.gold.withValues(alpha: 0.6))),
           const SizedBox(height: 48),
           _ModeButton(
-            icon: Icons.person,
-            label: l10n.singlePlayerLabel,
-            subtitle: l10n.singlePlayerSubtitle,
-            onTap: onSinglePlayer,
-          ),
+              icon: Icons.person,
+              label: l10n.singlePlayerLabel,
+              subtitle: l10n.singlePlayerSubtitle,
+              onTap: onSinglePlayer),
           const SizedBox(height: 16),
           _ModeButton(
-            icon: Icons.public,
-            label: l10n.playOnlineLabel,
-            subtitle: 'Create or join a room by code',
-            onTap: onPlayOnline,
-          ),
+              icon: Icons.public,
+              label: l10n.playOnlineLabel,
+              subtitle: 'Create or join a room by code',
+              onTap: onPlayOnline),
         ],
       ),
     );
@@ -393,7 +374,6 @@ class _ModeButton extends StatelessWidget {
     required this.onTap,
     this.enabled = true,
   });
-
   final IconData icon;
   final String label;
   final String subtitle;
@@ -404,7 +384,6 @@ class _ModeButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.kiduna;
     final text = context.kidunaText;
-
     return GestureDetector(
       onTap: enabled ? onTap : null,
       child: MouseRegion(
@@ -424,44 +403,34 @@ class _ModeButton extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(
-                icon,
-                color: enabled
-                    ? colors.gold
-                    : colors.gold.withValues(alpha: 0.3),
-                size: 28,
-              ),
+              Icon(icon,
+                  color: enabled
+                      ? colors.gold
+                      : colors.gold.withValues(alpha: 0.3),
+                  size: 28),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      label,
-                      style: text.body.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: enabled
-                            ? colors.cream
-                            : colors.cream.withValues(alpha: 0.3),
-                      ),
-                    ),
+                    Text(label,
+                        style: text.body.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: enabled
+                                ? colors.cream
+                                : colors.cream.withValues(alpha: 0.3))),
                     const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: text.caption.copyWith(
-                        color: enabled
-                            ? colors.muted
-                            : colors.muted.withValues(alpha: 0.3),
-                      ),
-                    ),
+                    Text(subtitle,
+                        style: text.caption.copyWith(
+                            color: enabled
+                                ? colors.muted
+                                : colors.muted.withValues(alpha: 0.3))),
                   ],
                 ),
               ),
               if (enabled)
-                Icon(
-                  Icons.chevron_right,
-                  color: colors.gold.withValues(alpha: 0.5),
-                ),
+                Icon(Icons.chevron_right,
+                    color: colors.gold.withValues(alpha: 0.5)),
             ],
           ),
         ),
@@ -472,11 +441,8 @@ class _ModeButton extends StatelessWidget {
 
 // ── Poker table with Ki tips ─────────────────────────────────────────
 
-/// Active poker game — uses [MedievalPokerGame] + [PokerHud] for proper
-/// animations. Sends instant local tips to Ki chat on game events.
 class _PokerTableView extends ConsumerStatefulWidget {
   const _PokerTableView({super.key, required this.onExit});
-
   final VoidCallback onExit;
 
   @override
@@ -486,12 +452,19 @@ class _PokerTableView extends ConsumerStatefulWidget {
 class _PokerTableViewState extends ConsumerState<_PokerTableView> {
   late final MedievalPokerGame _game;
 
+  // Track what tips we've already shown (prevent repeats)
   bool _sentWelcome = false;
   bool _wasHeatingUp = false;
   bool _wasTilted = false;
   bool _wasGameOver = false;
   bool _hadPowerPrompt = false;
   bool _wasPlayerTurn = false;
+  bool _sentFirstFlop = false;
+  bool _sentFirstBetting = false;
+  bool _hadSetupPrompt = false;
+  bool _hadClassSelect = false;
+  bool _hadCourtSelect = false;
+  bool _hadDeckBuild = false;
 
   @override
   void initState() {
@@ -499,19 +472,12 @@ class _PokerTableViewState extends ConsumerState<_PokerTableView> {
     _game = MedievalPokerGame(opponentCount: 3);
     _game.view.addListener(_onViewChanged);
 
-    // Welcome tip — once, after the first frame.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_sentWelcome && mounted) {
-        _sentWelcome = true;
-        _tip(_tipWelcome);
-        // Mark game as active so tab-switch confirmation works.
-        ref.read(kiChatControllerProvider.notifier)
-            .setGameContext('Game in progress');
-      }
+      // Welcome already shown by _startSinglePlayer.
+      // Just mark as sent so it doesn't repeat.
+      _sentWelcome = true;
     });
   }
-
-  // ── helpers ──
 
   void _tip(String text) {
     if (!mounted) return;
@@ -559,12 +525,50 @@ class _PokerTableViewState extends ConsumerState<_PokerTableView> {
     }
   }
 
-  // ── game event listener ──
-
   void _onViewChanged() {
     if (!mounted) return;
     final v = _game.view.value;
     final ki = ref.read(kiChatControllerProvider.notifier);
+
+    // Class selection — shown once
+    if (v.showClassSelect && !_hadClassSelect) {
+      _hadClassSelect = true;
+      _tip(_tipClassSelect);
+    }
+
+    // Deck building — shown once
+    if (v.showDeckBuild && !_hadDeckBuild) {
+      _hadDeckBuild = true;
+      _tip(_tipDeckBuild);
+    }
+
+    // Court card selection — shown once
+    if (v.showCourtSelect && !_hadCourtSelect) {
+      _hadCourtSelect = true;
+      _tip(_tipCourtSelect);
+    }
+
+    // Setup card prompt — shown once
+    if (v.showPower && v.powerTitle.contains('Setup') && !_hadSetupPrompt) {
+      _hadSetupPrompt = true;
+      _tip(_tipSetupCard);
+    }
+
+    // First time flop appears — detect board cards
+    if (!_sentFirstFlop) {
+      try {
+        if (_game.engine.community.isNotEmpty) {
+          _sentFirstFlop = true;
+          _tip(_tipFirstFlop);
+        }
+      } catch (_) {}
+    }
+
+    // First time player's turn — explain betting options
+    if (v.showActions && !_sentFirstBetting) {
+      _sentFirstBetting = true;
+      _tip(_tipFirstBetting);
+    }
 
     // Heating Up
     if (v.banner.contains('Heating Up') && !_wasHeatingUp) {
@@ -582,17 +586,17 @@ class _PokerTableViewState extends ConsumerState<_PokerTableView> {
       _wasTilted = false;
     }
 
-    // Power Card counter prompt
+    // Power Card counter prompt (not Setup)
     if (v.showPower &&
         v.powerTitle.contains('Respond') &&
         !_hadPowerPrompt) {
       _hadPowerPrompt = true;
       _tip(_tipPowerCard);
-    } else if (!v.showPower) {
+    } else if (!v.showPower || !v.powerTitle.contains('Respond')) {
       _hadPowerPrompt = false;
     }
 
-    // Player's turn — card evaluation
+    // Player's turn — card evaluation (every turn)
     if (v.showActions && !_wasPlayerTurn) {
       _wasPlayerTurn = true;
       final ctx = _buildCardContext();
