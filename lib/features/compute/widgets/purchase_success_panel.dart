@@ -87,8 +87,6 @@ class _PurchaseSuccessPanelState extends State<PurchaseSuccessPanel> {
                 label: 'You Received',
                 value:
                     '${KidunaPurchasePanel.formatKiduna(widget.kidunaReceived)} KIDUNA',
-                colors: colors,
-                text: text,
                 isGold: true,
               ),
               const SizedBox(height: 10),
@@ -98,8 +96,6 @@ class _PurchaseSuccessPanelState extends State<PurchaseSuccessPanel> {
                 label: 'New Balance',
                 value:
                     '${KidunaPurchasePanel.formatKiduna(widget.newBalance)} KIDUNA',
-                colors: colors,
-                text: text,
               ),
             ],
           ),
@@ -192,19 +188,17 @@ class _Row extends StatelessWidget {
   const _Row({
     required this.label,
     required this.value,
-    required this.colors,
-    required this.text,
     this.isGold = false,
   });
 
   final String label;
   final String value;
-  final dynamic colors;
-  final dynamic text;
   final bool isGold;
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.kiduna;
+    final text = context.kidunaText;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [

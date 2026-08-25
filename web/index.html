@@ -41,6 +41,61 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
+  <!--
+    Phantom signing bridge.
+
+    Phantom's signTransaction expects a web3.js Transaction object, not the
+    base64 string the backend returns. Modelling Solana's wire format in Dart
+    to satisfy that would be a lot of code for no benefit, so the conversion
+    happens here where web3.js already exists.
+
+    Loaded before flutter_bootstrap.js so window.kidunaSignTransaction is
+    defined by the time the app can call it.
+  -->
+  <script src="https://unpkg.com/@solana/web3.js@1.95.3/lib/index.iife.min.js"></script>
+  <script>
+    /**
+     * Sign a base64 transaction with Phantom and return it re-encoded.
+     *
+     * The transaction arrives already signed by the admin wallet, so it is
+     * deserialized without signature verification — it is legitimately
+     * incomplete until Phantom adds the fee payer's signature.
+     *
+     * Throws if Phantom is missing or the user rejects the prompt.
+     */
+    window.kidunaSignTransaction = async function (txBase64) {
+      if (!window.solana || !window.solana.isPhantom) {
+        throw new Error('Phantom wallet not found');
+      }
+      if (!window.solanaWeb3) {
+        throw new Error('solana web3 library not loaded');
+      }
+
+      const raw = Uint8Array.from(atob(txBase64), function (c) {
+        return c.charCodeAt(0);
+      });
+
+      const tx = window.solanaWeb3.Transaction.from(raw);
+
+      // Phantom prompts the user here, and rejects if they decline.
+      const signed = await window.solana.signTransaction(tx);
+
+      // Still partially signed from web3.js's perspective until broadcast,
+      // so skip its verification on the way back out.
+      const out = signed.serialize({
+        requireAllSignatures: false,
+        verifySignatures: false,
+      });
+
+      let binary = '';
+      const bytes = new Uint8Array(out);
+      for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      return btoa(binary);
+    };
+  </script>
+
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

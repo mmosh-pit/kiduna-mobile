@@ -5,6 +5,8 @@ import '../../../core/extensions/context_extensions.dart';
 import '../../../shared/layouts/responsive_layout.dart';
 import '../../../shared/widgets/app_header.dart';
 import '../../../shared/widgets/kiduna_gold_button.dart';
+import '../../../shared/widgets/kiduna_secondary_button.dart';
+import '../../auth/controllers/auth_controller.dart';
 import '../../field/screens/field_screen.dart';
 import '../controllers/compute_controller.dart';
 import '../controllers/compute_history_controller.dart';
@@ -52,6 +54,14 @@ class _ComputeDetailsScreenState extends ConsumerState<ComputeDetailsScreen>
     await ref
         .read(computeHistoryControllerProvider.notifier)
         .loadPurchases(refresh: true);
+  }
+
+  /// Withdrawals need a browser wallet signature, so they happen on the
+  /// web app. On desktop that means handing off to the browser.
+  Future<void> _withdraw() async {
+    await openWithdrawPage(context);
+    if (!mounted) return;
+    await ref.read(computeControllerProvider.notifier).refresh();
   }
 
   @override
@@ -132,6 +142,11 @@ class _ComputeDetailsScreenState extends ConsumerState<ComputeDetailsScreen>
                           KidunaGoldButton(
                             label: 'Buy More KIDUNA',
                             onPressed: _buy,
+                          ),
+                          const SizedBox(height: 10),
+                          KidunaSecondaryButton(
+                            label: 'Withdraw',
+                            onPressed: _withdraw,
                           ),
                           const SizedBox(height: 20),
                         ],

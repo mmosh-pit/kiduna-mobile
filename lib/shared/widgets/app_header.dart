@@ -5,6 +5,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../config/assets.dart';
 import '../../core/extensions/context_extensions.dart';
 import '../../features/auth/controllers/auth_controller.dart';
+import 'connect_wallet_button.dart';
 import 'user_menu_actions.dart';
 
 const Color _headerBg = Color.fromRGBO(18, 12, 7, 0.97);
@@ -57,6 +58,9 @@ class AppHeader extends ConsumerWidget {
             height: isMobile ? 34 : 40,
           ),
           const Spacer(),
+          // Wallet connection is a web-only concern; the button renders
+          // nothing elsewhere.
+          if (showUserMenu && isAuthenticated) const ConnectWalletButton(),
           if (end != null) end,
         ],
       ),

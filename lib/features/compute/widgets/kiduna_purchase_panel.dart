@@ -95,16 +95,16 @@ class _KidunaPurchasePanelState extends State<KidunaPurchasePanel> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.kiduna;
-    final text = context.kidunaText;
 
     if (widget.waitingForPayment) {
-      return _buildWaitingPanel(colors, text);
+      return _buildWaitingPanel();
     }
-    return _buildSwapPanel(colors, text);
+    return _buildSwapPanel();
   }
 
-  Widget _buildSwapPanel(dynamic colors, dynamic text) {
+  Widget _buildSwapPanel() {
+    final colors = context.kiduna;
+    final text = context.kidunaText;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -217,15 +217,11 @@ class _KidunaPurchasePanelState extends State<KidunaPurchasePanel> {
               _ReviewRow(
                 label: 'Amount',
                 value: '\$${_usdcAmount.toStringAsFixed(2)} USD',
-                colors: colors,
-                text: text,
               ),
               const SizedBox(height: 6),
               _ReviewRow(
                 label: 'Processing Fee (~6%)',
                 value: '~\$${_estimatedFee.toStringAsFixed(2)}',
-                colors: colors,
-                text: text,
                 isMuted: true,
               ),
               const SizedBox(height: 8),
@@ -234,8 +230,6 @@ class _KidunaPurchasePanelState extends State<KidunaPurchasePanel> {
               _ReviewRow(
                 label: 'Total Charge',
                 value: '~\$${_totalCharge.toStringAsFixed(2)} USD',
-                colors: colors,
-                text: text,
                 isBold: true,
               ),
               const SizedBox(height: 8),
@@ -243,8 +237,6 @@ class _KidunaPurchasePanelState extends State<KidunaPurchasePanel> {
                 label: 'You Receive',
                 value:
                     '${KidunaPurchasePanel.formatKiduna(_kidunaAmount)} KIDUNA',
-                colors: colors,
-                text: text,
                 isGold: true,
                 isBold: true,
               ),
@@ -252,8 +244,6 @@ class _KidunaPurchasePanelState extends State<KidunaPurchasePanel> {
               _ReviewRow(
                 label: 'Rate',
                 value: '1 KIDUNA = \$${widget.tokenPrice}',
-                colors: colors,
-                text: text,
                 isMuted: true,
               ),
             ],
@@ -283,24 +273,16 @@ class _KidunaPurchasePanelState extends State<KidunaPurchasePanel> {
               ),
               const SizedBox(height: 6),
               _InfoBullet(
-                text: text,
-                colors: colors,
                 label: 'Used for AI chat compute costs',
               ),
               _InfoBullet(
-                text: text,
-                colors: colors,
-                label: 'Digital tokens held on the platform',
+                label: 'Can be withdrawn to your own wallet',
               ),
               _InfoBullet(
-                text: text,
-                colors: colors,
-                label: 'Non-transferable and non-refundable',
+                label: 'Currently in presale — not yet listed on exchanges',
               ),
               _InfoBullet(
-                text: text,
-                colors: colors,
-                label: 'Cannot be withdrawn to an external wallet',
+                label: 'Purchases are non-refundable',
               ),
             ],
           ),
@@ -337,8 +319,8 @@ class _KidunaPurchasePanelState extends State<KidunaPurchasePanel> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'I understand this purchase is final. KIDUNA tokens are '
-                  'non-refundable and non-transferable.',
+                  'I understand this purchase is final and KIDUNA tokens '
+                  'are non-refundable.',
                   style: text.caption.copyWith(
                     color: colors.muted,
                     fontSize: 12,
@@ -374,7 +356,9 @@ class _KidunaPurchasePanelState extends State<KidunaPurchasePanel> {
     );
   }
 
-  Widget _buildWaitingPanel(dynamic colors, dynamic text) {
+  Widget _buildWaitingPanel() {
+    final colors = context.kiduna;
+    final text = context.kidunaText;
     return Column(
       children: [
         const SizedBox(height: 12),
@@ -506,8 +490,6 @@ class _ReviewRow extends StatelessWidget {
   const _ReviewRow({
     required this.label,
     required this.value,
-    required this.colors,
-    required this.text,
     this.isMuted = false,
     this.isBold = false,
     this.isGold = false,
@@ -515,14 +497,14 @@ class _ReviewRow extends StatelessWidget {
 
   final String label;
   final String value;
-  final dynamic colors;
-  final dynamic text;
   final bool isMuted;
   final bool isBold;
   final bool isGold;
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.kiduna;
+    final text = context.kidunaText;
     final labelColor = isMuted ? colors.quiet : colors.muted;
     final valueColor = isGold ? colors.gold : colors.text;
 
@@ -552,17 +534,15 @@ class _ReviewRow extends StatelessWidget {
 
 class _InfoBullet extends StatelessWidget {
   const _InfoBullet({
-    required this.text,
-    required this.colors,
     required this.label,
   });
 
-  final dynamic text;
-  final dynamic colors;
   final String label;
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.kiduna;
+    final text = context.kidunaText;
     return Padding(
       padding: const EdgeInsets.only(bottom: 3),
       child: Row(

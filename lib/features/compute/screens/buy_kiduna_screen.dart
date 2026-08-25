@@ -221,7 +221,7 @@ class _BuyKidunaScreenState extends ConsumerState<BuyKidunaScreen> {
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 460),
-                  child: _buildBody(colors),
+                  child: _buildBody(),
                 ),
               ),
             ),
@@ -231,7 +231,8 @@ class _BuyKidunaScreenState extends ConsumerState<BuyKidunaScreen> {
     );
   }
 
-  Widget _buildBody(dynamic colors) {
+  Widget _buildBody() {
+    final colors = context.kiduna;
     final text = context.kidunaText;
 
     if (_checkingAuth) {
@@ -244,7 +245,7 @@ class _BuyKidunaScreenState extends ConsumerState<BuyKidunaScreen> {
     }
 
     if (!_isAuthenticated) {
-      return _buildSignInPrompt(colors, text);
+      return _buildSignInPrompt();
     }
 
     final compute = ref.watch(computeControllerProvider);
@@ -304,7 +305,9 @@ class _BuyKidunaScreenState extends ConsumerState<BuyKidunaScreen> {
   }
 
   /// Shown when the browser has no Kiduna session.
-  Widget _buildSignInPrompt(dynamic colors, dynamic text) {
+  Widget _buildSignInPrompt() {
+    final colors = context.kiduna;
+    final text = context.kidunaText;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [

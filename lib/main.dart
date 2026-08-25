@@ -13,6 +13,7 @@ import 'data/local/secure_storage.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/auth/screens/signup_screen.dart';
 import 'features/compute/screens/buy_kiduna_screen.dart';
+import 'features/compute/screens/withdraw_screen.dart';
 import 'l10n/app_localizations.dart';
 
 /// Extracts an invite code from the URL on web.
@@ -79,6 +80,7 @@ String? pendingInviteCode;
 /// True when the app is launched at /buy-kiduna (web).
 /// Auth is resolved from the existing browser session, never from the URL.
 bool isBuyKidunaRoute = false;
+bool isWithdrawRoute = false;
 
 /// Detects the /buy-kiduna route.
 void _detectBuyKidunaRoute() {
@@ -91,6 +93,11 @@ void _detectBuyKidunaRoute() {
         full.contains('/buy-kiduna')) {
       isBuyKidunaRoute = true;
       AppLogger.info('Buy KIDUNA route detected', tag: 'App');
+    } else if (uri.path.contains('/withdraw') ||
+        uri.fragment.contains('/withdraw') ||
+        full.contains('/withdraw')) {
+      isWithdrawRoute = true;
+      AppLogger.info('Withdraw route detected', tag: 'App');
     }
   } catch (e) {
     AppLogger.warning('Failed to detect buy-kiduna route: $e', tag: 'App');
@@ -109,7 +116,7 @@ Future<void> main() async {
 
   // Route detection from URL before anything renders
   _detectBuyKidunaRoute();
-  if (!isBuyKidunaRoute) {
+  if (!isBuyKidunaRoute && !isWithdrawRoute) {
     pendingInviteCode = _extractInviteCodeFromUrl();
   }
 
@@ -124,6 +131,9 @@ class KidunaApp extends StatelessWidget {
   Widget _resolveHome() {
     if (isBuyKidunaRoute) {
       return const BuyKidunaScreen();
+    }
+    if (isWithdrawRoute) {
+      return const WithdrawScreen();
     }
     if (pendingInviteCode != null) {
       return const SignupScreen();
