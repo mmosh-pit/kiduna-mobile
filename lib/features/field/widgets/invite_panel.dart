@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../config/kiduna_colors.dart';
 import '../../../config/kiduna_motion.dart';
-import '../../../config/kiduna_text.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../data/models/ki_topic.dart';
 import '../controllers/field_controller.dart';
@@ -25,47 +23,71 @@ class InvitePanel extends ConsumerStatefulWidget {
 
 class _InvitePanelState extends ConsumerState<InvitePanel> {
   final TextEditingController _name = TextEditingController();
-  final TextEditingController _handshake = TextEditingController();
   final TextEditingController _notes = TextEditingController();
+  final TextEditingController _expirationAmount = TextEditingController(
+    text: '7',
+  );
   TextEditingController? _message;
-  List<String> _roles = const ['Member'];
-  late String _expiration;
+  String _role = 'Member';
+  bool _expirationEnabled = false;
+  String _expirationUnit = 'days';
   bool _prepared = false;
-  bool _initialized = false;
   bool _editing = false;
   String? _copyStatus;
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_initialized) {
-      _expiration = context.l10n.sevenDays;
-      _initialized = true;
-    }
+  String get _expirationValue {
+    if (!_expirationEnabled) return 'never';
+    if (_expirationUnit == 'never') return 'never';
+    final amount = _expirationAmount.text.trim();
+    if (amount.isEmpty) return 'never';
+    return '$amount $_expirationUnit';
   }
 
   @override
   void dispose() {
     _name.dispose();
-    _handshake.dispose();
     _notes.dispose();
+    _expirationAmount.dispose();
     _message?.dispose();
     super.dispose();
   }
 
-  Future<void> _prepare() async {
+  String? _nameError;
+  String? _expirationError;
+
+  bool _validate() {
     final name = _name.text.trim();
+    String? nameErr;
+    String? expErr;
+
     if (name.isEmpty) {
-      setState(() {});
-      return;
+      nameErr = 'Name is required';
     }
+
+    if (_expirationEnabled && _expirationUnit != 'never') {
+      final raw = _expirationAmount.text.trim();
+      final amount = int.tryParse(raw);
+      if (raw.isEmpty || amount == null || amount <= 0) {
+        expErr = 'Enter a valid number';
+      }
+    }
+
+    setState(() {
+      _nameError = nameErr;
+      _expirationError = expErr;
+    });
+
+    return nameErr == null && expErr == null;
+  }
+
+  Future<void> _prepare() async {
+    if (!_validate()) return;
 
     final controller = ref.read(fieldControllerProvider.notifier);
     await controller.prepareInvitation(
-      recipientName: name,
-      role: _roles.join(', '),
-      expiration: _expiration,
-      handshake: _handshake.text.trim().isEmpty ? null : _handshake.text.trim(),
+      recipientName: _name.text.trim(),
+      role: _role,
+      expiration: _expirationValue,
       notes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
     );
 
@@ -121,25 +143,36 @@ class _InvitePanelState extends ConsumerState<InvitePanel> {
       children: [
         _FormGrid(
           children: [
-            FieldTextInput(
-              label: '${l10n.nameYouUseForThem} *',
-              controller: _name,
-              hint: l10n.whatYouMostCommonlyCallThem,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                FieldTextInput(
+                  label: '${l10n.nameYouUseForThem} *',
+                  controller: _name,
+                  hint: l10n.whatYouMostCommonlyCallThem,
+                ),
+                if (_nameError != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    _nameError!,
+                    style: TextStyle(color: colors.orange, fontSize: 11),
+                  ),
+                ],
+              ],
+            ),
+            _ExpirationInput(
+              enabled: _expirationEnabled,
+              amount: _expirationAmount,
+              unit: _expirationUnit,
+              error: _expirationError,
+              onEnabledChanged: (v) => setState(() => _expirationEnabled = v),
+              onUnitChanged: (v) => setState(() => _expirationUnit = v),
             ),
             FieldDropdown(
-              label: l10n.expiration,
-              value: _expiration,
-              options: FieldFixtures.expirations,
-              onChanged: (value) => setState(() => _expiration = value),
-            ),
-            _RoleMultiSelect(
-              roles: _roles,
-              onChanged: (next) => setState(() => _roles = next),
-            ),
-            FieldTextInput(
-              label: l10n.privateHandshakeOptional,
-              controller: _handshake,
-              hint: l10n.shareASecretWordOrPhrase,
+              label: l10n.proposedRole,
+              value: _role,
+              options: FieldFixtures.roles,
+              onChanged: (v) => setState(() => _role = v),
             ),
             _FullWidth(
               child: FieldTextInput(
@@ -242,14 +275,6 @@ class _InvitePanelState extends ConsumerState<InvitePanel> {
           action: l10n.copyCode,
           onCopy: () => _copy(l10n.codeCopied, code),
         ),
-        const SizedBox(height: 14),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: FieldPrimaryButton(
-            label: l10n.sendThroughKi,
-            onPressed: () {},
-          ),
-        ),
         if (_copyStatus != null) ...[
           const SizedBox(height: 8),
           Text(_copyStatus!, style: text.label.copyWith(color: colors.mint)),
@@ -313,58 +338,25 @@ class _FullWidth extends StatelessWidget {
   Widget build(BuildContext context) => child;
 }
 
-/// CSS `.roleField` — multi-select role dropdown with checkboxes.
-class _RoleMultiSelect extends StatefulWidget {
-  const _RoleMultiSelect({
-    required this.roles,
-    required this.onChanged,
+/// Expiration toggle: checkbox + number input + unit dropdown on one row.
+class _ExpirationInput extends StatelessWidget {
+  const _ExpirationInput({
+    required this.enabled,
+    required this.amount,
+    required this.unit,
+    required this.onEnabledChanged,
+    required this.onUnitChanged,
+    this.error,
   });
 
-  final List<String> roles;
-  final ValueChanged<List<String>> onChanged;
+  final bool enabled;
+  final TextEditingController amount;
+  final String unit;
+  final ValueChanged<bool> onEnabledChanged;
+  final ValueChanged<String> onUnitChanged;
+  final String? error;
 
-  @override
-  State<_RoleMultiSelect> createState() => _RoleMultiSelectState();
-}
-
-class _RoleMultiSelectState extends State<_RoleMultiSelect> {
-  final LayerLink _link = LayerLink();
-  OverlayEntry? _overlay;
-
-  void _toggle() {
-    if (_overlay != null) {
-      _close();
-    } else {
-      _open();
-    }
-  }
-
-  void _open() {
-    final overlay = Overlay.of(context);
-    final box = context.findRenderObject()! as RenderBox;
-    final width = box.size.width;
-    _overlay = OverlayEntry(
-      builder: (_) => _RoleDropdownOverlay(
-        link: _link,
-        width: width,
-        roles: widget.roles,
-        onChanged: widget.onChanged,
-        onClose: _close,
-      ),
-    );
-    overlay.insert(_overlay!);
-  }
-
-  void _close() {
-    _overlay?.remove();
-    _overlay = null;
-  }
-
-  @override
-  void dispose() {
-    _close();
-    super.dispose();
-  }
+  static const _units = ['minutes', 'hours', 'days', 'never'];
 
   @override
   Widget build(BuildContext context) {
@@ -373,161 +365,16 @@ class _RoleMultiSelectState extends State<_RoleMultiSelect> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        FieldLabel(text: context.l10n.proposedRole),
+        FieldLabel(text: context.l10n.expiration),
         const SizedBox(height: 6),
-        CompositedTransformTarget(
-          link: _link,
-          child: GestureDetector(
-            onTap: _toggle,
-            child: Container(
-              height: 37,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              alignment: Alignment.centerLeft,
-              decoration: BoxDecoration(
-                color: const Color.fromRGBO(6, 3, 4, 0.66),
-                border: Border.all(color: colors.camel.withValues(alpha: 0.24)),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                widget.roles.isEmpty
-                    ? context.l10n.chooseRoles
-                    : widget.roles.join(', '),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: text.caption.copyWith(color: colors.text, height: 1.4),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _RoleDropdownOverlay extends StatefulWidget {
-  const _RoleDropdownOverlay({
-    required this.link,
-    required this.width,
-    required this.roles,
-    required this.onChanged,
-    required this.onClose,
-  });
-
-  final LayerLink link;
-  final double width;
-  final List<String> roles;
-  final ValueChanged<List<String>> onChanged;
-  final VoidCallback onClose;
-
-  @override
-  State<_RoleDropdownOverlay> createState() => _RoleDropdownOverlayState();
-}
-
-class _RoleDropdownOverlayState extends State<_RoleDropdownOverlay> {
-  late List<String> _selected;
-
-  @override
-  void initState() {
-    super.initState();
-    _selected = List.of(widget.roles);
-  }
-
-  void _toggleRole(String role) {
-    setState(() {
-      if (_selected.contains(role)) {
-        _selected.remove(role);
-      } else {
-        _selected.add(role);
-      }
-    });
-    widget.onChanged(_selected);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.kiduna;
-    final text = context.kidunaText;
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: GestureDetector(
-            onTap: widget.onClose,
-            behavior: HitTestBehavior.opaque,
-          ),
-        ),
-        CompositedTransformFollower(
-          link: widget.link,
-          offset: const Offset(0, 42),
-          child: Material(
-            color: Colors.transparent,
-            child: Container(
-              width: widget.width,
-              padding: const EdgeInsets.all(5),
-              decoration: BoxDecoration(
-                color: const Color.fromRGBO(30, 20, 12, 0.99),
-                border: Border.all(color: colors.camel.withValues(alpha: 0.36)),
-                borderRadius: BorderRadius.circular(7),
-                boxShadow: const [
-                  BoxShadow(
-                    offset: Offset(0, 18),
-                    blurRadius: 40,
-                    color: Color.fromRGBO(0, 0, 0, 0.58),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  for (final role in FieldFixtures.roles)
-                    _RoleRow(
-                      role: role,
-                      checked: _selected.contains(role),
-                      onToggle: () => _toggleRole(role),
-                      text: text,
-                      colors: colors,
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _RoleRow extends StatelessWidget {
-  const _RoleRow({
-    required this.role,
-    required this.checked,
-    required this.onToggle,
-    required this.text,
-    required this.colors,
-  });
-
-  final String role;
-  final bool checked;
-  final VoidCallback onToggle;
-  final KidunaText text;
-  final KidunaColors colors;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onToggle,
-      borderRadius: BorderRadius.circular(4),
-      hoverColor: colors.sky.withValues(alpha: 0.055),
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 36),
-        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-        child: Row(
+        Row(
           children: [
             SizedBox(
               width: 18,
               height: 16,
               child: Checkbox(
-                value: checked,
-                onChanged: (_) => onToggle(),
+                value: enabled,
+                onChanged: (v) => onEnabledChanged(v ?? false),
                 activeColor: colors.sky,
                 side: BorderSide(color: colors.camel.withValues(alpha: 0.4)),
                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -535,15 +382,86 @@ class _RoleRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                role,
-                style: text.caption.copyWith(color: colors.text, height: 1.4),
+            if (!enabled)
+              Text(
+                'Never expires',
+                style: text.caption.copyWith(color: colors.muted, height: 1.4),
               ),
-            ),
+            if (enabled && unit != 'never') ...[
+              SizedBox(
+                width: 56,
+                height: 37,
+                child: TextField(
+                  controller: amount,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  textAlign: TextAlign.center,
+                  style: text.caption.copyWith(color: colors.text, height: 1.4),
+                  decoration: InputDecoration(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 8,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(6),
+                      borderSide: BorderSide(
+                        color: colors.camel.withValues(alpha: 0.24),
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(6),
+                      borderSide: BorderSide(
+                        color: colors.camel.withValues(alpha: 0.24),
+                      ),
+                    ),
+                    filled: true,
+                    fillColor: const Color.fromRGBO(6, 3, 4, 0.66),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
+            if (enabled)
+              Container(
+                height: 37,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                decoration: BoxDecoration(
+                  color: const Color.fromRGBO(6, 3, 4, 0.66),
+                  border: Border.all(
+                    color: colors.camel.withValues(alpha: 0.24),
+                  ),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: unit,
+                    dropdownColor: const Color.fromRGBO(30, 20, 12, 0.99),
+                    style: text.caption.copyWith(
+                      color: colors.text,
+                      height: 1.4,
+                    ),
+                    icon: Icon(
+                      Icons.arrow_drop_down,
+                      color: colors.muted,
+                      size: 18,
+                    ),
+                    items: [
+                      for (final u in _units)
+                        DropdownMenuItem(value: u, child: Text(u)),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) onUnitChanged(v);
+                    },
+                  ),
+                ),
+              ),
           ],
         ),
-      ),
+        if (error != null) ...[
+          const SizedBox(height: 4),
+          Text(error!, style: TextStyle(color: colors.orange, fontSize: 11)),
+        ],
+      ],
     );
   }
 }
