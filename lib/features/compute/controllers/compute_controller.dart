@@ -13,6 +13,7 @@ class ComputeState {
     this.totalPurchased = 0,
     this.totalSpent = 0,
     this.tokenPrice = 0.00001,
+    this.totalWithdrawn = 0,
     this.tokensUsed = 0,
     this.requestCount = 0,
     this.chargedCost = 0,
@@ -24,6 +25,11 @@ class ComputeState {
   final double balance;
   final double totalPurchased;
   final double totalSpent;
+
+  /// Lifetime KIDUNA cashed back out to USDC. Kept apart from [totalSpent],
+  /// which covers compute only.
+  final double totalWithdrawn;
+
   final double tokenPrice;
 
   /// Current-month LLM tokens consumed (input + output).
@@ -49,6 +55,7 @@ class ComputeState {
     double? totalPurchased,
     double? totalSpent,
     double? tokenPrice,
+    double? totalWithdrawn,
     int? tokensUsed,
     int? requestCount,
     double? chargedCost,
@@ -62,6 +69,7 @@ class ComputeState {
       totalPurchased: totalPurchased ?? this.totalPurchased,
       totalSpent: totalSpent ?? this.totalSpent,
       tokenPrice: tokenPrice ?? this.tokenPrice,
+      totalWithdrawn: totalWithdrawn ?? this.totalWithdrawn,
       tokensUsed: tokensUsed ?? this.tokensUsed,
       requestCount: requestCount ?? this.requestCount,
       chargedCost: chargedCost ?? this.chargedCost,
@@ -99,6 +107,8 @@ class ComputeController extends Notifier<ComputeState> {
         balance: (balance['balance'] as num?)?.toDouble() ?? 0,
         totalPurchased: (balance['totalPurchased'] as num?)?.toDouble() ?? 0,
         totalSpent: (balance['totalSpent'] as num?)?.toDouble() ?? 0,
+        totalWithdrawn:
+            (balance['totalWithdrawn'] as num?)?.toDouble() ?? 0,
         isLoading: false,
       );
 
