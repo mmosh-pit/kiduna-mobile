@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../data/models/knowledge_base_model.dart';
 import '../../../shared/widgets/confirm_dialog.dart';
+import '../controllers/ally_controller.dart';
 import '../controllers/knowledge_controller.dart';
 import 'capacity_header.dart';
 import 'field_inputs.dart';
@@ -38,6 +39,15 @@ class _WisdomPanelState extends ConsumerState<WisdomPanel> {
     final kbState = ref.watch(knowledgeControllerProvider);
     final ctrl = ref.read(knowledgeControllerProvider.notifier);
     final kbs = kbState.knowledgeBases;
+
+    // Reload KBs when ally loads (fixes first-open empty state)
+    ref.listen(allyControllerProvider, (prev, next) {
+      final prevIds = prev?.ally?.knowledgeBaseIds ?? [];
+      final nextIds = next.ally?.knowledgeBaseIds ?? [];
+      if (prevIds.length != nextIds.length) {
+        ctrl.loadKnowledgeBases();
+      }
+    });
 
     return Padding(
       padding: const EdgeInsets.all(17),
