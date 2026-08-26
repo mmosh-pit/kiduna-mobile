@@ -127,6 +127,10 @@ class _LoginFormState extends State<LoginForm> {
             suffix: IconButton(
               onPressed: () {
                 setState(() => _showPassword = !_showPassword);
+                // The eye is an IconButton and takes focus when tapped;
+                // without this the field is left unfocused and select-all
+                // and copy have no target.
+                _passwordFocus.requestFocus();
               },
               icon: Icon(
                 _showPassword

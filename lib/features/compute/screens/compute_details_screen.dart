@@ -84,111 +84,128 @@ class _ComputeDetailsScreenState extends ConsumerState<ComputeDetailsScreen>
 
   Widget _buildContent(BuildContext context) {
     final colors = context.kiduna;
-    final text = context.kidunaText;
-    final compute = ref.watch(computeControllerProvider);
 
+    // A single scroll view over header + tabs + active tab content.
+    //
+    // NestedScrollView was the obvious fit, but its body is always handed
+    // the full viewport height, so a short list still filled the screen and
+    // left blank space to scroll into. Rendering only the active tab, sized
+    // to its content, keeps the scrollable exactly as tall as the data.
     return Container(
       color: colors.deep,
       child: Center(
         child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 640),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          TextButton(
-                            onPressed: () => Navigator.of(context).maybePop(),
-                            style: TextButton.styleFrom(
-                              padding: EdgeInsets.zero,
-                              minimumSize: Size.zero,
-                              tapTargetSize:
-                                  MaterialTapTargetSize.shrinkWrap,
-                              foregroundColor: colors.sky,
-                            ),
-                            child: const Text('← Back'),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Compute',
-                            style: text.h4.copyWith(color: colors.gold),
-                          ),
-                          const SizedBox(height: 16),
+          constraints: const BoxConstraints(maxWidth: 640),
+          // Desktop and web draw a scrollbar by default. This is a short
+          // scroll inside a narrow column, where the track reads as chrome
+          // rather than a useful cue.
+          child: ScrollConfiguration(
+            behavior:
+                ScrollConfiguration.of(context).copyWith(scrollbars: false),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeader(context),
 
-                          if (compute.isLoading && compute.balance == 0)
-                            const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 40),
-                              child: Center(
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              ),
-                            )
-                          else
-                            ComputeUsageBar(
-                              balance: compute.balance,
-                              totalPurchased: compute.totalPurchased,
-                              totalSpent: compute.totalSpent,
-                              tokenPrice: compute.tokenPrice,
-                            ),
-
-                          const SizedBox(height: 12),
-                          _ComputeStats(compute: compute),
-
-                          const SizedBox(height: 14),
-                          KidunaGoldButton(
-                            label: 'Buy More KIDUNA',
-                            onPressed: _buy,
-                          ),
-                          const SizedBox(height: 10),
-                          KidunaSecondaryButton(
-                            label: 'Withdraw',
-                            onPressed: _withdraw,
-                          ),
-                          const SizedBox(height: 20),
-                        ],
-                      ),
-                    ),
-
-                    // Tabs
-                    Container(
-                      decoration: BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(
-                            color: colors.camel.withValues(alpha: 0.18),
-                          ),
+                  Container(
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(
+                          color: colors.camel.withValues(alpha: 0.18),
                         ),
                       ),
-                      child: TabBar(
-                        controller: _tabs,
-                        indicatorColor: colors.gold,
-                        labelColor: colors.gold,
-                        unselectedLabelColor: colors.muted,
-                        labelStyle: text.label.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                        tabs: const [
-                          Tab(text: 'Purchases'),
-                          Tab(text: 'Rewards'),
-                        ],
-                      ),
                     ),
+                    child: TabBar(
+                      controller: _tabs,
+                      indicatorColor: colors.gold,
+                      labelColor: colors.gold,
+                      unselectedLabelColor: colors.muted,
+                      labelStyle: context.kidunaText.label.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                      tabs: const [
+                        Tab(text: 'Purchases'),
+                        Tab(text: 'Rewards'),
+                      ],
+                    ),
+                  ),
 
-                    Expanded(
-                      child: TabBarView(
-                        controller: _tabs,
-                        children: const [
-                          _PurchasesTab(),
-                          _RewardsTab(),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+                  // Only the selected tab is built. TabBarView would need a
+                  // bounded height, which is what forced the blank space.
+                  AnimatedBuilder(
+                    animation: _tabs,
+                    builder: (context, _) => _tabs.index == 0
+                        ? const _PurchasesTab()
+                        : const _RewardsTab(),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
+      ),
+    );
+  }
+
+  /// Balance, stats, and actions — scrolls away above the pinned tab bar.
+  Widget _buildHeader(BuildContext context) {
+    final colors = context.kiduna;
+    final text = context.kidunaText;
+    final compute = ref.watch(computeControllerProvider);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextButton(
+            onPressed: () => Navigator.of(context).maybePop(),
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.zero,
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              foregroundColor: colors.sky,
+            ),
+            child: const Text('← Back'),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Compute',
+            style: text.h4.copyWith(color: colors.gold),
+          ),
+          const SizedBox(height: 16),
+
+          if (compute.isLoading && compute.balance == 0)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 40),
+              child: Center(
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            )
+          else
+            ComputeUsageBar(
+              balance: compute.balance,
+              totalPurchased: compute.totalPurchased,
+              totalSpent: compute.totalSpent,
+              tokenPrice: compute.tokenPrice,
+            ),
+
+          const SizedBox(height: 12),
+          _ComputeStats(compute: compute),
+
+          const SizedBox(height: 14),
+          KidunaGoldButton(
+            label: 'Buy More KIDUNA',
+            onPressed: _buy,
+          ),
+          const SizedBox(height: 10),
+          KidunaSecondaryButton(
+            label: 'Withdraw',
+            onPressed: _withdraw,
+          ),
+          const SizedBox(height: 20),
+        ],
       ),
     );
   }
@@ -326,8 +343,9 @@ class _PurchasesTab extends ConsumerWidget {
 
     if (history.purchases.isEmpty) {
       if (history.isLoadingPurchases) {
-        return const Center(
-          child: CircularProgressIndicator(strokeWidth: 2),
+        return const Padding(
+          padding: EdgeInsets.symmetric(vertical: 48),
+          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
         );
       }
       return const _EmptyState(
@@ -337,6 +355,8 @@ class _PurchasesTab extends ConsumerWidget {
     }
 
     return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
       itemCount:
           history.purchases.length + (history.hasMorePurchases ? 1 : 0),
@@ -429,52 +449,46 @@ class _RewardsTab extends StatelessWidget {
     final colors = context.kiduna;
     final text = context.kidunaText;
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: colors.gold.withValues(alpha: 0.1),
-                border: Border.all(color: colors.gold.withValues(alpha: 0.3)),
-              ),
-              child: Icon(
-                Icons.card_giftcard_outlined,
-                size: 26,
-                color: colors.gold,
-              ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(32, 48, 32, 48),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: colors.gold.withValues(alpha: 0.1),
+              border: Border.all(color: colors.gold.withValues(alpha: 0.3)),
             ),
-            const SizedBox(height: 16),
-            Text(
-              'Coming Soon',
-              style: text.h4.copyWith(color: colors.gold),
+            child: Icon(
+              Icons.card_giftcard_outlined,
+              size: 26,
+              color: colors.gold,
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Earn KIDUNA through participation in the ecosystem. '
-              'Rewards will appear here once available.',
-              textAlign: TextAlign.center,
-              style: text.caption.copyWith(
-                color: colors.muted,
-                fontSize: 12,
-                height: 1.5,
-              ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Coming Soon',
+            style: text.h4.copyWith(color: colors.gold),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Earn KIDUNA through participation in the ecosystem. '
+            'Rewards will appear here once available.',
+            textAlign: TextAlign.center,
+            style: text.caption.copyWith(
+              color: colors.muted,
+              fontSize: 12,
+              height: 1.5,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-// Shared
-// ═══════════════════════════════════════════════════════════════════════
 
 class _EmptyState extends StatelessWidget {
   const _EmptyState({required this.icon, required this.message});
@@ -487,7 +501,10 @@ class _EmptyState extends StatelessWidget {
     final colors = context.kiduna;
     final text = context.kidunaText;
 
-    return Center(
+    // Sized to its content — the page owns the scroll, so filling the
+    // viewport here would leave blank space to scroll into.
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 48),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

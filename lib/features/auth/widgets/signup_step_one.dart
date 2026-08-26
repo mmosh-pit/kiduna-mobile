@@ -1,6 +1,9 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/extensions/context_extensions.dart';
+import '../../legal/screens/privacy_policy_screen.dart';
+import '../../legal/screens/terms_of_service_screen.dart';
 import '../../../shared/animations/slide_in_animation.dart';
 import '../../../shared/widgets/kiduna_primary_button.dart';
 import '../../../shared/widgets/kiduna_text_field.dart';
@@ -11,6 +14,8 @@ class SignupStepOne extends StatefulWidget {
     required this.onNext,
     required this.onLogin,
     required this.onError,
+    required this.consentChecked,
+    required this.onConsentChanged,
     required this.nameController,
     required this.emailController,
     this.isLoading = false,
@@ -19,6 +24,10 @@ class SignupStepOne extends StatefulWidget {
   final VoidCallback onNext;
   final VoidCallback onLogin;
   final ValueChanged<String> onError;
+  /// Owned by the signup screen so it survives navigating between steps.
+  final bool consentChecked;
+  final ValueChanged<bool> onConsentChanged;
+
   final TextEditingController nameController;
   final TextEditingController emailController;
   final bool isLoading;
@@ -29,7 +38,6 @@ class SignupStepOne extends StatefulWidget {
 
 class _SignupStepOneState extends State<SignupStepOne> {
   final _emailFocus = FocusNode();
-  bool _consentChecked = false;
 
   @override
   void dispose() {
@@ -44,7 +52,7 @@ class _SignupStepOneState extends State<SignupStepOne> {
     final email = widget.emailController.text.trim();
 
     if (name.isEmpty) {
-      widget.onError('Please enter your code name.');
+      widget.onError('Please enter your name.');
       return;
     }
     if (email.isEmpty) {
@@ -55,7 +63,7 @@ class _SignupStepOneState extends State<SignupStepOne> {
       widget.onError('Please enter a valid email address.');
       return;
     }
-    if (!_consentChecked) {
+    if (!widget.consentChecked) {
       widget.onError('Please accept the Privacy Policy and Terms of Service.');
       return;
     }
@@ -95,7 +103,7 @@ class _SignupStepOneState extends State<SignupStepOne> {
           ),
           const SizedBox(height: 20),
           KidunaTextField(
-            label: 'Your code name',
+            label: 'Your name',
             placeholder: 'What you want to be called',
             controller: widget.nameController,
             required: true,
@@ -117,10 +125,8 @@ class _SignupStepOneState extends State<SignupStepOne> {
           ),
           const SizedBox(height: 12),
           _ConsentCheckbox(
-            value: _consentChecked,
-            onChanged: (value) {
-              setState(() => _consentChecked = value);
-            },
+            value: widget.consentChecked,
+            onChanged: widget.onConsentChanged,
           ),
           const SizedBox(height: 20),
           KidunaPrimaryButton(
@@ -163,11 +169,45 @@ class _SignupStepOneState extends State<SignupStepOne> {
   }
 }
 
-class _ConsentCheckbox extends StatelessWidget {
+class _ConsentCheckbox extends StatefulWidget {
   const _ConsentCheckbox({required this.value, required this.onChanged});
 
   final bool value;
   final ValueChanged<bool> onChanged;
+
+  @override
+  State<_ConsentCheckbox> createState() => _ConsentCheckboxState();
+}
+
+class _ConsentCheckboxState extends State<_ConsentCheckbox> {
+  /// Held as fields rather than built inline: a recognizer created in
+  /// build() is reallocated every frame and never disposed.
+  late final TapGestureRecognizer _privacyTap;
+  late final TapGestureRecognizer _termsTap;
+
+  @override
+  void initState() {
+    super.initState();
+    _privacyTap = TapGestureRecognizer()
+      ..onTap = () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const PrivacyPolicyScreen(),
+            ),
+          );
+    _termsTap = TapGestureRecognizer()
+      ..onTap = () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const TermsOfServiceScreen(),
+            ),
+          );
+  }
+
+  @override
+  void dispose() {
+    _privacyTap.dispose();
+    _termsTap.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -175,7 +215,7 @@ class _ConsentCheckbox extends StatelessWidget {
     final text = context.kidunaText;
 
     return GestureDetector(
-      onTap: () => onChanged(!value),
+      onTap: () => widget.onChanged(!widget.value),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -183,8 +223,8 @@ class _ConsentCheckbox extends StatelessWidget {
             width: 16,
             height: 16,
             child: Checkbox(
-              value: value,
-              onChanged: (v) => onChanged(v ?? false),
+              value: widget.value,
+              onChanged: (v) => widget.onChanged(v ?? false),
               activeColor: colors.sky,
               side: BorderSide(color: colors.camel.withValues(alpha: 0.5)),
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -206,12 +246,22 @@ class _ConsentCheckbox extends StatelessWidget {
                   ),
                   TextSpan(
                     text: 'Privacy Policy',
-                    style: TextStyle(color: colors.sky),
+                    style: TextStyle(
+                      color: colors.sky,
+                      decoration: TextDecoration.underline,
+                      decorationColor: colors.sky,
+                    ),
+                    recognizer: _privacyTap,
                   ),
                   const TextSpan(text: ' and accept the '),
                   TextSpan(
                     text: 'Terms of Service',
-                    style: TextStyle(color: colors.sky),
+                    style: TextStyle(
+                      color: colors.sky,
+                      decoration: TextDecoration.underline,
+                      decorationColor: colors.sky,
+                    ),
+                    recognizer: _termsTap,
                   ),
                   const TextSpan(text: '.'),
                 ],
