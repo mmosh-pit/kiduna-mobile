@@ -3,10 +3,9 @@ import '../../../data/services/gravity_service.dart';
 import 'field_models.dart';
 import 'field_source.dart';
 import 'gravity_snapshot_converter.dart';
-import 'mock_source.dart';
 
 /// A [FieldSource] that fetches live gravity data from the API and
-/// converts it to a [FieldSnapshot]. Falls back to [MockFieldSource]
+/// converts it to a [FieldSnapshot]. Returns an empty snapshot
 /// when the wallet is unavailable or the API call fails.
 class GravityFieldSource with FieldEventSink implements FieldSource {
   GravityFieldSource({
@@ -28,10 +27,10 @@ class GravityFieldSource with FieldEventSink implements FieldSource {
 
     if (walletAddress.isEmpty) {
       AppLogger.warning(
-        'No wallet — falling back to mock',
+        'No wallet — returning empty snapshot',
         tag: 'GravityFieldSource',
       );
-      return MockFieldSource().load();
+      return _emptySnapshot();
     }
 
     try {
@@ -57,10 +56,10 @@ class GravityFieldSource with FieldEventSink implements FieldSource {
           );
         }
         AppLogger.warning(
-          'Gravity returned 0 realms — falling back to mock',
+          'Gravity returned 0 realms — returning empty snapshot',
           tag: 'GravityFieldSource',
         );
-        return MockFieldSource().load();
+        return _emptySnapshot();
       }
 
       AppLogger.info(
@@ -96,7 +95,22 @@ class GravityFieldSource with FieldEventSink implements FieldSource {
           clusters: const [],
         );
       }
-      return MockFieldSource().load();
+      return _emptySnapshot();
     }
   }
+
+  FieldSnapshot _emptySnapshot() => FieldSnapshot(
+        schemaVersion: '1.0',
+        viewer: Viewer(
+          id: walletAddress.isNotEmpty ? walletAddress : 'unknown',
+          displayName: viewerName,
+        ),
+        ecosystem: const EcosystemRef(
+          id: 'kinship-duna',
+          name: 'Kinship Duna',
+          type: 'Ecosystem',
+        ),
+        realms: const [],
+        clusters: const [],
+      );
 }

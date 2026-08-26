@@ -243,10 +243,7 @@ class _FieldStackState extends ConsumerState<FieldStack> {
         ref.read(fieldControllerProvider.notifier).clearSelection();
       },
       onReady: () {
-        final insideRealm = currentRealmId.isNotEmpty &&
-            currentRealmId != 'kinship-duna';
-        final isEmpty = insideRealm &&
-            (_game?.snapshot?.realms.isEmpty ?? true);
+        final isEmpty = _game?.snapshot?.realms.isEmpty ?? true;
         if (isEmpty != _showEmptyState || !_gameReady) {
           setState(() {
             _showEmptyState = isEmpty;
