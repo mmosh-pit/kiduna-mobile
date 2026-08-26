@@ -5,6 +5,7 @@ import '../../../core/errors/exceptions.dart';
 import '../../../core/utils/logger.dart';
 import '../../../data/models/knowledge_base_model.dart';
 import '../../../data/services/knowledge_service.dart';
+import '../../../data/services/ally_service.dart';
 import '../../../features/auth/controllers/auth_controller.dart';
 import 'ally_controller.dart';
 import 'field_controller.dart';
@@ -153,6 +154,14 @@ class KnowledgeController extends Notifier<KnowledgeState> {
   /// Reads `knowledgeBaseIds` from the ally and fetches each KB by ID.
   /// KBs belong to the agent, not the user's wallet.
   Future<void> loadKnowledgeBases() async {
+    // Always fetch ally fresh from API to get latest knowledge_base_ids
+    try {
+      final freshAlly = await AllyService.instance.fetchAlly();
+      ref.read(allyControllerProvider.notifier).updateKnowledgeBaseIds(freshAlly.knowledgeBaseIds);
+    } catch (_) {
+      // Ally fetch failed — use cached version
+    }
+
     final kbIds = _currentKbIds;
     if (kbIds.isEmpty) {
       state = state.copyWith(
@@ -181,6 +190,10 @@ class KnowledgeController extends Notifier<KnowledgeState> {
       }
 
       if (!ref.mounted) return;
+
+      // Hide system-seeded KBs (e.g. game rules) from user's Wisdom panel
+      kbs.removeWhere((kb) => kb.wallet == 'SYSTEM');
+
       state = state.copyWith(isLoading: false, knowledgeBases: kbs);
       AppLogger.info(
         'Loaded ${kbs.length} knowledge bases for agent',
