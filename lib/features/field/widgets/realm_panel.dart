@@ -258,8 +258,10 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
           name: nameText, type: 'organization',
           parentId: parentId,
           handle: _handle.text.trim(),
+          description: _description.text.trim(),
           purpose: _purpose.text.trim(),
           email: _email.text.trim(),
+          visibility: _visibility,
           config: {
             if (_registration.text.trim().isNotEmpty)
               'registration': _registration.text.trim(),
@@ -627,7 +629,12 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
             // ── Organization-specific fields ─────────────────────────────
             // ═════════════════════════════════════════════════════════════
             if (_isOrganization) ...[
+              FieldTextInput(label: l10n.descriptionLabel, controller: _description,
+                  hint: l10n.organizationDescriptionHint, maxLines: 3),
+              const SizedBox(height: 12),
               FieldTextInput(label: l10n.registrationLabel, controller: _registration, hint: l10n.registrationHint),
+              const SizedBox(height: 12),
+              _VisibilitySelector(value: _visibility, onChanged: (v) => setState(() => _visibility = v)),
               const SizedBox(height: 12),
             ],
 
@@ -692,12 +699,6 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
                   const SizedBox(height: 5),
                   Text(l10n.defaultPortraitDescription, style: text.micro.copyWith(color: colors.muted, fontSize: 9, height: 1.45)),
                 ])),
-                const SizedBox(width: 10),
-                OutlinedButton(onPressed: () {}, style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(0, 30), padding: const EdgeInsets.symmetric(horizontal: 12),
-                  foregroundColor: colors.skyButtonInk, backgroundColor: colors.sky,
-                  side: BorderSide.none, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
-                ), child: Text(l10n.create, style: text.label.copyWith(color: colors.skyButtonInk, fontWeight: FontWeight.w700))),
               ]),
             ),
             const SizedBox(height: 14),

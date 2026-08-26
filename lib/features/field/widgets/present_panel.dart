@@ -190,27 +190,6 @@ class _PresentPanelState extends ConsumerState<PresentPanel> {
                     ],
                   ),
                 ),
-                const SizedBox(width: 10),
-                OutlinedButton(
-                  onPressed: () {},
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(0, 30),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    foregroundColor: colors.skyButtonInk,
-                    backgroundColor: colors.sky,
-                    side: BorderSide.none,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(5),
-                    ),
-                  ),
-                  child: Text(
-                    l10n.change,
-                    style: text.label.copyWith(
-                      color: colors.skyButtonInk,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
               ],
             ),
           ),
