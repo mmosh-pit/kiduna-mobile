@@ -31,4 +31,17 @@ abstract class AppConstants {
   // Network timeouts.
   static const Duration connectTimeout = Duration(seconds: 10);
   static const Duration receiveTimeout = Duration(seconds: 30);
+
+  /// Let the web build into the app itself instead of the download page.
+  ///
+  /// On web the app normally sends an authenticated user to DownloadAppScreen,
+  /// because the product ships as a mobile app. That makes the browser useless
+  /// for development, so this opens it up — off by default, so a production
+  /// web build still shows the download page with no source change:
+  ///
+  ///   flutter run -d chrome --dart-define=ALLOW_WEB_APP=true
+  static const bool allowWebApp = bool.fromEnvironment('ALLOW_WEB_APP');
+
+  /// True when this build should route web users to the download page.
+  static bool webDownloadGate(bool isWeb) => isWeb && !allowWebApp;
 }
