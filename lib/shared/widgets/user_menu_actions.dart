@@ -51,12 +51,24 @@ class _UserAvatarPopupInternal extends StatelessWidget {
       onSelected: (value) async {
         if (value == 'view_profile') {
           final username = user?.username;
+          print('[UserMenu] View Profile tapped — username=$username');
           if (username != null && username.isNotEmpty) {
             Navigator.of(context).push(
               MaterialPageRoute<void>(
                 builder: (_) => UserProfileScreen(handle: username),
               ),
             );
+          } else {
+            // Fallback: use wallet address as handle lookup
+            final wallet = user?.wallet;
+            print('[UserMenu] username null, trying wallet=$wallet');
+            if (wallet != null && wallet.isNotEmpty) {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => UserProfileScreen(handle: wallet),
+                ),
+              );
+            }
           }
         }
         if (value == 'copy_wallet') {
