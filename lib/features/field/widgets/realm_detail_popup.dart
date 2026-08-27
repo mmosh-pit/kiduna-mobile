@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/extensions/context_extensions.dart';
+import '../../../games/medieval_poker/session/lobby_client.dart';
+import '../../dashboard/screens/dashboard_screen.dart';
 import '../controllers/field_controller.dart';
 import '../data/field_composition.dart';
 import '../data/realm_atlas.dart';
@@ -71,6 +73,14 @@ class RealmDetailPopup extends ConsumerWidget {
           if (placement.reason.isNotEmpty)
             _WhySection(reason: placement.reason, accent: accent),
           _ActionRow(onEnter: () => onEnter(realm)),
+          if (realm.type == AtlasRealmType.cell)
+            _CellGameSection(
+              gameStatus: realm.gameStatus,
+              gameRoomCode: realm.gameRoomCode,
+              gamePlayerCount: realm.gamePlayerCount,
+              gameSeatCount: realm.gameSeatCount,
+              onClosePopup: onClose,
+            ),
           _LevelFooter(
             level: level,
             realmId: realm.id,
@@ -334,6 +344,233 @@ class _LevelFooter extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _CellGameSection extends StatefulWidget {
+  const _CellGameSection({
+    this.gameStatus,
+    this.gameRoomCode,
+    this.gamePlayerCount,
+    this.gameSeatCount,
+    this.onClosePopup,
+  });
+
+  final String? gameStatus;
+  final String? gameRoomCode;
+  final int? gamePlayerCount;
+  final int? gameSeatCount;
+  final VoidCallback? onClosePopup;
+
+  @override
+  State<_CellGameSection> createState() => _CellGameSectionState();
+}
+
+class _CellGameSectionState extends State<_CellGameSection> {
+  final TextEditingController _codeController = TextEditingController();
+  bool _busy = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _codeController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _joinGame(String code) async {
+    if (code.isEmpty) {
+      setState(() => _error = 'Enter a room code');
+      return;
+    }
+
+    setState(() { _busy = true; _error = null; });
+
+    try {
+      final lobby = LobbyClient();
+      final ticket = await lobby.joinRoom(code);
+
+      if (!mounted) return;
+
+      widget.onClosePopup?.call();
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => DashboardScreen(
+            initialTab: 1,
+            startGameInLobby: true,
+            joinTicket: ticket,
+          ),
+        ),
+      );
+    } on LobbyException catch (e) {
+      if (mounted) setState(() { _error = e.message; _busy = false; });
+    } catch (e) {
+      if (mounted) setState(() { _error = 'Failed to join'; _busy = false; });
+    }
+  }
+
+  Color _statusColor(String? status) {
+    return switch (status) {
+      'lobby' => const Color(0xFF2A6B4F),
+      'active' => const Color(0xFF6B4F2A),
+      'finished' || 'ended' => const Color(0xFF4A3A3A),
+      _ => const Color(0xFF3A3A4A),
+    };
+  }
+
+  String _statusLabel(String? status) {
+    return switch (status) {
+      'lobby' => 'LOBBY',
+      'active' => 'ACTIVE',
+      'finished' || 'ended' => 'FINISHED',
+      _ => 'NO GAME',
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.kiduna;
+    final text = context.kidunaText;
+    final status = widget.gameStatus;
+    final canJoin = status == 'lobby' || status == 'active';
+    final hasGame = status != null;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: colors.sky.withValues(alpha: 0.04),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: colors.sky.withValues(alpha: 0.14)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'GAME',
+                  style: text.eyebrowSmall.copyWith(
+                    color: colors.sky,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: _statusColor(status),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    _statusLabel(status),
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      color: colors.cream,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                ),
+                if (hasGame &&
+                    widget.gamePlayerCount != null &&
+                    widget.gameSeatCount != null) ...[
+                  const SizedBox(width: 6),
+                  Text(
+                    '${widget.gamePlayerCount}/${widget.gameSeatCount}',
+                    style: TextStyle(fontSize: 10, color: colors.muted),
+                  ),
+                ],
+              ],
+            ),
+            if (canJoin) ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _codeController,
+                      textCapitalization: TextCapitalization.characters,
+                      style: TextStyle(
+                        color: colors.cream,
+                        fontSize: 16,
+                        letterSpacing: 3,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'ABC123',
+                        hintStyle: TextStyle(
+                          color: colors.muted.withValues(alpha: 0.4),
+                          letterSpacing: 3,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(6),
+                          borderSide: BorderSide(
+                            color: colors.camel.withValues(alpha: 0.24),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(6),
+                          borderSide: BorderSide(
+                            color: colors.camel.withValues(alpha: 0.24),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(6),
+                          borderSide: BorderSide(color: colors.sky),
+                        ),
+                        filled: true,
+                        fillColor: const Color.fromRGBO(6, 3, 4, 0.66),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  SizedBox(
+                    height: 44,
+                    child: ElevatedButton(
+                      onPressed: _busy
+                          ? null
+                          : () => _joinGame(
+                              _codeController.text.trim().toUpperCase(),
+                            ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: colors.sky,
+                        foregroundColor: colors.skyButtonInk,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: _busy
+                          ? SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: colors.skyButtonInk,
+                              ),
+                            )
+                          : const Text('Join',
+                              style: TextStyle(fontWeight: FontWeight.w700)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            if (_error != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _error!,
+                style: TextStyle(color: colors.orange, fontSize: 11),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

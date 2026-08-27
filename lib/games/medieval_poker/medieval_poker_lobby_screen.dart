@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/utils/logger.dart';
 import 'medieval_poker_leaderboard_screen.dart';
 import 'medieval_poker_matchmaking_screen.dart';
 import 'medieval_poker_online_screen.dart';
@@ -16,10 +17,25 @@ const _border = Color(0xFF6B5533);
 /// or join one by code; ready up; the host starts once everyone is ready, and
 /// all clients hand off to the online table. Requires the app's auth token.
 class MedievalPokerLobbyScreen extends StatefulWidget {
-  const MedievalPokerLobbyScreen({super.key, this.onLeaderboard});
+  const MedievalPokerLobbyScreen({
+    super.key,
+    this.onLeaderboard,
+    this.cellRealmId,
+    this.initialTicket,
+    this.onGameLaunch,
+  });
 
   /// Called when the leaderboard icon is tapped.
   final VoidCallback? onLeaderboard;
+
+  final String? cellRealmId;
+
+  /// If provided, skip the create/join entry view and go straight to the room.
+  final LobbyTicket? initialTicket;
+
+  /// Called when the game starts, with the online screen widget params.
+  /// If set, the lobby will NOT push a route — the parent renders the game.
+  final void Function(MedievalPokerOnlineScreen screen)? onGameLaunch;
 
   @override
   State<MedievalPokerLobbyScreen> createState() =>
@@ -40,6 +56,23 @@ class _MedievalPokerLobbyScreenState extends State<MedievalPokerLobbyScreen> {
   bool _busy = false;
   bool _launched = false;
   Timer? _poll;
+
+  @override
+  void initState() {
+    super.initState();
+    AppLogger.debug('[Lobby] initState — initialTicket: ${widget.initialTicket != null}', tag: 'Lobby');
+    final ticket = widget.initialTicket;
+    if (ticket != null) {
+      AppLogger.debug('[Lobby] initialTicket present — room: ${ticket.room.code}, seat: ${ticket.seat}, status: ${ticket.room.status}', tag: 'Lobby');
+      _room = ticket.room;
+      _mySeat = ticket.seat;
+      _gameToken = ticket.gameToken;
+      _wsUrl = ticket.wsUrl;
+      _isHost = false;
+      _startPolling();
+      AppLogger.debug('[Lobby] room set, polling started', tag: 'Lobby');
+    }
+  }
 
   @override
   void dispose() {
@@ -91,7 +124,7 @@ class _MedievalPokerLobbyScreenState extends State<MedievalPokerLobbyScreen> {
   }
 
   Future<void> _create() => _guard(() async {
-        final t = await _lobby.createRoom();
+        final t = await _lobby.createRoom(realmId: widget.cellRealmId);
         if (mounted) setState(() => _adopt(t, host: true));
       });
 
@@ -163,32 +196,40 @@ class _MedievalPokerLobbyScreenState extends State<MedievalPokerLobbyScreen> {
 
   void _maybeLaunch() {
     final r = _room;
+    AppLogger.debug('[Lobby] _maybeLaunch — room: ${r?.code}, status: ${r?.status}, isActive: ${r?.isActive}, _launched: $_launched', tag: 'Lobby');
     if (r == null || !r.isActive || _launched) return;
+    AppLogger.debug('[Lobby] LAUNCHING game', tag: 'Lobby');
     _launched = true;
     _poll?.cancel();
-    Navigator.of(context)
-        .push(MaterialPageRoute(
-          builder: (_) => MedievalPokerOnlineScreen(
-            wsUrl: _wsUrl!,
-            room: r.code,
-            seat: _mySeat!,
-            humans: r.humans,
-            token: _gameToken,
-            timedLevels: r.timedLevels,
-            playerName: _mySeatName(r),
-          ),
-        ))
-        .then((_) {
-      // Returning from the table: reset to the entry view.
-      if (mounted) {
-        setState(() {
-          _room = null;
-          _mySeat = null;
-          _gameToken = null;
-          _wsUrl = null;
-        });
-      }
-    });
+
+    final screen = MedievalPokerOnlineScreen(
+      wsUrl: _wsUrl!,
+      room: r.code,
+      seat: _mySeat!,
+      humans: r.humans,
+      token: _gameToken,
+      timedLevels: r.timedLevels,
+      playerName: _mySeatName(r),
+    );
+
+    if (widget.onGameLaunch != null) {
+      AppLogger.debug('[Lobby] using onGameLaunch callback — staying in DashboardScreen', tag: 'Lobby');
+      widget.onGameLaunch!(screen);
+    } else {
+      AppLogger.debug('[Lobby] no callback — pushing route directly', tag: 'Lobby');
+      Navigator.of(context)
+          .push(MaterialPageRoute(builder: (_) => screen))
+          .then((_) {
+        if (mounted) {
+          setState(() {
+            _room = null;
+            _mySeat = null;
+            _gameToken = null;
+            _wsUrl = null;
+          });
+        }
+      });
+    }
   }
 
   @override
@@ -222,7 +263,10 @@ class _MedievalPokerLobbyScreenState extends State<MedievalPokerLobbyScreen> {
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(20),
-                child: _room == null ? _entryView() : _roomView(_room!),
+                child: Builder(builder: (_) {
+                  AppLogger.debug('[Lobby] build — _room: ${_room?.code}, showing: ${_room == null ? "entryView" : "roomView"}', tag: 'Lobby');
+                  return _room == null ? _entryView() : _roomView(_room!);
+                }),
               ),
             ),
           ],

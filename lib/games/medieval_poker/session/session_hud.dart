@@ -1143,6 +1143,13 @@ class _DeckBuilderState extends State<_DeckBuilder> {
         }
       });
 
+  Widget _groupHeader(String g) => Padding(
+        padding: const EdgeInsets.only(top: 10, bottom: 4, left: 4),
+        child: Text(g,
+            style: const TextStyle(
+                color: _gold, fontWeight: FontWeight.w800, fontSize: 13)),
+      );
+
   @override
   Widget build(BuildContext context) {
     final ready = _selected.length == _target;
@@ -1176,13 +1183,26 @@ class _DeckBuilderState extends State<_DeckBuilder> {
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               children: [
-                for (final c in _pool)
-                  _DeckRow(
-                    option: c,
-                    selected: _selected.contains(c.id),
-                    atCap: _selected.length >= _target,
-                    onTap: () => _toggle(c.id),
-                  ),
+                for (final g in const ['Neutral', 'Class', 'Court']) ...[
+                  if (_pool.any((c) => c.group == g)) ...[
+                    _groupHeader('$g Cards'),
+                    for (final c in _pool.where((c) => c.group == g))
+                      _DeckRow(
+                        option: c,
+                        selected: _selected.contains(c.id),
+                        atCap: _selected.length >= _target,
+                        onTap: () => _toggle(c.id),
+                      ),
+                  ],
+                ],
+                if (_pool.any((c) => c.group == null))
+                  for (final c in _pool.where((c) => c.group == null))
+                    _DeckRow(
+                      option: c,
+                      selected: _selected.contains(c.id),
+                      atCap: _selected.length >= _target,
+                      onTap: () => _toggle(c.id),
+                    ),
                 const SizedBox(height: 8),
               ],
             ),
@@ -1276,12 +1296,33 @@ class _DeckRow extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(option.label,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 13)),
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(option.label,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 13)),
+                            ),
+                            if (option.badge != null) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF33291C),
+                                  borderRadius: BorderRadius.circular(5),
+                                  border: Border.all(color: _panelBorder),
+                                ),
+                                child: Text(option.badge!,
+                                    style: const TextStyle(
+                                        color: _gold, fontSize: 9)),
+                              ),
+                            ],
+                          ],
+                        ),
                         if (option.subtitle != null) ...[
                           const SizedBox(height: 2),
                           Text(option.subtitle!,
@@ -1979,7 +2020,7 @@ class _ExitButton extends StatelessWidget {
         backgroundColor: Colors.transparent,
         insetPadding: const EdgeInsets.symmetric(horizontal: 32),
         child: Container(
-          padding: const EdgeInsets.all(22),
+          padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             color: _panel,
             borderRadius: BorderRadius.circular(18),
@@ -1996,26 +2037,34 @@ class _ExitButton extends StatelessWidget {
                       color: _gold)),
               const SizedBox(height: 10),
               const Text(
-                'You’ll forfeit your seat and your progress in this match.',
+                "You'll forfeit your seat and your progress in this match.",
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.white70, fontSize: 14),
               ),
               const SizedBox(height: 20),
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: _ActionButton(
-                      label: 'Keep Playing',
-                      color: const Color(0xFF2E5A44),
-                      onTap: () => Navigator.of(context).pop(false),
-                    ),
+                  _MiniButton(
+                    label: 'Keep Playing',
+                    onTap: () => Navigator.of(context).pop(false),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _ActionButton(
-                      label: 'Leave',
-                      color: const Color(0xFF7A2E2E),
+                  const SizedBox(width: 12),
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(10),
                       onTap: () => Navigator.of(context).pop(true),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 8),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: _panelBorder),
+                        ),
+                        child: const Text('Leave',
+                            style: TextStyle(color: Colors.white70)),
+                      ),
                     ),
                   ),
                 ],

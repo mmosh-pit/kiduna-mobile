@@ -212,14 +212,16 @@ class GameServer {
               personality: AiPersonality.values[i % AiPersonality.values.length])
             ..court = CourtMember.values[i % CourtMember.values.length],
       ];
-      final game = PokerGame(config: cfg, players: players, rng: _rng);
+      late final GameRoom room;
+      final game = PokerGame(config: cfg, players: players, rng: _rng,
+          onLog: (line) => room.captureLog(line));
       // Start every seat as AI; a connecting human swaps their seat's agent.
       final agents = <PlayerAgent>[
         for (var i = 0; i < seatsPerRoom; i++) AiAgent(i, brain: AiBrain(rng: _rng)),
       ];
       final live = _LiveRoom(roomId, game, agents,
           config: cfg, startThreshold: humansToStart);
-      live.room = GameRoom(
+      room = GameRoom(
         roomId: roomId,
         game: game,
         agents: agents,
@@ -227,6 +229,7 @@ class GameServer {
         send: (s, msg) => _sendTo(live, s, msg),
         levelSecondsLeft: () => _levelSecondsLeft(live),
       );
+      live.room = room;
       return live;
     });
   }

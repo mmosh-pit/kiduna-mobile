@@ -7,6 +7,8 @@ import '../../../games/medieval_poker/flame/medieval_poker_game.dart';
 import '../../../games/medieval_poker/flame/poker_hud.dart';
 import '../../../games/medieval_poker/medieval_poker_leaderboard_screen.dart';
 import '../../../games/medieval_poker/medieval_poker_lobby_screen.dart';
+import '../../../games/medieval_poker/medieval_poker_online_screen.dart';
+import '../../../games/medieval_poker/session/lobby_client.dart';
 import '../../../features/ki_chat/controllers/ki_chat_controller.dart';
 import '../../../l10n/app_localizations.dart';
 
@@ -106,18 +108,23 @@ String _evaluateHand(List<String> holeRanks, List<String> boardRanks) {
 // ── GameScreen ───────────────────────────────────────────────────────
 
 class GameScreen extends ConsumerStatefulWidget {
-  const GameScreen({super.key});
+  const GameScreen({super.key, this.startInLobby = false, this.cellRealmId, this.joinTicket});
+
+  final bool startInLobby;
+  final String? cellRealmId;
+  final Object? joinTicket;
 
   @override
   ConsumerState<GameScreen> createState() => _GameScreenState();
 }
 
-enum _GameView { modeSelector, singlePlayer, lobby, leaderboard }
+enum _GameView { modeSelector, singlePlayer, lobby, leaderboard, onlinePlay }
 
 class _GameScreenState extends ConsumerState<GameScreen> {
-  _GameView _view = _GameView.modeSelector;
+  late _GameView _view = widget.startInLobby ? _GameView.lobby : _GameView.modeSelector;
   bool _showExitConfirm = false;
   _PokerTableView? _pokerView;
+  MedievalPokerOnlineScreen? _onlineScreen;
 
   @override
   void dispose() {
@@ -165,7 +172,18 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       return _LobbyView(
         onBack: _goToModeSelector,
         onLeaderboard: () => setState(() => _view = _GameView.leaderboard),
+        cellRealmId: widget.cellRealmId,
+        joinTicket: widget.joinTicket,
+        onGameLaunch: (screen) {
+          setState(() {
+            _onlineScreen = screen;
+            _view = _GameView.onlinePlay;
+          });
+        },
       );
+    }
+    if (_view == _GameView.onlinePlay && _onlineScreen != null) {
+      return _onlineScreen!;
     }
     if (_view == _GameView.leaderboard) {
       return _LeaderboardView(
@@ -274,12 +292,16 @@ class _ExitOverlay extends StatelessWidget {
 // ── Lobby + Leaderboard ──────────────────────────────────────────────
 
 class _LobbyView extends StatelessWidget {
-  const _LobbyView({required this.onBack, required this.onLeaderboard});
+  const _LobbyView({required this.onBack, required this.onLeaderboard, this.cellRealmId, this.joinTicket, this.onGameLaunch});
   final VoidCallback onBack;
   final VoidCallback onLeaderboard;
+  final String? cellRealmId;
+  final Object? joinTicket;
+  final void Function(MedievalPokerOnlineScreen screen)? onGameLaunch;
 
   @override
   Widget build(BuildContext context) {
+    final LobbyTicket? ticket = joinTicket is LobbyTicket ? joinTicket as LobbyTicket : null;
     return Column(children: [
       Align(
         alignment: Alignment.centerLeft,
@@ -293,7 +315,12 @@ class _LobbyView extends StatelessWidget {
         ),
       ),
       Expanded(
-          child: MedievalPokerLobbyScreen(onLeaderboard: onLeaderboard)),
+          child: MedievalPokerLobbyScreen(
+            onLeaderboard: onLeaderboard,
+            cellRealmId: cellRealmId,
+            initialTicket: ticket,
+            onGameLaunch: onGameLaunch,
+          )),
     ]);
   }
 }

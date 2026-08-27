@@ -40,6 +40,7 @@ class GravityService {
         'Gravity loaded: ${gravity.realms.length} realms',
         tag: 'GravityService',
       );
+
       return gravity;
     } on DioException catch (e) {
       if (e.error is AppException) {
