@@ -10,6 +10,7 @@ import '../../../data/models/sse_event.dart';
 import '../../../data/services/chat_service.dart';
 import '../../../features/auth/controllers/auth_controller.dart';
 import '../../../features/dashboard/controllers/ecosystem_controller.dart';
+import '../../../features/field/controllers/field_controller.dart';
 import 'ally_controller.dart';
 
 @immutable
@@ -87,7 +88,22 @@ class KiChatController extends Notifier<KiChatState> {
   String? get _presenceId => ref.read(allyControllerProvider).ally?.id;
   String? get _userWallet => ref.read(authControllerProvider).user?.wallet;
   String? get _userId => ref.read(authControllerProvider).user?.id;
-  String? get _realmId => ref.read(ecosystemControllerProvider).ecosystem?.id;
+  String? get _realmId {
+    // Prefer the specific realm the user has navigated into (Field).
+    // Fall back to ecosystem ID when the user hasn't entered a sub-realm.
+    final fieldRealmId = ref.read(fieldControllerProvider).currentRealmId;
+    final ecosystemId = ref.read(ecosystemControllerProvider).ecosystem?.id;
+
+    // fieldRealmId defaults to 'kinship-duna' (placeholder) when not navigated.
+    // Use it only when it's an actual realm ID (UUID format).
+    final useField = fieldRealmId.isNotEmpty &&
+        fieldRealmId != 'kinship-duna' &&
+        fieldRealmId != ecosystemId;
+
+    final id = useField ? fieldRealmId : ecosystemId;
+    print('[DashboardKiChat] _realmId = $id (field=$fieldRealmId, eco=$ecosystemId)');
+    return id;
+  }
 
   Future<void> loadHistory() async {
     final presenceId = _presenceId;

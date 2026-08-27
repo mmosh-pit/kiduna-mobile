@@ -1496,6 +1496,7 @@ class FieldController extends Notifier<FieldState> {
     double kidunaPerPerson = 0,
   }) async {
     final realmId = state.currentRealmId;
+    print('[prepareInvitation] realmId=$realmId');
     if (realmId.isEmpty) {
       state = state.copyWith(invitationError: 'No realm selected.');
       return;
@@ -1519,14 +1520,13 @@ class FieldController extends Notifier<FieldState> {
       state = state.copyWith(
         invitationResponse: response,
         invitationLoading: false,
-        kiTopic: const KiTopic(
+        kiTopic: KiTopic(
           title: 'Invitation prepared',
           body:
-              'Ki has prepared a personal invitation, a unique Kinship Link, '
-              'and its equivalent Kinship Code for review.',
+              'Your invitation is ready! ${response.summary}.',
           invitation:
-              'Copy the message, link, or code and share it with your '
-              'intended recipient.',
+              'Copy the invite link or code and share it. '
+              'Recipients will see your profile and can join directly.',
         ),
       );
 

@@ -80,7 +80,11 @@ class KiChatController extends Notifier<KiChatState> {
   String? get _presenceId => ref.read(allyControllerProvider).ally?.id;
   String? get _userWallet => ref.read(authControllerProvider).user?.wallet;
   String? get _userId => ref.read(authControllerProvider).user?.id;
-  String? get _realmId => ref.read(fieldControllerProvider).currentRealmId;
+  String? get _realmId {
+    final id = ref.read(fieldControllerProvider).currentRealmId;
+    print('[FieldKiChat] _realmId = $id');
+    return id;
+  }
 
   /// Load conversation history from the server.
   Future<void> loadHistory() async {
