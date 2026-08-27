@@ -5,6 +5,8 @@ class PhantomWallet {
 
   static Future<String?> connect() async => null;
 
+  static Future<String?> eagerConnect() async => null;
+
   static Future<String?> signTransaction(String transactionBase64) async =>
       null;
 

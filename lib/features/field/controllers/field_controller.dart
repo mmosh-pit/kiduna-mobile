@@ -1488,10 +1488,12 @@ class FieldController extends Notifier<FieldState> {
   /// the form fields to `POST /api/v1/codes`, and stores the response so the
   /// review panel can display the real code, link, and message.
   Future<void> prepareInvitation({
-    required String recipientName,
     required String role,
     required String expiration,
-    String? notes,
+    required int maxUses,
+    String? recipientName,
+    String? label,
+    double kidunaPerPerson = 0,
   }) async {
     final realmId = state.currentRealmId;
     if (realmId.isEmpty) {
@@ -1504,10 +1506,12 @@ class FieldController extends Notifier<FieldState> {
     try {
       final request = InvitationRequest(
         realmId: realmId,
-        recipientName: recipientName,
         role: role,
         expiration: expiration,
-        notes: notes,
+        maxUses: maxUses,
+        recipientName: recipientName,
+        label: label,
+        kidunaPerPerson: kidunaPerPerson,
       );
 
       final response = await InvitationService.instance.generate(request);

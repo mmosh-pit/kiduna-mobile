@@ -49,6 +49,31 @@ class PhantomWallet {
     }
   }
 
+  /// Silently reconnect if the user previously approved this site.
+  ///
+  /// Phantom supports `connect({ onlyIfTrusted: true })` which succeeds
+  /// without a popup when the site is already trusted. Returns the public
+  /// key or null if no prior approval exists.
+  static Future<String?> eagerConnect() async {
+    final s = _solana;
+    if (s == null) return null;
+
+    try {
+      final opts = JSObject();
+      opts.setProperty('onlyIfTrusted'.toJS, true.toJS);
+      final result =
+          await (s.callMethod('connect'.toJS, opts) as JSPromise).toDart;
+      final obj = result as JSObject;
+      if (!obj.has('publicKey')) return null;
+      final pk = obj.getProperty('publicKey'.toJS) as JSObject;
+      final str = pk.callMethod('toString'.toJS) as JSString;
+      return str.toDart;
+    } catch (_) {
+      // Not previously trusted — no popup, just returns null.
+      return null;
+    }
+  }
+
   /// Ask Phantom to sign a base64 transaction, returning it re-encoded.
   ///
   /// Returns null when the user rejects. The transaction already carries the

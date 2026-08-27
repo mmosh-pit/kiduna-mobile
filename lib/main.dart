@@ -10,6 +10,7 @@ import 'config/theme.dart';
 import 'core/network/api_client.dart';
 import 'core/utils/logger.dart';
 import 'data/local/secure_storage.dart';
+import 'features/auth/screens/user_profile_screen.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/auth/screens/signup_screen.dart';
 import 'features/compute/screens/buy_kiduna_screen.dart';
@@ -17,9 +18,11 @@ import 'features/compute/screens/withdraw_screen.dart';
 import 'l10n/app_localizations.dart';
 
 /// Extracts an invite code from the URL on web.
-/// e.g., https://kiduna.ai/join/RLM-A3Kx9M → "RLM-A3Kx9M"
-///       https://kiduna.ai/#/join/RLM-A3Kx9M → "RLM-A3Kx9M"
-///       https://kiduna.ai/?code=RLM-A3Kx9M → "RLM-A3Kx9M"
+///
+/// Supported formats:
+///   https://kiduna.ai/{handle}/code/{CODE}  → new format (also sets pendingInviteHandle)
+///   https://kiduna.ai/join/{CODE}           → legacy format
+///   https://kiduna.ai/?code={CODE}          → query param fallback
 String? _extractInviteCodeFromUrl() {
   if (!kIsWeb) return null;
   try {
@@ -27,8 +30,43 @@ String? _extractInviteCodeFromUrl() {
     final fullUrl = uri.toString();
     AppLogger.info('Extracting invite from URL: $fullUrl', tag: 'App');
 
-    // Check path: /join/RLM-XXXXXX
+    // ── New format: /{handle}/code/{CODE} ──
     final path = uri.path;
+    final codeIdx = path.indexOf('/code/');
+    if (codeIdx > 0) {
+      // Everything before /code/ is the handle (strip leading /)
+      final handle = path.substring(1, codeIdx).trim();
+      final code =
+          path.substring(codeIdx + 6).replaceAll('/', '').trim();
+      if (handle.isNotEmpty && code.isNotEmpty) {
+        pendingInviteHandle = handle;
+        AppLogger.info(
+          'Invite from URL: handle=$handle, code=$code',
+          tag: 'App',
+        );
+        return code.toUpperCase();
+      }
+    }
+
+    // ── Hash-routing: #/{handle}/code/{CODE} ──
+    final fragment = uri.fragment;
+    final fragCodeIdx = fragment.indexOf('/code/');
+    if (fragCodeIdx > 0) {
+      var handlePart = fragment.substring(0, fragCodeIdx);
+      if (handlePart.startsWith('/')) handlePart = handlePart.substring(1);
+      final code =
+          fragment.substring(fragCodeIdx + 6).replaceAll('/', '').trim();
+      if (handlePart.isNotEmpty && code.isNotEmpty) {
+        pendingInviteHandle = handlePart;
+        AppLogger.info(
+          'Invite from fragment: handle=$handlePart, code=$code',
+          tag: 'App',
+        );
+        return code.toUpperCase();
+      }
+    }
+
+    // ── Legacy format: /join/{CODE} ──
     if (path.contains('/join/')) {
       final idx = path.indexOf('/join/');
       final code = path.substring(idx + 6).replaceAll('/', '').trim();
@@ -38,8 +76,6 @@ String? _extractInviteCodeFromUrl() {
       }
     }
 
-    // Check fragment (hash routing): #/join/RLM-XXXXXX
-    final fragment = uri.fragment;
     if (fragment.contains('/join/')) {
       final idx = fragment.indexOf('/join/');
       final code = fragment.substring(idx + 6).replaceAll('/', '').trim();
@@ -49,11 +85,10 @@ String? _extractInviteCodeFromUrl() {
       }
     }
 
-    // Check full URL string as fallback (handles edge cases)
-    if (fullUrl.contains('/join/')) {
-      final idx = fullUrl.indexOf('/join/');
-      var code = fullUrl.substring(idx + 6);
-      // Remove trailing slashes, query params, fragments
+    // ── Full URL fallback for /code/ ──
+    final fullCodeIdx = fullUrl.indexOf('/code/');
+    if (fullCodeIdx > 0) {
+      var code = fullUrl.substring(fullCodeIdx + 6);
       code = code.split('?').first.split('#').first.replaceAll('/', '').trim();
       if (code.isNotEmpty) {
         AppLogger.info('Invite code from full URL: $code', tag: 'App');
@@ -61,7 +96,18 @@ String? _extractInviteCodeFromUrl() {
       }
     }
 
-    // Check query param: ?code=RLM-XXXXXX
+    // ── Full URL fallback for /join/ ──
+    if (fullUrl.contains('/join/')) {
+      final idx = fullUrl.indexOf('/join/');
+      var code = fullUrl.substring(idx + 6);
+      code = code.split('?').first.split('#').first.replaceAll('/', '').trim();
+      if (code.isNotEmpty) {
+        AppLogger.info('Invite code from full URL: $code', tag: 'App');
+        return code.toUpperCase();
+      }
+    }
+
+    // ── Query param: ?code=RLM-XXXXXX ──
     final queryCode = uri.queryParameters['code'];
     if (queryCode != null && queryCode.isNotEmpty) {
       AppLogger.info('Invite code from query: $queryCode', tag: 'App');
@@ -76,6 +122,10 @@ String? _extractInviteCodeFromUrl() {
 /// Global invite code extracted from URL (if any).
 /// Used by SignupScreen to prefill Step 6.
 String? pendingInviteCode;
+
+/// Inviter's handle from the URL (if /{handle}/code/{CODE} format).
+/// Used by InviteLandingScreen to display the inviter context.
+String? pendingInviteHandle;
 
 /// True when the app is launched at /buy-kiduna (web).
 /// Auth is resolved from the existing browser session, never from the URL.
@@ -120,6 +170,15 @@ Future<void> main() async {
     pendingInviteCode = _extractInviteCodeFromUrl();
   }
 
+  AppLogger.info(
+    'Route resolution: inviteCode=$pendingInviteCode, '
+    'handle=$pendingInviteHandle, '
+    'buyKiduna=$isBuyKidunaRoute, '
+    'withdraw=$isWithdrawRoute, '
+    'uri=${kIsWeb ? Uri.base.toString() : "non-web"}',
+    tag: 'App',
+  );
+
   ApiClient.instance.init(tokenProvider: SecureStorage.instance.getToken);
 
   runApp(const ProviderScope(child: KidunaApp()));
@@ -136,7 +195,10 @@ class KidunaApp extends StatelessWidget {
       return const WithdrawScreen();
     }
     if (pendingInviteCode != null) {
-      return const SignupScreen();
+      return UserProfileScreen(
+        handle: pendingInviteHandle ?? '',
+        inviteCode: pendingInviteCode,
+      );
     }
     return const LoginScreen();
   }

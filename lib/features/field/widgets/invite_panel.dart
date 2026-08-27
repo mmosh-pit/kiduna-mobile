@@ -9,9 +9,9 @@ import '../controllers/field_controller.dart';
 import '../data/field_fixtures.dart';
 import 'field_inputs.dart';
 
-/// The Invite working panel: a form to prepare a one-person invitation, which
-/// calls the backend API and then swaps to a review of the personal message,
-/// unique link, and Kinship Code.
+/// The Invite working panel: a form to prepare a realm invitation with
+/// optional KIDUNA sponsorship. After creation, swaps to a review showing
+/// the invite link, code, and a summary.
 class InvitePanel extends ConsumerStatefulWidget {
   const InvitePanel({super.key, this.askAbout});
 
@@ -23,61 +23,80 @@ class InvitePanel extends ConsumerStatefulWidget {
 
 class _InvitePanelState extends ConsumerState<InvitePanel> {
   final TextEditingController _name = TextEditingController();
-  final TextEditingController _notes = TextEditingController();
+  final TextEditingController _label = TextEditingController();
+  final TextEditingController _maxUses = TextEditingController(text: '1');
   final TextEditingController _expirationAmount = TextEditingController(
     text: '7',
   );
-  TextEditingController? _message;
+  final TextEditingController _kidunaPerPerson = TextEditingController();
   String _role = 'Member';
-  bool _expirationEnabled = false;
   String _expirationUnit = 'days';
   bool _prepared = false;
-  bool _editing = false;
   String? _copyStatus;
 
+  // Validation errors
+  String? _maxUsesError;
+  String? _expirationError;
+  String? _kidunaError;
+
   String get _expirationValue {
-    if (!_expirationEnabled) return 'never';
-    if (_expirationUnit == 'never') return 'never';
     final amount = _expirationAmount.text.trim();
-    if (amount.isEmpty) return 'never';
+    if (amount.isEmpty) return '7 days';
     return '$amount $_expirationUnit';
   }
+
+  double get _kidunaAmount {
+    return double.tryParse(_kidunaPerPerson.text.trim()) ?? 0;
+  }
+
+  int get _maxUsesValue {
+    return int.tryParse(_maxUses.text.trim()) ?? 1;
+  }
+
+  double get _totalKidunaLock => _kidunaAmount * _maxUsesValue;
 
   @override
   void dispose() {
     _name.dispose();
-    _notes.dispose();
+    _label.dispose();
+    _maxUses.dispose();
     _expirationAmount.dispose();
-    _message?.dispose();
+    _kidunaPerPerson.dispose();
     super.dispose();
   }
 
-  String? _nameError;
-  String? _expirationError;
-
   bool _validate() {
-    final name = _name.text.trim();
-    String? nameErr;
+    String? maxErr;
     String? expErr;
+    String? kidErr;
 
-    if (name.isEmpty) {
-      nameErr = 'Name is required';
+    final uses = int.tryParse(_maxUses.text.trim());
+    if (uses == null || uses <= 0) {
+      maxErr = 'Enter a number greater than 0';
     }
 
-    if (_expirationEnabled && _expirationUnit != 'never') {
-      final raw = _expirationAmount.text.trim();
-      final amount = int.tryParse(raw);
-      if (raw.isEmpty || amount == null || amount <= 0) {
-        expErr = 'Enter a valid number';
-      }
+    final expAmt = int.tryParse(_expirationAmount.text.trim());
+    if (expAmt == null || expAmt <= 0) {
+      expErr = 'Enter a valid number';
+    }
+
+    final kiduna = _kidunaAmount;
+    if (_kidunaPerPerson.text.trim().isNotEmpty && kiduna < 0) {
+      kidErr = 'Must be 0 or more';
+    }
+
+    // If sponsoring, require max_uses
+    if (kiduna > 0 && (uses == null || uses <= 0)) {
+      maxErr = 'Required for sponsored invites';
     }
 
     setState(() {
-      _nameError = nameErr;
+      _maxUsesError = maxErr;
       _expirationError = expErr;
+      _kidunaError = kidErr;
     });
 
-    return nameErr == null && expErr == null;
+    return maxErr == null && expErr == null && kidErr == null;
   }
 
   Future<void> _prepare() async {
@@ -85,32 +104,30 @@ class _InvitePanelState extends ConsumerState<InvitePanel> {
 
     final controller = ref.read(fieldControllerProvider.notifier);
     await controller.prepareInvitation(
-      recipientName: _name.text.trim(),
       role: _role,
       expiration: _expirationValue,
-      notes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
+      maxUses: _maxUsesValue,
+      recipientName:
+          _name.text.trim().isEmpty ? null : _name.text.trim(),
+      label: _label.text.trim().isEmpty ? null : _label.text.trim(),
+      kidunaPerPerson: _kidunaAmount,
     );
 
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
 
-    // Check if API succeeded — read fresh state.
     final state = ref.read(fieldControllerProvider);
     if (state.invitationResponse != null) {
-      _message = TextEditingController(
-        text: state.invitationResponse!.invitationMessage,
-      );
       setState(() => _prepared = true);
     }
   }
 
   Future<void> _copy(String label, String value) async {
     await Clipboard.setData(ClipboardData(text: value));
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
     setState(() => _copyStatus = label);
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _copyStatus = null);
+    });
   }
 
   @override
@@ -143,30 +160,11 @@ class _InvitePanelState extends ConsumerState<InvitePanel> {
       children: [
         _FormGrid(
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                FieldTextInput(
-                  label: '${l10n.nameYouUseForThem} *',
-                  controller: _name,
-                  hint: l10n.whatYouMostCommonlyCallThem,
-                ),
-                if (_nameError != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    _nameError!,
-                    style: TextStyle(color: colors.orange, fontSize: 11),
-                  ),
-                ],
-              ],
-            ),
-            _ExpirationInput(
-              enabled: _expirationEnabled,
-              amount: _expirationAmount,
-              unit: _expirationUnit,
-              error: _expirationError,
-              onEnabledChanged: (v) => setState(() => _expirationEnabled = v),
-              onUnitChanged: (v) => setState(() => _expirationUnit = v),
+            // Row 1: Name (optional) | Role
+            FieldTextInput(
+              label: l10n.nameYouUseForThem,
+              controller: _name,
+              hint: 'Optional — for named invites',
             ),
             FieldDropdown(
               label: l10n.proposedRole,
@@ -174,26 +172,67 @@ class _InvitePanelState extends ConsumerState<InvitePanel> {
               options: FieldFixtures.roles,
               onChanged: (v) => setState(() => _role = v),
             ),
-            _FullWidth(
-              child: FieldTextInput(
-                label: l10n.notes,
-                controller: _notes,
-                hint: l10n.invitationNotesHint,
-                maxLines: 5,
-                minHeight: 104,
-              ),
+
+            // Row 2: Number of People | Expiration
+            _ValidatedInput(
+              label: 'Number of People *',
+              controller: _maxUses,
+              error: _maxUsesError,
+              hint: '1',
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            ),
+            _ExpirationInput(
+              amount: _expirationAmount,
+              unit: _expirationUnit,
+              error: _expirationError,
+              onUnitChanged: (v) => setState(() => _expirationUnit = v),
+            ),
+
+            // Row 3: KIDUNA per Person | Label
+            _ValidatedInput(
+              label: 'KIDUNA per Person',
+              controller: _kidunaPerPerson,
+              error: _kidunaError,
+              hint: '0 — no sponsorship',
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
+              ],
+            ),
+            FieldTextInput(
+              label: 'Label',
+              controller: _label,
+              hint: 'e.g. ETH Denver 2026',
             ),
           ],
         ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(0, 2, 0, 9),
-          child: Text(
-            l10n.requiredField,
-            style: context.kidunaText.label.copyWith(
-              color: context.kiduna.cream,
+
+        // Total KIDUNA lock summary
+        if (_kidunaAmount > 0 && _maxUsesValue > 0) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: colors.gold.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: colors.gold.withValues(alpha: 0.2),
+              ),
+            ),
+            child: Text(
+              'Total KIDUNA to lock: ${_formatNumber(_totalKidunaLock)}'
+              ' (${_formatNumber(_kidunaAmount)} × ${_maxUsesValue} people)',
+              style: context.kidunaText.caption.copyWith(
+                color: colors.gold,
+                height: 1.4,
+              ),
             ),
           ),
-        ),
+        ],
+
+        const SizedBox(height: 10),
         if (error != null) ...[
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
@@ -236,51 +275,86 @@ class _InvitePanelState extends ConsumerState<InvitePanel> {
   }
 
   Widget _review(BuildContext context) {
-    final l10n = context.l10n;
     final colors = context.kiduna;
     final text = context.kidunaText;
     final invitation = ref.read(fieldControllerProvider).invitationResponse;
-    final name =
-        invitation?.recipientName ??
-        (_name.text.trim().isEmpty ? l10n.friend : _name.text.trim());
-    final link = invitation?.invitationLink ?? '';
-    final code = invitation?.code ?? '';
+    if (invitation == null) return const SizedBox.shrink();
+
+    final link = invitation.invitationLink;
+    final code = invitation.code;
+
     return Column(
       key: const ValueKey('review'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          l10n.invitationIntendedOnlyFor(name),
-          style: text.caption.copyWith(color: colors.cream, height: 1.5),
+        // Summary line
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+          decoration: BoxDecoration(
+            color: colors.gold.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: colors.gold.withValues(alpha: 0.2),
+            ),
+          ),
+          child: Text(
+            invitation.summary,
+            style: text.caption.copyWith(
+              color: colors.gold,
+              fontWeight: FontWeight.w600,
+              height: 1.4,
+            ),
+          ),
         ),
         const SizedBox(height: 14),
-        _InvitationEditor(
-          message: _message!,
-          editing: _editing,
-          onToggleEdit: () => setState(() => _editing = !_editing),
-          onCopy: () => _copy(l10n.invitationCopied, _message!.text),
-        ),
-        const SizedBox(height: 14),
+
+        // Invite URL
         _InvitationPartRow(
-          label: l10n.uniqueLink,
+          label: 'Invite URL',
           value: link,
-          action: l10n.copyLink,
-          onCopy: () => _copy(l10n.linkCopied, link),
+          action: 'Copy Link',
+          onCopy: () => _copy('Link copied', link),
         ),
         const SizedBox(height: 8),
+
+        // Code
         _InvitationPartRow(
-          label: l10n.kinshipCode,
+          label: 'Code',
           value: code,
-          action: l10n.copyCode,
-          onCopy: () => _copy(l10n.codeCopied, code),
+          action: 'Copy Code',
+          onCopy: () => _copy('Code copied', code),
         ),
+        const SizedBox(height: 14),
+
+        // Copy invite text button
+        Align(
+          alignment: Alignment.centerLeft,
+          child: FieldPrimaryButton(
+            label: 'Copy Invite Text',
+            onPressed: () => _copy('Invite text copied', invitation.shareText),
+          ),
+        ),
+
         if (_copyStatus != null) ...[
           const SizedBox(height: 8),
-          Text(_copyStatus!, style: text.label.copyWith(color: colors.mint)),
+          Text(
+            _copyStatus!,
+            style: text.caption.copyWith(color: colors.mint),
+          ),
         ],
       ],
     );
+  }
+
+  String _formatNumber(double n) {
+    if (n >= 1000000) {
+      return '${(n / 1000000).toStringAsFixed(n % 1000000 == 0 ? 0 : 1)}M';
+    }
+    if (n >= 1000) {
+      return '${(n / 1000).toStringAsFixed(n % 1000 == 0 ? 0 : 1)}K';
+    }
+    return n.toStringAsFixed(n == n.roundToDouble() ? 0 : 2);
   }
 }
 
@@ -338,25 +412,23 @@ class _FullWidth extends StatelessWidget {
   Widget build(BuildContext context) => child;
 }
 
-/// Expiration toggle: checkbox + number input + unit dropdown on one row.
-class _ExpirationInput extends StatelessWidget {
-  const _ExpirationInput({
-    required this.enabled,
-    required this.amount,
-    required this.unit,
-    required this.onEnabledChanged,
-    required this.onUnitChanged,
+/// A text input with an optional validation error below it.
+class _ValidatedInput extends StatelessWidget {
+  const _ValidatedInput({
+    required this.label,
+    required this.controller,
     this.error,
+    this.hint,
+    this.keyboardType,
+    this.inputFormatters,
   });
 
-  final bool enabled;
-  final TextEditingController amount;
-  final String unit;
-  final ValueChanged<bool> onEnabledChanged;
-  final ValueChanged<String> onUnitChanged;
+  final String label;
+  final TextEditingController controller;
   final String? error;
-
-  static const _units = ['minutes', 'hours', 'days', 'never'];
+  final String? hint;
+  final TextInputType? keyboardType;
+  final List<TextInputFormatter>? inputFormatters;
 
   @override
   Widget build(BuildContext context) {
@@ -365,97 +437,41 @@ class _ExpirationInput extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        FieldLabel(text: context.l10n.expiration),
+        FieldLabel(text: label),
         const SizedBox(height: 6),
-        Row(
-          children: [
-            SizedBox(
-              width: 18,
-              height: 16,
-              child: Checkbox(
-                value: enabled,
-                onChanged: (v) => onEnabledChanged(v ?? false),
-                activeColor: colors.sky,
-                side: BorderSide(color: colors.camel.withValues(alpha: 0.4)),
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                visualDensity: VisualDensity.compact,
+        SizedBox(
+          height: 37,
+          child: TextField(
+            controller: controller,
+            keyboardType: keyboardType,
+            inputFormatters: inputFormatters,
+            style: text.caption.copyWith(color: colors.text, height: 1.4),
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: text.caption.copyWith(
+                color: colors.muted.withValues(alpha: 0.5),
+                height: 1.4,
               ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 8,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: BorderSide(
+                  color: colors.camel.withValues(alpha: 0.24),
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: BorderSide(
+                  color: colors.camel.withValues(alpha: 0.24),
+                ),
+              ),
+              filled: true,
+              fillColor: const Color.fromRGBO(6, 3, 4, 0.66),
             ),
-            const SizedBox(width: 8),
-            if (!enabled)
-              Text(
-                'Never expires',
-                style: text.caption.copyWith(color: colors.muted, height: 1.4),
-              ),
-            if (enabled && unit != 'never') ...[
-              SizedBox(
-                width: 56,
-                height: 37,
-                child: TextField(
-                  controller: amount,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  textAlign: TextAlign.center,
-                  style: text.caption.copyWith(color: colors.text, height: 1.4),
-                  decoration: InputDecoration(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 8,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(6),
-                      borderSide: BorderSide(
-                        color: colors.camel.withValues(alpha: 0.24),
-                      ),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(6),
-                      borderSide: BorderSide(
-                        color: colors.camel.withValues(alpha: 0.24),
-                      ),
-                    ),
-                    filled: true,
-                    fillColor: const Color.fromRGBO(6, 3, 4, 0.66),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-            ],
-            if (enabled)
-              Container(
-                height: 37,
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                decoration: BoxDecoration(
-                  color: const Color.fromRGBO(6, 3, 4, 0.66),
-                  border: Border.all(
-                    color: colors.camel.withValues(alpha: 0.24),
-                  ),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: unit,
-                    dropdownColor: const Color.fromRGBO(30, 20, 12, 0.99),
-                    style: text.caption.copyWith(
-                      color: colors.text,
-                      height: 1.4,
-                    ),
-                    icon: Icon(
-                      Icons.arrow_drop_down,
-                      color: colors.muted,
-                      size: 18,
-                    ),
-                    items: [
-                      for (final u in _units)
-                        DropdownMenuItem(value: u, child: Text(u)),
-                    ],
-                    onChanged: (v) {
-                      if (v != null) onUnitChanged(v);
-                    },
-                  ),
-                ),
-              ),
-          ],
+          ),
         ),
         if (error != null) ...[
           const SizedBox(height: 4),
@@ -466,104 +482,105 @@ class _ExpirationInput extends StatelessWidget {
   }
 }
 
-class _InvitationEditor extends StatelessWidget {
-  const _InvitationEditor({
-    required this.message,
-    required this.editing,
-    required this.onToggleEdit,
-    required this.onCopy,
+/// Expiration input: number + unit dropdown (always visible, no checkbox).
+class _ExpirationInput extends StatelessWidget {
+  const _ExpirationInput({
+    required this.amount,
+    required this.unit,
+    required this.onUnitChanged,
+    this.error,
   });
 
-  final TextEditingController message;
-  final bool editing;
-  final VoidCallback onToggleEdit;
-  final VoidCallback onCopy;
+  final TextEditingController amount;
+  final String unit;
+  final ValueChanged<String> onUnitChanged;
+  final String? error;
+
+  static const _units = ['minutes', 'hours', 'days'];
 
   @override
   Widget build(BuildContext context) {
     final colors = context.kiduna;
     final text = context.kidunaText;
-    return Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: const Color.fromRGBO(6, 3, 4, 0.55),
-        border: Border.all(color: colors.camel.withValues(alpha: 0.22)),
-        borderRadius: BorderRadius.circular(7),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Container(
-            padding: const EdgeInsets.fromLTRB(11, 7, 8, 7),
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(color: colors.camel.withValues(alpha: 0.14)),
-              ),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    context.l10n.personalInvitation.toUpperCase(),
-                    style: text.label.copyWith(
-                      color: colors.gold,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.8,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        FieldLabel(text: 'Expiration *'),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            SizedBox(
+              width: 56,
+              height: 37,
+              child: TextField(
+                controller: amount,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                textAlign: TextAlign.center,
+                style: text.caption.copyWith(color: colors.text, height: 1.4),
+                decoration: InputDecoration(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 8,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    borderSide: BorderSide(
+                      color: colors.camel.withValues(alpha: 0.24),
                     ),
                   ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    borderSide: BorderSide(
+                      color: colors.camel.withValues(alpha: 0.24),
+                    ),
+                  ),
+                  filled: true,
+                  fillColor: const Color.fromRGBO(6, 3, 4, 0.66),
                 ),
-                _EditorIconButton(
-                  icon: Icons.edit_outlined,
-                  onPressed: onToggleEdit,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              height: 37,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              decoration: BoxDecoration(
+                color: const Color.fromRGBO(6, 3, 4, 0.66),
+                border: Border.all(
+                  color: colors.camel.withValues(alpha: 0.24),
                 ),
-                const SizedBox(width: 5),
-                _EditorIconButton(icon: Icons.copy_outlined, onPressed: onCopy),
-              ],
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: unit,
+                  dropdownColor: const Color.fromRGBO(30, 20, 12, 0.99),
+                  style: text.caption.copyWith(
+                    color: colors.text,
+                    height: 1.4,
+                  ),
+                  icon: Icon(
+                    Icons.arrow_drop_down,
+                    color: colors.muted,
+                    size: 18,
+                  ),
+                  items: [
+                    for (final u in _units)
+                      DropdownMenuItem(value: u, child: Text(u)),
+                  ],
+                  onChanged: (v) {
+                    if (v != null) onUnitChanged(v);
+                  },
+                ),
+              ),
             ),
-          ),
-          TextField(
-            controller: message,
-            readOnly: !editing,
-            maxLines: null,
-            minLines: 7,
-            style: text.caption.copyWith(
-              color: editing ? colors.text : colors.muted,
-              height: 1.6,
-            ),
-            decoration: const InputDecoration(
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.all(13),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _EditorIconButton extends StatelessWidget {
-  const _EditorIconButton({required this.icon, required this.onPressed});
-
-  final IconData icon;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.kiduna;
-    return SizedBox(
-      width: 30,
-      height: 30,
-      child: IconButton(
-        onPressed: onPressed,
-        padding: EdgeInsets.zero,
-        iconSize: 14,
-        style: IconButton.styleFrom(
-          backgroundColor: colors.sky.withValues(alpha: 0.05),
-          side: BorderSide(color: colors.sky.withValues(alpha: 0.24)),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+          ],
         ),
-        icon: Icon(icon, color: colors.sky),
-      ),
+        if (error != null) ...[
+          const SizedBox(height: 4),
+          Text(error!, style: TextStyle(color: colors.orange, fontSize: 11)),
+        ],
+      ],
     );
   }
 }
@@ -595,8 +612,14 @@ class _InvitationPartRow extends StatelessWidget {
       child: Row(
         children: [
           SizedBox(
-            width: 84,
-            child: Text(label, style: text.label.copyWith(color: colors.muted)),
+            width: 72,
+            child: Text(
+              label,
+              style: text.caption.copyWith(
+                color: colors.muted,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -604,9 +627,10 @@ class _InvitationPartRow extends StatelessWidget {
               value,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: text.label.copyWith(
+              style: text.caption.copyWith(
                 color: colors.cream,
                 fontFamily: 'monospace',
+                fontSize: 13,
               ),
             ),
           ),
@@ -622,7 +646,7 @@ class _InvitationPartRow extends StatelessWidget {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(5),
               ),
-              textStyle: text.label,
+              textStyle: text.caption,
             ),
             child: Text(action),
           ),

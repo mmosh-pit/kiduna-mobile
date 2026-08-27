@@ -9,6 +9,7 @@ import '../../../data/models/chat_message_model.dart';
 import '../../../data/models/sse_event.dart';
 import '../../../data/services/chat_service.dart';
 import '../../../features/auth/controllers/auth_controller.dart';
+import '../controllers/field_controller.dart';
 import 'ally_controller.dart';
 
 /// State for the Ki chat conversation thread.
@@ -78,6 +79,8 @@ class KiChatController extends Notifier<KiChatState> {
 
   String? get _presenceId => ref.read(allyControllerProvider).ally?.id;
   String? get _userWallet => ref.read(authControllerProvider).user?.wallet;
+  String? get _userId => ref.read(authControllerProvider).user?.id;
+  String? get _realmId => ref.read(fieldControllerProvider).currentRealmId;
 
   /// Load conversation history from the server.
   Future<void> loadHistory() async {
@@ -175,6 +178,8 @@ class KiChatController extends Notifier<KiChatState> {
         presenceId: presenceId,
         message: trimmed,
         userWallet: userWallet,
+        userId: _userId,
+        realmId: _realmId,
       );
 
       _subscription = stream.listen(
