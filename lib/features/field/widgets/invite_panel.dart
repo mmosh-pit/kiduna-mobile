@@ -5,7 +5,9 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../config/kiduna_motion.dart';
 import '../../../core/extensions/context_extensions.dart';
+import '../../../data/models/invitation_response.dart';
 import '../../../data/models/ki_topic.dart';
+import '../../ki_chat/controllers/ki_chat_controller.dart';
 import '../controllers/field_controller.dart';
 import '../data/field_fixtures.dart';
 import 'field_inputs.dart';
@@ -443,6 +445,18 @@ class _InvitePanelState extends ConsumerState<InvitePanel> {
             onPressed: () => _copy('Invite text copied', invitation.shareText),
           ),
         ),
+        const SizedBox(height: 14),
+
+        // ── Send via Email ──
+        _EmailSendSection(
+          invitation: invitation,
+          onCopyStatus: (msg) {
+            setState(() => _copyStatus = msg);
+            Future.delayed(const Duration(seconds: 3), () {
+              if (mounted) setState(() => _copyStatus = null);
+            });
+          },
+        ),
 
         if (_copyStatus != null) ...[
           const SizedBox(height: 8),
@@ -761,6 +775,236 @@ class _InvitationPartRow extends StatelessWidget {
             ),
             child: Text(action),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+
+/// Send invite via email using connected Google account.
+/// If Google is not connected, shows a "Connect Google" prompt.
+class _EmailSendSection extends ConsumerStatefulWidget {
+  const _EmailSendSection({
+    required this.invitation,
+    required this.onCopyStatus,
+  });
+
+  final InvitationResponse invitation;
+  final ValueChanged<String> onCopyStatus;
+
+  @override
+  ConsumerState<_EmailSendSection> createState() => _EmailSendSectionState();
+}
+
+class _EmailSendSectionState extends ConsumerState<_EmailSendSection> {
+  final TextEditingController _emailController = TextEditingController();
+  bool _sending = false;
+  String? _sendResult;
+  bool _sendSuccess = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  bool get _isGoogleConnected {
+    final tools = ref.read(fieldControllerProvider).savedTools;
+    return tools.any((t) => t.toolName == 'google' && t.isActive);
+  }
+
+  Future<void> _sendEmail() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty || !email.contains('@')) {
+      setState(() {
+        _sendResult = 'Please enter a valid email address.';
+        _sendSuccess = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _sending = true;
+      _sendResult = null;
+    });
+
+    try {
+      final invitation = widget.invitation;
+      final kiChat = ref.read(kiChatControllerProvider.notifier);
+
+      // Compose a message for Ki to send the invite email
+      final message =
+          'Send an invitation email to $email. '
+          'Subject: You\'re invited to join ${invitation.realmName} on Kiduna. '
+          'Body: You have been invited to join ${invitation.realmName} on Kiduna! '
+          'Your role: ${invitation.role}. '
+          '${invitation.kidunaPerPerson > 0 ? '${InvitationResponse.formatKiduna(invitation.kidunaPerPerson)} KIDUNA has been sponsored for you. ' : ''}'
+          'Use this link to join: ${invitation.invitationLink} '
+          'Or use invitation code: ${invitation.code}';
+
+      kiChat.sendMessage(message);
+
+      if (!mounted) return;
+      setState(() {
+        _sending = false;
+        _sendResult = 'Email request sent to Ki. Check the chat for confirmation.';
+        _sendSuccess = true;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _sending = false;
+        _sendResult = 'Failed to send. Please try again.';
+        _sendSuccess = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.kiduna;
+    final text = context.kidunaText;
+
+    // Watch tools to react to connection changes
+    ref.watch(fieldControllerProvider.select((s) => s.savedTools));
+
+    final connected = _isGoogleConnected;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color.fromRGBO(6, 3, 4, 0.4),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: colors.camel.withValues(alpha: 0.14)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.email_outlined, size: 16, color: colors.gold),
+              const SizedBox(width: 8),
+              Text(
+                'Send via Email',
+                style: text.caption.copyWith(
+                  color: colors.gold,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          if (!connected) ...[
+            // Google not connected — show connect prompt
+            Text(
+              'Connect your Google account to send invitations via email.',
+              style: text.caption.copyWith(color: colors.muted, height: 1.4),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: () {
+                ref.read(fieldControllerProvider.notifier).connectGoogleOAuth();
+              },
+              icon: Icon(Icons.link, size: 16, color: colors.sky),
+              label: Text('Connect Google',
+                  style: text.caption.copyWith(color: colors.sky)),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(0, 34),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                side: BorderSide(color: colors.sky.withValues(alpha: 0.3)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6)),
+              ),
+            ),
+          ] else ...[
+            // Google connected — show email input + send
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 37,
+                    child: TextField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      style: text.caption.copyWith(
+                          color: colors.text, height: 1.4),
+                      decoration: InputDecoration(
+                        hintText: 'Recipient email address',
+                        hintStyle: text.caption.copyWith(
+                          color: colors.muted.withValues(alpha: 0.5),
+                          height: 1.4,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 8,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(6),
+                          borderSide: BorderSide(
+                            color: colors.camel.withValues(alpha: 0.24),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(6),
+                          borderSide: BorderSide(
+                            color: colors.camel.withValues(alpha: 0.24),
+                          ),
+                        ),
+                        filled: true,
+                        fillColor: const Color.fromRGBO(6, 3, 4, 0.66),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _sending
+                    ? SizedBox(
+                        width: 34,
+                        height: 34,
+                        child: Center(
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: colors.sky,
+                            ),
+                          ),
+                        ),
+                      )
+                    : OutlinedButton(
+                        onPressed: _sendEmail,
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(0, 37),
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 14),
+                          foregroundColor: colors.skyButtonInk,
+                          backgroundColor: colors.sky,
+                          side: BorderSide.none,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(6)),
+                          textStyle: text.caption
+                              .copyWith(fontWeight: FontWeight.w700),
+                        ),
+                        child: const Text('Send'),
+                      ),
+              ],
+            ),
+
+            if (_sendResult != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _sendResult!,
+                style: text.caption.copyWith(
+                  color: _sendSuccess ? colors.mint : colors.orange,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ],
         ],
       ),
     );

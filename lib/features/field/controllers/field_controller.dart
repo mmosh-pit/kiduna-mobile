@@ -1272,6 +1272,8 @@ class FieldController extends Notifier<FieldState> {
   /// backend handles the entire flow via `/api/oauth/google/init`.
   ///
   /// After the popup completes, [fetchSavedTools] refreshes the list.
+  /// On web, WidgetsBindingObserver detects tab focus return.
+  /// On desktop, we poll every 5s for up to 120s to detect the new connection.
   Future<void> connectGoogleOAuth() async {
     final wallet = ref.read(authControllerProvider).user?.wallet;
     if (wallet == null || wallet.isEmpty) {
@@ -1281,6 +1283,11 @@ class FieldController extends Notifier<FieldState> {
       );
       return;
     }
+
+    // Count connected Google tools before OAuth
+    final beforeCount = state.savedTools
+        .where((t) => t.toolName == 'google' && t.isActive)
+        .length;
 
     final baseUrl = Env.apiBaseUrl;
     final oauthUrl = Uri.parse(
@@ -1299,14 +1306,52 @@ class FieldController extends Notifier<FieldState> {
 
       AppLogger.info('Google OAuth popup opened', tag: 'FieldController');
 
-      // No delay — ConnectionsPanel detects tab focus return via
-      // WidgetsBindingObserver and calls fetchSavedTools automatically.
+      // Poll for connection changes — works on all platforms (web + desktop).
+      // Stops after detecting a new connection or after 120s timeout.
+      _startOAuthPoll(beforeCount);
     } catch (e) {
       AppLogger.warning(
         'Google OAuth launch failed: $e',
         tag: 'FieldController',
       );
     }
+  }
+
+  Timer? _oauthPollTimer;
+
+  void _startOAuthPoll(int beforeCount) {
+    _oauthPollTimer?.cancel();
+    var attempts = 0;
+    const maxAttempts = 24; // 24 × 5s = 120s
+
+    _oauthPollTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
+      attempts++;
+      if (attempts > maxAttempts) {
+        timer.cancel();
+        _oauthPollTimer = null;
+        AppLogger.info(
+          'OAuth poll timed out after ${maxAttempts * 5}s',
+          tag: 'FieldController',
+        );
+        return;
+      }
+
+      try {
+        await fetchSavedTools();
+        final afterCount = state.savedTools
+            .where((t) => t.toolName == 'google' && t.isActive)
+            .length;
+
+        if (afterCount > beforeCount) {
+          timer.cancel();
+          _oauthPollTimer = null;
+          AppLogger.info(
+            'Google OAuth connection detected after ${attempts * 5}s',
+            tag: 'FieldController',
+          );
+        }
+      } catch (_) {}
+    });
   }
 
   /// Open the credential form for a specific tool.
