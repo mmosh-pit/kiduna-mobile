@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kiduna_mobile/data/models/chat_message_model.dart';
+import 'package:kiduna/data/models/chat_message_model.dart';
 
 void main() {
   const json = {

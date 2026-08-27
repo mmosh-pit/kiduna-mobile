@@ -1,5 +1,5 @@
-
 import 'package:dio/dio.dart';
+
 import '../../../../core/network/api_client.dart';
 
 /// One seat as seen in the lobby.
@@ -74,22 +74,21 @@ class LobbyRoom {
   bool get isLobby => status == 'lobby';
 
   factory LobbyRoom.fromJson(Map<String, dynamic> j) => LobbyRoom(
-        id: j['id'] as String,
-        code: j['code'] as String,
-        game: j['game'] as String? ?? 'medieval_poker',
-        status: j['status'] as String,
-        seatCount: j['seatCount'] as int,
-        wsUrl: j['wsUrl'] as String,
-        createdBy: j['createdBy'] as String,
-        humans: j['humans'] as int? ?? 0,
-        timedLevels:
-            (j['config'] as Map<String, dynamic>?)?['timedLevels'] as bool? ??
-                true,
-        seats: [
-          for (final s in (j['seats'] as List? ?? const []))
-            LobbySeat.fromJson(s as Map<String, dynamic>)
-        ],
-      );
+    id: j['id'] as String,
+    code: j['code'] as String,
+    game: j['game'] as String? ?? 'medieval_poker',
+    status: j['status'] as String,
+    seatCount: j['seatCount'] as int,
+    wsUrl: j['wsUrl'] as String,
+    createdBy: j['createdBy'] as String,
+    humans: j['humans'] as int? ?? 0,
+    timedLevels:
+        (j['config'] as Map<String, dynamic>?)?['timedLevels'] as bool? ?? true,
+    seats: [
+      for (final s in (j['seats'] as List? ?? const []))
+        LobbySeat.fromJson(s as Map<String, dynamic>),
+    ],
+  );
 }
 
 /// What a create/join returns: the room, your seat, and the connection details
@@ -129,13 +128,13 @@ class LeaderboardEntry {
   int get winRate => games == 0 ? 0 : ((wins / games) * 100).round();
 
   factory LeaderboardEntry.fromJson(Map<String, dynamic> j) => LeaderboardEntry(
-        userId: j['userId'] as String? ?? '',
-        games: j['games'] as int? ?? 0,
-        wins: j['wins'] as int? ?? 0,
-        username: j['username'] as String?,
-        name: j['name'] as String?,
-        picture: j['picture'] as String?,
-      );
+    userId: j['userId'] as String? ?? '',
+    games: j['games'] as int? ?? 0,
+    wins: j['wins'] as int? ?? 0,
+    username: j['username'] as String?,
+    name: j['name'] as String?,
+    picture: j['picture'] as String?,
+  );
 }
 
 /// The caller's own aggregate.
@@ -144,10 +143,8 @@ class PlayerStats {
   final int wins;
   const PlayerStats({required this.games, required this.wins});
   int get winRate => games == 0 ? 0 : ((wins / games) * 100).round();
-  factory PlayerStats.fromJson(Map<String, dynamic> j) => PlayerStats(
-        games: j['games'] as int? ?? 0,
-        wins: j['wins'] as int? ?? 0,
-      );
+  factory PlayerStats.fromJson(Map<String, dynamic> j) =>
+      PlayerStats(games: j['games'] as int? ?? 0, wins: j['wins'] as int? ?? 0);
 }
 
 /// The caller's public-matchmaking status.
@@ -169,6 +166,14 @@ class LobbyException implements Exception {
   String toString() => message;
 }
 
+/// Body for a POST that carries no payload.
+///
+/// Both Dio instances set `Content-Type: application/json` on every request, so
+/// a POST with no body reaches Fastify as JSON-typed-but-empty and is rejected
+/// with FST_ERR_CTP_EMPTY_JSON_BODY. Sending an empty object satisfies the
+/// parser without changing what the route reads.
+const Map<String, dynamic> _noBody = <String, dynamic>{};
+
 /// REST client for the Node lobby (`/games/*`). Uses the app's [DioClient],
 /// which targets `BACKEND_URL` and attaches the user's bearer token, so the
 /// caller must already be authenticated.
@@ -177,31 +182,41 @@ class LobbyClient {
   LobbyClient({Dio? dio}) : _dio = dio ?? ApiClient.instance.dio;
 
   Future<LobbyTicket> createRoom({int? seats, bool? timedLevels}) async {
-    final res = await _call(() => _dio.post('/games/rooms', data: {
+    final res = await _call(
+      () => _dio.post(
+        '/games/rooms',
+        data: {
           if (seats != null) 'seats': seats,
           if (timedLevels != null) 'timedLevels': timedLevels,
-        }));
+        },
+      ),
+    );
     return _ticketOf(res);
   }
 
   Future<LobbyTicket> joinRoom(String code) async {
-    final res = await _call(() => _dio.post('/games/rooms/$code/join'));
+    final res = await _call(
+      () => _dio.post('/games/rooms/$code/join', data: _noBody),
+    );
     return _ticketOf(res);
   }
 
   Future<LobbyRoom> setReady(String code, bool ready) async {
-    final res =
-        await _call(() => _dio.post('/games/rooms/$code/ready', data: {'ready': ready}));
+    final res = await _call(
+      () => _dio.post('/games/rooms/$code/ready', data: {'ready': ready}),
+    );
     return LobbyRoom.fromJson(_data(res)['room'] as Map<String, dynamic>);
   }
 
   Future<LobbyRoom> start(String code) async {
-    final res = await _call(() => _dio.post('/games/rooms/$code/start'));
+    final res = await _call(
+      () => _dio.post('/games/rooms/$code/start', data: _noBody),
+    );
     return LobbyRoom.fromJson(_data(res)['room'] as Map<String, dynamic>);
   }
 
   Future<void> leave(String code) async {
-    await _call(() => _dio.post('/games/rooms/$code/leave'));
+    await _call(() => _dio.post('/games/rooms/$code/leave', data: _noBody));
   }
 
   Future<LobbyRoom> getRoom(String code) async {
@@ -210,8 +225,9 @@ class LobbyClient {
   }
 
   // ── Public matchmaking ─────────────────────────────────────────────────
-  Future<QueueStatus> enqueue() async =>
-      _queueStatusOf(await _call(() => _dio.post('/games/queue')));
+  Future<QueueStatus> enqueue() async => _queueStatusOf(
+    await _call(() => _dio.post('/games/queue', data: _noBody)),
+  );
 
   Future<QueueStatus> queueStatus() async =>
       _queueStatusOf(await _call(() => _dio.get('/games/queue')));
@@ -225,7 +241,8 @@ class LobbyClient {
     final res = await _call(() => _dio.get('/games/leaderboard'));
     final list = _data(res)['leaderboard'] as List? ?? const [];
     return [
-      for (final e in list) LeaderboardEntry.fromJson(e as Map<String, dynamic>)
+      for (final e in list)
+        LeaderboardEntry.fromJson(e as Map<String, dynamic>),
     ];
   }
 

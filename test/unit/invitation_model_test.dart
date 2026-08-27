@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kiduna_mobile/data/models/invitation_request.dart';
-import 'package:kiduna_mobile/data/models/invitation_response.dart';
+import 'package:kiduna/data/models/invitation_request.dart';
+import 'package:kiduna/data/models/invitation_response.dart';
 
 void main() {
   group('InvitationRequest', () {

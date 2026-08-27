@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kiduna_mobile/features/field/data/design_persona.dart';
-import 'package:kiduna_mobile/features/field/data/realm_atlas.dart';
+import 'package:kiduna/features/field/data/design_persona.dart';
+import 'package:kiduna/features/field/data/realm_atlas.dart';
 
 void main() {
   group('DesignPersona', () {

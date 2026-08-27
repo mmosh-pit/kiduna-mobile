@@ -1,11 +1,11 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/errors/exceptions.dart';
 import '../../../core/extensions/context_extensions.dart';
+import '../../../config/web_dashboard.dart';
 import '../../../core/utils/logger.dart';
 import '../../../data/local/secure_storage.dart';
 import '../../../data/services/auth_service.dart';
@@ -129,13 +129,12 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   void _navigateToDashboard() {
-    final destination = kIsWeb
+    final destination = sendWebUsersToDownload
         ? const DownloadAppScreen()
         : const DashboardScreen();
     Navigator.of(context).pushReplacement(
       PageRouteBuilder<void>(
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            destination,
+        pageBuilder: (context, animation, secondaryAnimation) => destination,
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(opacity: animation, child: child);
         },
@@ -431,7 +430,8 @@ class _SignupScreenState extends State<SignupScreen> {
       if (!mounted) return;
 
       if (preview['valid'] != true) {
-        final reason = preview['reason'] as String? ?? 'Invalid invitation code.';
+        final reason =
+            preview['reason'] as String? ?? 'Invalid invitation code.';
         _onError(reason);
         setState(() => _isLoading = false);
         return;
@@ -452,7 +452,10 @@ class _SignupScreenState extends State<SignupScreen> {
         );
         _loadTokenPriceAndGoToStep7();
       } else if (result['already_member'] == true) {
-        AppLogger.info('Already a member — proceeding to token purchase', tag: 'Auth');
+        AppLogger.info(
+          'Already a member — proceeding to token purchase',
+          tag: 'Auth',
+        );
         _loadTokenPriceAndGoToStep7();
       } else {
         _onError('Failed to join. Please try again.');
@@ -509,8 +512,9 @@ class _SignupScreenState extends State<SignupScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final result =
-          await AuthService.instance.purchaseKiduna(usdcAmount: usdcAmount);
+      final result = await AuthService.instance.purchaseKiduna(
+        usdcAmount: usdcAmount,
+      );
       if (!mounted) return;
 
       final stripeUrl = result['stripeUrl'] as String?;
@@ -541,7 +545,11 @@ class _SignupScreenState extends State<SignupScreen> {
       if (!mounted) return;
       _onError('No internet connection.');
     } catch (e, st) {
-      AppLogger.error('Unexpected error in purchaseKiduna', error: e, stackTrace: st);
+      AppLogger.error(
+        'Unexpected error in purchaseKiduna',
+        error: e,
+        stackTrace: st,
+      );
       if (!mounted) return;
       _onError('Something went wrong. Please try again.');
     } finally {

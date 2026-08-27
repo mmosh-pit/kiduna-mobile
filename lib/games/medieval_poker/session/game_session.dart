@@ -15,8 +15,11 @@ class HandResultView {
   /// for context and potential differentiation of the message.
   final bool inHand;
   final String detail;
-  const HandResultView(
-      {required this.won, required this.inHand, required this.detail});
+  const HandResultView({
+    required this.won,
+    required this.inHand,
+    required this.detail,
+  });
 }
 
 /// One row of the final standings.
@@ -27,10 +30,54 @@ class StandingView {
 
   /// Display name for the seat (real player name, or "Seat N" for AI).
   final String? name;
-  const StandingView(this.seat, this.stack, {this.name});
+
+  /// 1-based finishing place; 1 is the champion. Busted players all end on or
+  /// near zero chips, so [stack] alone cannot order them — this can.
+  final int rank;
+
+  /// Hand this seat busted on, or null if they were still in at the end.
+  final int? eliminatedAtHand;
+
+  const StandingView(
+    this.seat,
+    this.stack, {
+    this.name,
+    this.rank = 0,
+    this.eliminatedAtHand,
+  });
+
+  /// Whether this seat played to the finish rather than busting out.
+  bool get survived => eliminatedAtHand == null;
 
   /// What to show for this row — the player name when known, else the seat.
   String get label => (name != null && name!.isNotEmpty) ? name! : 'Seat $seat';
+}
+
+/// Where a finished table sat in a tournament, when it was one.
+///
+/// Null on a casual table. Populated by the tournament layer so the standings
+/// can say "you advance" instead of offering a rematch that does not exist.
+@immutable
+class TournamentOutcomeView {
+  /// Human label for the round just played, e.g. "Round 1", "Final Table".
+  final String roundLabel;
+
+  /// Whether the viewer came out of this table still in the tournament.
+  final bool advanced;
+
+  /// Where they advance to. Null when this was the final table, or when they
+  /// did not advance.
+  final String? nextRoundLabel;
+
+  /// The viewer won the whole tournament, not just this table.
+  final bool isChampion;
+
+  const TournamentOutcomeView({
+    required this.roundLabel,
+    required this.advanced,
+    this.nextRoundLabel,
+    this.isChampion = false,
+  });
 }
 
 /// The end-of-game result.
@@ -40,11 +87,16 @@ class GameOverView {
   final int? winnerSeat;
   final String detail;
   final List<StandingView> standings;
+
+  /// Set only when this table was one heat of a tournament.
+  final TournamentOutcomeView? tournament;
+
   const GameOverView({
     required this.youWon,
     required this.winnerSeat,
     required this.detail,
     required this.standings,
+    this.tournament,
   });
 }
 

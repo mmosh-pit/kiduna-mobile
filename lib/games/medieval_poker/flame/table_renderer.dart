@@ -5,9 +5,11 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
 import 'package:medieval_poker_engine/protocol.dart';
+
 import '../session/card_zoom.dart';
 import '../session/game_session.dart';
 import 'components/snapshot_seat_component.dart';
+import 'seat_ring.dart';
 import 'components/card_component.dart';
 import 'components/table_component.dart';
 import 'poker_assets.dart';
@@ -45,7 +47,10 @@ class TableRenderer extends FlameGame {
 
     for (int i = 0; i < 5; i++) {
       final c = ZoomableCardComponent(
-          size: Vector2(46, 64), atlas: _cardAtlas, cardZoom: cardZoom);
+        size: Vector2(46, 64),
+        atlas: _cardAtlas,
+        cardZoom: cardZoom,
+      );
       _board.add(c);
       await add(c);
     }
@@ -155,12 +160,19 @@ class TableRenderer extends FlameGame {
       );
     }
 
+    final ring = SeatRing(
+      centreX: cx,
+      centreY: cy,
+      radiusX: ringX,
+      radiusY: ringY,
+      viewerDrop: fy * 0.52,
+    );
+
     final me = _seats[session.viewerSeat];
-    if (me != null) place(me, cx, cy + fy * 0.52);
+    if (me != null) place(me, ring.viewer.x, ring.viewer.y);
     for (int k = 0; k < m; k++) {
-      final angle = (90 + (k + 1) * 360 / (m + 1)) * pi / 180.0;
-      place(_seats[others[k]]!, cx + ringX * cos(angle),
-          cy + ringY * sin(angle));
+      final slot = ring.opponent(k, m);
+      place(_seats[others[k]]!, slot.x, slot.y);
     }
 
     final cardW = 46.0 * scale;

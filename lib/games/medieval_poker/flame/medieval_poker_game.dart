@@ -6,10 +6,12 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
 import 'package:medieval_poker_engine/medieval_poker_engine.dart';
+
 import 'components/card_component.dart';
 import 'components/seat_component.dart';
 import 'components/table_component.dart';
 import 'poker_assets.dart';
+import 'seat_ring.dart';
 
 /// Immutable snapshot the Flutter overlay renders. Rebuilt on every state
 /// change and published through [MedievalPokerGame.view].
@@ -118,8 +120,11 @@ class HandResult {
   final bool won;
   final bool folded; // human wasn't in the showdown
   final String detail; // e.g. "won 60 with a Flush" or "The Rogue won 40"
-  const HandResult(
-      {required this.won, required this.folded, required this.detail});
+  const HandResult({
+    required this.won,
+    required this.folded,
+    required this.detail,
+  });
 }
 
 /// One playable Power Card offered to the human.
@@ -147,8 +152,13 @@ class DeckCardInfo {
   final String description;
   final String group; // 'Neutral' | 'Class' | 'Court'
   final String timing; // 'Setup' | 'Round' | 'Showdown' | 'Counter'
-  const DeckCardInfo(this.templateId, this.name, this.description, this.group,
-      this.timing);
+  const DeckCardInfo(
+    this.templateId,
+    this.name,
+    this.description,
+    this.group,
+    this.timing,
+  );
 }
 
 /// A labelled section of the Power Deck viewer (In Hand / Draw Deck / …).
@@ -171,8 +181,9 @@ class MedievalPokerGame extends FlameGame {
   late PokerGame engine;
   late AiBrain _ai;
 
-  final ValueNotifier<PokerViewState> view =
-      ValueNotifier(const PokerViewState(banner: 'Shuffling up...'));
+  final ValueNotifier<PokerViewState> view = ValueNotifier(
+    const PokerViewState(banner: 'Shuffling up...'),
+  );
   final ValueNotifier<List<String>> log = ValueNotifier(const []);
 
   /// Short label for the current stage (ante level / Sudden Death).
@@ -406,7 +417,8 @@ class MedievalPokerGame extends FlameGame {
     }
     _syncSeats(); // shows the D badge on the dealer
     view.value = PokerViewState(
-      banner: '🂡 Cut for the deal — ${dealer.name} '
+      banner:
+          '🂡 Cut for the deal — ${dealer.name} '
           '${dealer.isHuman ? 'deal' : 'deals'} first',
     );
     await _pause(2400);
@@ -420,10 +432,10 @@ class MedievalPokerGame extends FlameGame {
   };
 
   void _publishDeckBuild(PokerPlayer human) {
-    final neutralIds =
-        PowerCards.standard.map((c) => c.templateId).toSet();
-    final classIds =
-        ClassCards.forClass(human.personality).map((c) => c.templateId).toSet();
+    final neutralIds = PowerCards.standard.map((c) => c.templateId).toSet();
+    final classIds = ClassCards.forClass(human.personality)
+        .map((c) => c.templateId)
+        .toSet();
     final pool = <DeckCardInfo>[
       for (final c in engine.deckCandidatesFor(human))
         DeckCardInfo(
@@ -433,8 +445,8 @@ class MedievalPokerGame extends FlameGame {
           neutralIds.contains(c.templateId)
               ? 'Neutral'
               : classIds.contains(c.templateId)
-                  ? 'Class'
-                  : 'Court',
+              ? 'Class'
+              : 'Court',
           _timingLabel[c.timing.name] ?? c.timing.name,
         ),
     ];
@@ -516,12 +528,14 @@ class MedievalPokerGame extends FlameGame {
     const personalities = AiPersonality.values;
     for (int i = 0; i < opponentCount; i++) {
       final personality = personalities[i % personalities.length];
-      players.add(PokerPlayer(
-        seat: i + 1,
-        name: personality.title,
-        stack: config.startingStack,
-        personality: personality,
-      ));
+      players.add(
+        PokerPlayer(
+          seat: i + 1,
+          name: personality.title,
+          stack: config.startingStack,
+          personality: personality,
+        ),
+      );
     }
     engine = PokerGame(
       config: config,
@@ -562,8 +576,9 @@ class MedievalPokerGame extends FlameGame {
       return;
     }
     _levelElapsed += dt;
-    final remaining =
-        (config.levelDurationSeconds - _levelElapsed).ceil().clamp(0, 1 << 30);
+    final remaining = (config.levelDurationSeconds - _levelElapsed)
+        .ceil()
+        .clamp(0, 1 << 30);
     if (remaining != levelClock.value) levelClock.value = remaining;
     if (_levelElapsed >= config.levelDurationSeconds) {
       _levelElapsed = 0;
@@ -595,23 +610,31 @@ class MedievalPokerGame extends FlameGame {
     final t = _seats.length;
     const topReserve = 46.0;
     const bottomReserve = 92.0;
+
+    final ring = SeatRing(
+      centreX: cx,
+      centreY: cy,
+      radiusX: ringX,
+      radiusY: ringY,
+      viewerDrop: fy * 0.52, // lower-inner felt, above the bottom overlays
+    );
+
+    // Counted rather than derived from the seat index, so the layout does not
+    // depend on the human being seat 0.
+    final opponentTotal = _seats.where((s) => !s.player.isHuman).length;
+    var opponentIndex = 0;
+
     for (int i = 0; i < t; i++) {
       final seat = _seats[i];
       final hw = seat.width / 2;
       final hh = seat.height / 2;
-      double sx;
-      double sy;
-      if (seat.player.isHuman) {
-        sx = cx;
-        sy = cy + fy * 0.52; // lower-inner felt, above the bottom overlays
-      } else {
-        final angle = (90 + i * 360 / t) * pi / 180.0;
-        sx = cx + ringX * cos(angle);
-        sy = cy + ringY * sin(angle);
-      }
-      sx = sx.clamp(hw + 4, w - hw - 4);
-      sy = sy.clamp(topReserve + hh, h - bottomReserve - hh);
-      seat.position = Vector2(sx, sy);
+      final slot = seat.player.isHuman
+          ? ring.viewer
+          : ring.opponent(opponentIndex++, opponentTotal);
+      seat.position = Vector2(
+        slot.x.clamp(hw + 4, w - hw - 4),
+        slot.y.clamp(topReserve + hh, h - bottomReserve - hh),
+      );
     }
 
     // Community row + pot, centred on the felt.
@@ -652,8 +675,12 @@ class MedievalPokerGame extends FlameGame {
   List<DeckSection> powerDeckView() {
     final h = engine.players.firstWhere((p) => p.isHuman);
     DeckCardInfo info(PowerCard c) => DeckCardInfo(
-        c.templateId, c.name, c.description, '',
-        _timingLabel[c.timing.name] ?? c.timing.name);
+      c.templateId,
+      c.name,
+      c.description,
+      '',
+      _timingLabel[c.timing.name] ?? c.timing.name,
+    );
     List<DeckCardInfo> sorted(List<PowerCard> cs) =>
         cs.map(info).toList()..sort((a, b) => a.name.compareTo(b.name));
     return [
@@ -691,9 +718,9 @@ class MedievalPokerGame extends FlameGame {
       _syncSeats();
       _syncBoard();
       _publishThinking();
-      await _pause(engine.inSuddenDeath && engine.suddenDeathHand == 1
-          ? 1600
-          : 500);
+      await _pause(
+        engine.inSuddenDeath && engine.suddenDeathHand == 1 ? 1600 : 500,
+      );
       if (token != _loopToken) return;
 
       await _setupWindow(token);
@@ -739,8 +766,9 @@ class MedievalPokerGame extends FlameGame {
     }
 
     final awards = engine.settle();
-    final winners =
-        awards.isNotEmpty ? awards.first.winners.toSet() : <PokerPlayer>{};
+    final winners = awards.isNotEmpty
+        ? awards.first.winners.toSet()
+        : <PokerPlayer>{};
     engine.resolveShowdown(winners);
     _syncSeats(revealAll: true);
     _syncBoard();
@@ -869,13 +897,10 @@ class MedievalPokerGame extends FlameGame {
       int? pick;
       final needsPick = engine.itemPick(human, item, mode);
       if (needsPick != null) {
-        pick = await _humanItemMode(
-          needsPick.prompt,
-          [
-            ...needsPick.options,
-            if (needsPick.optional) 'None',
-          ],
-        );
+        pick = await _humanItemMode(needsPick.prompt, [
+          ...needsPick.options,
+          if (needsPick.optional) 'None',
+        ]);
         if (token != _loopToken) return;
         // The trailing "None" option (optional picks) maps to a decline (-1).
         if (needsPick.optional && pick == needsPick.options.length) pick = -1;
@@ -921,7 +946,10 @@ class MedievalPokerGame extends FlameGame {
   }
 
   Future<void> _playAiPower(
-      List<PowerCard> plays, PokerPlayer p, int token) async {
+    List<PowerCard> plays,
+    PokerPlayer p,
+    int token,
+  ) async {
     for (final card in plays) {
       if (token != _loopToken || p.folded) return;
       await _playPowerCardWithCounters(p, card, token);
@@ -961,7 +989,8 @@ class MedievalPokerGame extends FlameGame {
         powerTitle: 'Showdown',
         powerDismissLabel: 'Done',
         powerOptions: [
-          for (final c in options) PowerOption(c.name, c.description, c.templateId),
+          for (final c in options)
+            PowerOption(c.name, c.description, c.templateId),
         ],
       );
       final choice = await _awaitPowerChoice();
@@ -1010,7 +1039,8 @@ class MedievalPokerGame extends FlameGame {
       powerTitle: 'Just Dealt',
       powerDismissLabel: 'Pass',
       powerOptions: [
-        for (final c in options) PowerOption(c.name, c.description, c.templateId),
+        for (final c in options)
+          PowerOption(c.name, c.description, c.templateId),
       ],
     );
     final choice = await _awaitPowerChoice();
@@ -1036,7 +1066,10 @@ class MedievalPokerGame extends FlameGame {
   /// Play [card]: pick a target if needed, propose it, run the counter window
   /// (other players may respond, forming a LIFO chain), then resolve.
   Future<void> _playPowerCardWithCounters(
-      PokerPlayer actor, PowerCard card, int token) async {
+    PokerPlayer actor,
+    PowerCard card,
+    int token,
+  ) async {
     PokerPlayer? target;
     if (engine.cardNeedsPlayerTarget(card)) {
       target = actor.isHuman
@@ -1152,7 +1185,8 @@ class MedievalPokerGame extends FlameGame {
       powerTitle: 'Counter — ${top.card.name}',
       powerDismissLabel: 'Pass',
       powerOptions: [
-        for (final c in options) PowerOption(c.name, c.description, c.templateId),
+        for (final c in options)
+          PowerOption(c.name, c.description, c.templateId),
       ],
     );
     final choice = await _awaitPowerChoice();
@@ -1173,7 +1207,9 @@ class MedievalPokerGame extends FlameGame {
       targetOptions: [
         for (final t in targets)
           TargetOption(
-              t.name, '${t.stack} chips${t.tilted ? '  ·  Tilted' : ''}'),
+            t.name,
+            '${t.stack} chips${t.tilted ? '  ·  Tilted' : ''}',
+          ),
       ],
     );
     final idx = await _awaitTargetChoice();
@@ -1249,7 +1285,8 @@ class MedievalPokerGame extends FlameGame {
       showPower: true,
       powerTitle: '${timing.label} Power Cards',
       powerOptions: [
-        for (final c in options) PowerOption(c.name, c.description, c.templateId),
+        for (final c in options)
+          PowerOption(c.name, c.description, c.templateId),
       ],
     );
   }
@@ -1272,8 +1309,9 @@ class MedievalPokerGame extends FlameGame {
 
   void _publishResult(List<PotAward> awards) {
     final text = awards
-        .map((a) =>
-            '${a.winners.map((w) => w.name).join(', ')} win ${a.amount}')
+        .map(
+          (a) => '${a.winners.map((w) => w.name).join(', ')} win ${a.amount}',
+        )
         .join('   ·   ');
     view.value = PokerViewState(banner: text, pot: 0);
 
@@ -1295,19 +1333,17 @@ class MedievalPokerGame extends FlameGame {
     String detail;
     if (humanWon) {
       final hand = human.showdownHand?.toString();
-      detail = 'You won $humanTotalWon'
+      detail =
+          'You won $humanTotalWon'
           '${hand != null ? ' with a $hand' : ''}';
     } else if (main != null) {
-      detail = '${main.winners.map((w) => w.name).join(', ')} '
+      detail =
+          '${main.winners.map((w) => w.name).join(', ')} '
           'won the ${main.amount} pot';
     } else {
       detail = '';
     }
-    handResult.value = HandResult(
-      won: humanWon,
-      folded: false,
-      detail: detail,
-    );
+    handResult.value = HandResult(won: humanWon, folded: false, detail: detail);
   }
 
   void _publishGameOver() {
@@ -1322,7 +1358,8 @@ class MedievalPokerGame extends FlameGame {
     } else if (human.eliminated) {
       text = 'Defeated. Your coffers are empty.';
     } else {
-      text = '${winner?.name ?? 'A rival'} wins Sudden Death on the chip count.';
+      text =
+          '${winner?.name ?? 'A rival'} wins Sudden Death on the chip count.';
     }
     view.value = PokerViewState(gameOver: true, won: won, resultText: text);
   }

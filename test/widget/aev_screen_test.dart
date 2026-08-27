@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kiduna_mobile/app/routes.dart';
-import 'package:kiduna_mobile/config/theme.dart';
-import 'package:kiduna_mobile/features/field/data/field_fixtures.dart';
-import 'package:kiduna_mobile/features/field/screens/aev_screen.dart';
-import 'package:kiduna_mobile/features/field/widgets/enamel_icon.dart';
-import 'package:kiduna_mobile/l10n/app_localizations.dart';
-import 'package:kiduna_mobile/shared/widgets/app_header.dart';
+import 'package:kiduna/app/routes.dart';
+import 'package:kiduna/config/theme.dart';
+import 'package:kiduna/features/field/data/field_fixtures.dart';
+import 'package:kiduna/features/field/screens/aev_screen.dart';
+import 'package:kiduna/features/field/widgets/enamel_icon.dart';
+import 'package:kiduna/l10n/app_localizations.dart';
+import 'package:kiduna/shared/widgets/app_header.dart';
 
 const String _narrowWarning = 'Studio needs a little more room.';
 

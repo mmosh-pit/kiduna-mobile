@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kiduna_mobile/config/theme.dart';
-import 'package:kiduna_mobile/features/field/screens/field_screen.dart';
-import 'package:kiduna_mobile/l10n/app_localizations.dart';
+import 'package:kiduna/config/theme.dart';
+import 'package:kiduna/features/field/screens/field_screen.dart';
+import 'package:kiduna/l10n/app_localizations.dart';
 
 Future<void> _pumpAt(WidgetTester tester, double width) async {
   tester.view.physicalSize = Size(width, 800);

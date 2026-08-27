@@ -8,7 +8,22 @@ class GameTokenClaims {
   final int? seat;
   final String? code;
   final String? roomId;
-  const GameTokenClaims({this.userId, this.seat, this.code, this.roomId});
+
+  /// Table size the lobby assigned this room.
+  ///
+  /// Signed rather than read from the query string: the first connection to a
+  /// room fixes its size, so a client that supplied its own could seat a table
+  /// the lobby never authorised. Tournament heats are short-handed by design,
+  /// which is what makes this reachable rather than theoretical.
+  final int? seats;
+
+  const GameTokenClaims({
+    this.userId,
+    this.seat,
+    this.code,
+    this.roomId,
+    this.seats,
+  });
 }
 
 /// Verifies the short-lived HS256 game ticket the Node lobby mints
@@ -45,12 +60,15 @@ class GameTokenVerifier {
       if (nowSecs >= exp) return null; // expired
     }
 
-    final seat = payload['seat'];
+    int? asInt(Object? v) =>
+        v is int ? v : (v is num ? v.toInt() : null);
+
     return GameTokenClaims(
       userId: payload['userId'] as String?,
-      seat: seat is int ? seat : (seat is num ? seat.toInt() : null),
+      seat: asInt(payload['seat']),
       code: payload['code'] as String?,
       roomId: payload['roomId'] as String?,
+      seats: asInt(payload['seats']),
     );
   }
 

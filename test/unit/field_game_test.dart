@@ -2,14 +2,14 @@ import 'dart:ui';
 
 import 'package:flame_test/flame_test.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kiduna_mobile/config/kiduna_colors.dart';
-import 'package:kiduna_mobile/features/field/game/components/comet_component.dart';
-import 'package:kiduna_mobile/features/field/game/components/galaxy_component.dart';
-import 'package:kiduna_mobile/features/field/game/components/ground_component.dart';
-import 'package:kiduna_mobile/features/field/game/components/nebula_component.dart';
-import 'package:kiduna_mobile/features/field/game/components/star_field_component.dart';
-import 'package:kiduna_mobile/features/field/game/components/vignette_component.dart';
-import 'package:kiduna_mobile/features/field/game/field_game.dart';
+import 'package:kiduna/config/kiduna_colors.dart';
+import 'package:kiduna/features/field/game/components/comet_component.dart';
+import 'package:kiduna/features/field/game/components/galaxy_component.dart';
+import 'package:kiduna/features/field/game/components/ground_component.dart';
+import 'package:kiduna/features/field/game/components/nebula_component.dart';
+import 'package:kiduna/features/field/game/components/star_field_component.dart';
+import 'package:kiduna/features/field/game/components/vignette_component.dart';
+import 'package:kiduna/features/field/game/field_game.dart';
 
 FieldGame _game({bool reduceMotion = false}) =>
     FieldGame(palette: KidunaColors.standard, reduceMotion: reduceMotion);

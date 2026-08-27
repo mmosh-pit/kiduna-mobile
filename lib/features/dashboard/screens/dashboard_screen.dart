@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../features/field/screens/field_screen.dart';
 import '../../../features/game/screens/game_screen.dart';
+import '../../../games/medieval_poker/medieval_poker_leaderboard_screen.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/layouts/responsive_layout.dart';
 import '../../../shared/widgets/app_header.dart';
@@ -52,7 +53,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           children: [
             // Dark overlay — left side only
             Positioned(
-              left: 0, top: 0, bottom: 0,
+              left: 0,
+              top: 0,
+              bottom: 0,
               width: screenWidth * 0.7,
               child: GestureDetector(
                 onTap: () => Navigator.of(ctx).pop(),
@@ -61,7 +64,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ),
             // Popup centered in left side
             Positioned(
-              left: 0, top: 0, bottom: 0,
+              left: 0,
+              top: 0,
+              bottom: 0,
               width: screenWidth * 0.7,
               child: Center(
                 child: Material(
@@ -72,17 +77,31 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     decoration: BoxDecoration(
                       color: const Color(0xFF1B140C),
                       borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: const Color(0xFF6B5533), width: 1.5),
+                      border: Border.all(
+                        color: const Color(0xFF6B5533),
+                        width: 1.5,
+                      ),
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text('Leave the game?',
-                          style: TextStyle(fontFamily: 'GoudyHeavyface', fontSize: 22, color: colors.gold)),
+                        Text(
+                          'Leave the game?',
+                          style: TextStyle(
+                            fontFamily: 'GoudyHeavyface',
+                            fontSize: 22,
+                            color: colors.gold,
+                          ),
+                        ),
                         const SizedBox(height: 8),
-                        Text("You'll forfeit your seat and progress.",
+                        Text(
+                          "You'll forfeit your seat and progress.",
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: colors.cream.withValues(alpha: 0.7), fontSize: 14)),
+                          style: TextStyle(
+                            color: colors.cream.withValues(alpha: 0.7),
+                            fontSize: 14,
+                          ),
+                        ),
                         const SizedBox(height: 20),
                         Row(
                           children: [
@@ -90,10 +109,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                               child: GestureDetector(
                                 onTap: () => Navigator.of(ctx).pop(false),
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                  decoration: BoxDecoration(color: const Color(0xFF2A6B4F), borderRadius: BorderRadius.circular(10)),
-                                  child: Center(child: Text('Keep Playing',
-                                    style: TextStyle(color: colors.cream, fontWeight: FontWeight.w600, fontSize: 15))),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF2A6B4F),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      'Keep Playing',
+                                      style: TextStyle(
+                                        color: colors.cream,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
@@ -102,10 +134,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                               child: GestureDetector(
                                 onTap: () => Navigator.of(ctx).pop(true),
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                  decoration: BoxDecoration(color: const Color(0xFFB3261E), borderRadius: BorderRadius.circular(10)),
-                                  child: Center(child: Text('Leave',
-                                    style: TextStyle(color: colors.cream, fontWeight: FontWeight.w600, fontSize: 15))),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFB3261E),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      'Leave',
+                                      style: TextStyle(
+                                        color: colors.cream,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
@@ -157,10 +202,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
 /// Bottom navigation bar with 4 tabs.
 class _BottomTabBar extends StatelessWidget {
-  const _BottomTabBar({
-    required this.activeTab,
-    required this.onTabChanged,
-  });
+  const _BottomTabBar({required this.activeTab, required this.onTabChanged});
 
   final int activeTab;
   final ValueChanged<int> onTabChanged;
@@ -319,9 +361,7 @@ class _ResizeBoundaryState extends State<_ResizeBoundary> {
     final lineColor = active
         ? colors.sky.withValues(alpha: 0.5)
         : colors.sky.withValues(alpha: 0.3);
-    final arrowColor = active
-        ? colors.sky
-        : colors.sky.withValues(alpha: 0.5);
+    final arrowColor = active ? colors.sky : colors.sky.withValues(alpha: 0.5);
 
     return MouseRegion(
       cursor: SystemMouseCursors.resizeColumn,
@@ -342,11 +382,7 @@ class _ResizeBoundaryState extends State<_ResizeBoundary> {
               children: [
                 Text(
                   '◂',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: arrowColor,
-                    height: 1,
-                  ),
+                  style: TextStyle(fontSize: 10, color: arrowColor, height: 1),
                 ),
                 const SizedBox(height: 3),
                 AnimatedContainer(
@@ -369,11 +405,7 @@ class _ResizeBoundaryState extends State<_ResizeBoundary> {
                 const SizedBox(height: 3),
                 Text(
                   '▸',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: arrowColor,
-                    height: 1,
-                  ),
+                  style: TextStyle(fontSize: 10, color: arrowColor, height: 1),
                 ),
               ],
             ),
@@ -408,18 +440,17 @@ Widget _buildLeftPanel(BuildContext context, int activeTab) {
   return switch (activeTab) {
     0 => const FieldStack(),
     1 => const GameScreen(),
+    2 => const MedievalPokerLeaderboardScreen(),
     _ => _ComingSoonPanel(
-        title: switch (activeTab) {
-          2 => l10n.tabStandings,
-          3 => l10n.tabGuilds,
-          _ => '',
-        },
-        icon: switch (activeTab) {
-          2 => Icons.emoji_events,
-          3 => Icons.shield,
-          _ => Icons.hourglass_empty,
-        },
-      ),
+      title: switch (activeTab) {
+        3 => l10n.tabGuilds,
+        _ => '',
+      },
+      icon: switch (activeTab) {
+        3 => Icons.shield,
+        _ => Icons.hourglass_empty,
+      },
+    ),
   };
 }
 
@@ -446,10 +477,15 @@ class _ComingSoonPanel extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               title,
-              style: text.h4.copyWith(color: colors.gold.withValues(alpha: 0.6)),
+              style: text.h4.copyWith(
+                color: colors.gold.withValues(alpha: 0.6),
+              ),
             ),
             const SizedBox(height: 8),
-            Text(l10n.comingSoon, style: text.body.copyWith(color: colors.quiet)),
+            Text(
+              l10n.comingSoon,
+              style: text.body.copyWith(color: colors.quiet),
+            ),
           ],
         ),
       ),

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kiduna_mobile/data/models/user_model.dart';
+import 'package:kiduna/data/models/user_model.dart';
 
 /// AuthService integration tests require a running backend and Dio setup.
 /// These tests validate the response parsing logic in isolation — the same

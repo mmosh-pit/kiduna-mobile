@@ -1,8 +1,8 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/extensions/context_extensions.dart';
+import '../../../config/web_dashboard.dart';
 import '../../../shared/widgets/app_header.dart';
 import '../../dashboard/screens/dashboard_screen.dart';
 import '../../download/screens/download_app_screen.dart';
@@ -62,13 +62,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     final authState = ref.read(authControllerProvider);
     if (authState.isAuthenticated) {
-      final destination = kIsWeb
+      final destination = sendWebUsersToDownload
           ? const DownloadAppScreen()
           : const DashboardScreen();
       Navigator.of(context).pushReplacement(
         PageRouteBuilder<void>(
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              destination,
+          pageBuilder: (context, animation, secondaryAnimation) => destination,
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },
@@ -91,7 +90,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _hasAutoNavigated = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        final destination = kIsWeb
+        final destination = sendWebUsersToDownload
             ? const DownloadAppScreen()
             : const DashboardScreen();
         Navigator.of(context).pushReplacement(
@@ -100,8 +99,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 destination,
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
+                  return FadeTransition(opacity: animation, child: child);
+                },
             transitionDuration: const Duration(milliseconds: 300),
           ),
         );

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kiduna_mobile/data/models/ally_agent_model.dart';
+import 'package:kiduna/data/models/ally_agent_model.dart';
 
 /// AllyService integration tests require a running backend and Dio setup.
 /// These tests validate the response shape the service parses — the same

@@ -1,8 +1,8 @@
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kiduna_mobile/config/theme.dart';
-import 'package:kiduna_mobile/features/field/widgets/field_background.dart';
+import 'package:kiduna/config/theme.dart';
+import 'package:kiduna/features/field/widgets/field_background.dart';
 
 Future<void> _pump(WidgetTester tester, {required bool reduceMotion}) async {
   await tester.pumpWidget(

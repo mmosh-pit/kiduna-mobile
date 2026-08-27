@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kiduna_mobile/data/models/chat_message_model.dart';
-import 'package:kiduna_mobile/features/field/controllers/ki_chat_controller.dart';
+import 'package:kiduna/data/models/chat_message_model.dart';
+import 'package:kiduna/features/field/controllers/ki_chat_controller.dart';
 
 void main() {
   test('initial KiChatState has empty messages and no error', () {

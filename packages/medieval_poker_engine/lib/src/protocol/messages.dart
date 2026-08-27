@@ -72,7 +72,7 @@ class ClientMessage {
 // ── Server → client ────────────────────────────────────────────────────
 
 enum ServerMsgType {
-  welcome, // handshake accepted (payload: {seat, reconnectToken})
+  welcome, // handshake accepted (payload: {seat, room, seats})
   state, // payload: TableSnapshot
   prompt, // payload: PromptSpec
   reveal, // payload: {seats:[{seat, holeCards[]}], reason}  (showdown / PEEK)

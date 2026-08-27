@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'package:medieval_poker_engine/protocol.dart';
+
 import 'game_session.dart';
 
 /// One transport attempt: an incoming frame stream, a send sink, and a closer.
@@ -45,7 +46,8 @@ class RemoteSession implements GameSession {
   int _reconnectAttempts = 0;
   int _clientSeq = 0;
   bool _disposed = false;
-  bool _terminal = false; // a server error ended this session — do not reconnect
+  bool _terminal =
+      false; // a server error ended this session — do not reconnect
 
   final _phase = ValueNotifier<SessionPhase>(SessionPhase.connecting);
   final _table = ValueNotifier<TableSnapshot?>(null);
@@ -61,13 +63,15 @@ class RemoteSession implements GameSession {
     _Conn? initial,
     Duration heartbeat = const Duration(seconds: 15),
     int maxReconnects = 5,
-  })  : _opener = opener,
-        _heartbeatInterval = heartbeat,
-        _maxReconnects = maxReconnects {
+  }) : _opener = opener,
+       _heartbeatInterval = heartbeat,
+       _maxReconnects = maxReconnects {
     _bind(initial ?? opener!(false)); // initial connect = a fresh join
     if (_heartbeatInterval > Duration.zero) {
-      _heartbeat = Timer.periodic(_heartbeatInterval,
-          (_) => _sendMessage(const ClientMessage(type: ClientMsgType.heartbeat)));
+      _heartbeat = Timer.periodic(
+        _heartbeatInterval,
+        (_) => _sendMessage(const ClientMessage(type: ClientMsgType.heartbeat)),
+      );
     }
   }
 
@@ -87,21 +91,24 @@ class RemoteSession implements GameSession {
     bool? timedLevels,
     String? name,
   }) {
-    final uri = Uri.parse(wsUrl).replace(queryParameters: {
-      'room': room,
-      'seat': '$seat',
-      if (humans != null) 'humans': '$humans',
-      if (token != null) 'token': token,
-      if (timedLevels != null) 'timed': timedLevels ? '1' : '0',
-      if (name != null && name.isNotEmpty) 'name': name,
-    });
+    final uri = Uri.parse(wsUrl).replace(
+      queryParameters: {
+        'room': room,
+        'seat': '$seat',
+        if (humans != null) 'humans': '$humans',
+        if (token != null) 'token': token,
+        if (timedLevels != null) 'timed': timedLevels ? '1' : '0',
+        if (name != null && name.isNotEmpty) 'name': name,
+      },
+    );
     _Conn open(bool resume) {
       // A reconnect carries ?resume=1 so the service resumes the held seat if
       // the room still exists, or cleanly rejects if it's gone (e.g. the
       // service restarted) instead of dropping us into a brand-new game.
       final target = resume
           ? uri.replace(
-              queryParameters: {...uri.queryParameters, 'resume': '1'})
+              queryParameters: {...uri.queryParameters, 'resume': '1'},
+            )
           : uri;
       final channel = WebSocketChannel.connect(target);
       return _Conn(
@@ -121,12 +128,11 @@ class RemoteSession implements GameSession {
     required Stream<dynamic> incoming,
     required void Function(dynamic frame) send,
     void Function()? closeTransport,
-  }) =>
-      RemoteSession._(
-        viewerSeat: seat,
-        initial: _Conn(incoming, send, closeTransport),
-        heartbeat: Duration.zero, // no timers under test
-      );
+  }) => RemoteSession._(
+    viewerSeat: seat,
+    initial: _Conn(incoming, send, closeTransport),
+    heartbeat: Duration.zero, // no timers under test
+  );
 
   /// Test-only: a reopenable in-memory transport, so the auto-reconnect state
   /// machine (backoff → reopen → rebind → resync) can be exercised without a
@@ -136,16 +142,15 @@ class RemoteSession implements GameSession {
     required int seat,
     required (Stream<dynamic>, void Function(dynamic)) Function() open,
     int maxReconnects = 5,
-  }) =>
-      RemoteSession._(
-        viewerSeat: seat,
-        opener: (_) {
-          final (incoming, send) = open();
-          return _Conn(incoming, send, null);
-        },
-        heartbeat: Duration.zero,
-        maxReconnects: maxReconnects,
-      );
+  }) => RemoteSession._(
+    viewerSeat: seat,
+    opener: (_) {
+      final (incoming, send) = open();
+      return _Conn(incoming, send, null);
+    },
+    heartbeat: Duration.zero,
+    maxReconnects: maxReconnects,
+  );
 
   // ── GameSession ────────────────────────────────────────────────────────
   @override
@@ -168,12 +173,14 @@ class RemoteSession implements GameSession {
     final active = _prompt.value;
     if (active == null) return;
     _prompt.value = null; // optimistic dismiss; the next prompt/state refreshes
-    _sendMessage(ClientMessage(
-      type: ClientMsgType.action,
-      promptId: active.promptId,
-      actionKind: kind,
-      payload: payload,
-    ));
+    _sendMessage(
+      ClientMessage(
+        type: ClientMsgType.action,
+        promptId: active.promptId,
+        actionKind: kind,
+        payload: payload,
+      ),
+    );
   }
 
   @override
@@ -214,7 +221,8 @@ class RemoteSession implements GameSession {
     if (_opener != null && _reconnectAttempts < _maxReconnects) {
       // Reconnect with exponential backoff; the seat is held server-side during
       // the grace window, and a `resync` repaints the table on success.
-      _prompt.value = null; // drop any stale prompt; resync re-sends the live one
+      _prompt.value =
+          null; // drop any stale prompt; resync re-sends the live one
       _setPhase(SessionPhase.connecting);
       final secs = (1 << _reconnectAttempts).clamp(1, 16);
       _reconnectAttempts++;
@@ -229,7 +237,9 @@ class RemoteSession implements GameSession {
       });
     } else {
       // No transport to rebuild (debug) → disconnected; retries exhausted → error.
-      _setPhase(_opener == null ? SessionPhase.disconnected : SessionPhase.error);
+      _setPhase(
+        _opener == null ? SessionPhase.disconnected : SessionPhase.error,
+      );
     }
   }
 
@@ -293,7 +303,8 @@ class RemoteSession implements GameSession {
   HandResultView _handResultFrom(Map<String, dynamic> p) {
     final won = p['won'] as bool? ?? false;
     final inHand = p['inHand'] as bool? ?? true;
-    final detail = p['detail'] as String? ??
+    final detail =
+        p['detail'] as String? ??
         (won ? 'You win the hand' : 'You lose the hand');
     return HandResultView(won: won, inHand: inHand, detail: detail);
   }
@@ -301,12 +312,20 @@ class RemoteSession implements GameSession {
   GameOverView _gameOverFrom(Map<String, dynamic> p) {
     final winnerSeat = p['winnerSeat'] as int?;
     final youWon = p['youWon'] as bool? ?? (winnerSeat == viewerSeat);
+    final rows = p['standings'] as List? ?? const [];
     final standings = <StandingView>[
-      for (final s in (p['standings'] as List? ?? const []))
-        StandingView((s as Map)['seat'] as int, s['stack'] as int,
-            name: s['name'] as String?),
+      for (var i = 0; i < rows.length; i++)
+        StandingView(
+          (rows[i] as Map)['seat'] as int,
+          (rows[i] as Map)['stack'] as int,
+          name: (rows[i] as Map)['name'] as String?,
+          // Servers that predate ranking still send ordered rows.
+          rank: (rows[i] as Map)['rank'] as int? ?? (i + 1),
+          eliminatedAtHand: (rows[i] as Map)['eliminatedAtHand'] as int?,
+        ),
     ];
-    final detail = p['detail'] as String? ??
+    final detail =
+        p['detail'] as String? ??
         (youWon ? 'You have taken the table.' : 'A rival takes the table.');
     return GameOverView(
       youWon: youWon,

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kiduna_mobile/data/models/ally_agent_model.dart';
-import 'package:kiduna_mobile/features/field/controllers/ally_controller.dart';
+import 'package:kiduna/data/models/ally_agent_model.dart';
+import 'package:kiduna/features/field/controllers/ally_controller.dart';
 
 void main() {
   test('initial AllyState has no ally, no error, and is not loading', () {

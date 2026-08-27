@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kiduna_mobile/core/enums/capacity_target.dart';
-import 'package:kiduna_mobile/data/models/ki_topic.dart';
-import 'package:kiduna_mobile/features/field/controllers/field_controller.dart';
-import 'package:kiduna_mobile/features/field/data/field_fixtures.dart';
+import 'package:kiduna/core/enums/capacity_target.dart';
+import 'package:kiduna/data/models/ki_topic.dart';
+import 'package:kiduna/features/field/controllers/field_controller.dart';
+import 'package:kiduna/features/field/data/field_fixtures.dart';
 
 void main() {
   late ProviderContainer container;

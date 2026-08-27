@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kiduna_mobile/core/utils/responsive.dart';
+import 'package:kiduna/core/utils/responsive.dart';
 
 void main() {
   group('screenClassForWidth', () {

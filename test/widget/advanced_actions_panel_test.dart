@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kiduna_mobile/config/theme.dart';
-import 'package:kiduna_mobile/features/field/data/field_composition.dart';
-import 'package:kiduna_mobile/features/field/data/realm_atlas.dart';
-import 'package:kiduna_mobile/features/field/widgets/advanced_actions_panel.dart';
-import 'package:kiduna_mobile/l10n/app_localizations.dart';
+import 'package:kiduna/config/theme.dart';
+import 'package:kiduna/features/field/data/field_composition.dart';
+import 'package:kiduna/features/field/data/realm_atlas.dart';
+import 'package:kiduna/features/field/widgets/advanced_actions_panel.dart';
+import 'package:kiduna/l10n/app_localizations.dart';
 
 final _realm = realmAtlas['dunaversity']!;
 

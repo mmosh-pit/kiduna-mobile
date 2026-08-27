@@ -56,24 +56,25 @@ class GameRoom {
         actingSeat: game.actingPlayer?.seat,
         levelSecondsLeft: levelSecondsLeft?.call(),
         logTail: List.unmodifiable(
-            _log.length > 12 ? _log.sublist(_log.length - 12) : _log),
+          _log.length > 12 ? _log.sublist(_log.length - 12) : _log,
+        ),
         revealSeats: reveal,
       ).toJson();
 
   ServerMessage _stateFor(int seat, Set<int> reveal) => ServerMessage(
-        type: ServerMsgType.state,
-        seq: _seq,
-        payload: _snapshotPayload(seat, reveal),
-      );
+    type: ServerMsgType.state,
+    seq: _seq,
+    payload: _snapshotPayload(seat, reveal),
+  );
 
   /// A full state snapshot tagged `resync`, pushed to a (re)connecting client
   /// so it can repaint the table immediately instead of waiting for the next
   /// broadcast. The client treats it like `state`.
   ServerMessage resyncFor(int seat) => ServerMessage(
-        type: ServerMsgType.resync,
-        seq: _seq,
-        payload: _snapshotPayload(seat, const {}),
-      );
+    type: ServerMsgType.resync,
+    seq: _seq,
+    payload: _snapshotPayload(seat, const {}),
+  );
 
   void _broadcastState(Set<int> reveal) {
     _seq++;
@@ -90,21 +91,29 @@ class GameRoom {
       final won = awards.any((a) => a.winners.contains(me));
       send(
         s,
-        ServerMessage(type: ServerMsgType.handResult, seq: _seq, payload: {
-          'won': won,
-          'inHand': me.inHand,
-          // Per-seat blurb so every player — winner, showdown loser, or folder —
-          // sees a meaningful result popup, not just the winner.
-          'detail': _resultDetail(me, won, awards, main),
-          'winners': [for (final w in (main?.winners ?? const [])) w.seat],
-        }),
+        ServerMessage(
+          type: ServerMsgType.handResult,
+          seq: _seq,
+          payload: {
+            'won': won,
+            'inHand': me.inHand,
+            // Per-seat blurb so every player — winner, showdown loser, or folder —
+            // sees a meaningful result popup, not just the winner.
+            'detail': _resultDetail(me, won, awards, main),
+            'winners': [for (final w in (main?.winners ?? const [])) w.seat],
+          },
+        ),
       );
     }
   }
 
   /// Builds the one-line result blurb shown in each player's win/lose popup.
   String _resultDetail(
-      PokerPlayer me, bool won, List<PotAward> awards, PotAward? main) {
+    PokerPlayer me,
+    bool won,
+    List<PotAward> awards,
+    PotAward? main,
+  ) {
     if (won) {
       var total = 0;
       for (final a in awards) {
@@ -123,18 +132,28 @@ class GameRoom {
   void _broadcastGameOver() {
     _seq++;
     final winner = game.gameWinner;
-    final standings = [...game.players]..sort((a, b) => b.stack.compareTo(a.stack));
+    final standings = game.finalStandings;
     for (var s = 0; s < game.players.length; s++) {
       send(
         s,
-        ServerMessage(type: ServerMsgType.gameOver, seq: _seq, payload: {
-          'winnerSeat': winner?.seat,
-          'youWon': winner?.seat == s,
-          'standings': [
-            for (final p in standings)
-              {'seat': p.seat, 'stack': p.stack, 'name': p.name}
-          ],
-        }),
+        ServerMessage(
+          type: ServerMsgType.gameOver,
+          seq: _seq,
+          payload: {
+            'winnerSeat': winner?.seat,
+            'youWon': winner?.seat == s,
+            'standings': [
+              for (var i = 0; i < standings.length; i++)
+                {
+                  'seat': standings[i].seat,
+                  'stack': standings[i].stack,
+                  'name': standings[i].name,
+                  'rank': i + 1,
+                  'eliminatedAtHand': standings[i].eliminatedAtHand,
+                },
+            ],
+          },
+        ),
       );
     }
   }

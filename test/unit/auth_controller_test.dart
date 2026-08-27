@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kiduna_mobile/features/auth/controllers/auth_controller.dart';
-import 'package:kiduna_mobile/features/auth/enums/auth_status.dart';
+import 'package:kiduna/features/auth/controllers/auth_controller.dart';
+import 'package:kiduna/features/auth/enums/auth_status.dart';
 
 void main() {
   test('initial AuthState has no user, no token, and initial status', () {

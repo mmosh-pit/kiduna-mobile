@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'package:medieval_poker_engine/protocol.dart';
+
 import 'card_zoom.dart';
 import 'game_session.dart';
+import 'standings_screen.dart';
 
 const _gold = Color(0xFFEDC169);
 const _panel = Color(0xF21B140C);
@@ -74,50 +76,56 @@ class _SessionHudState extends State<SessionHud> {
     return _CardZoom(
       controller: _zoom,
       child: ListenableBuilder(
-      listenable: Listenable.merge([
-        session.phase,
-        session.table,
-        session.prompt,
-        session.handResult,
-        session.gameOver,
-        session.peek,
-        session.errorMessage,
-      ]),
-      builder: (context, _) {
-        final table = session.table.value;
-        final prompt = session.prompt.value;
-        final over = session.gameOver.value;
-        final phase = session.phase.value;
+        listenable: Listenable.merge([
+          session.phase,
+          session.table,
+          session.prompt,
+          session.handResult,
+          session.gameOver,
+          session.peek,
+          session.errorMessage,
+        ]),
+        builder: (context, _) {
+          final table = session.table.value;
+          final prompt = session.prompt.value;
+          final over = session.gameOver.value;
+          final phase = session.phase.value;
 
-        return Stack(
-          children: [
-            _ExitButton(onExit: onExit),
-            if (over == null) ...[
-              if (table != null) _StageChip(table: table),
-              if (table != null) _EventLog(lines: table.logTail),
-              if (table != null && table.yourPowerHand.isNotEmpty)
-                _PowerHandFan(cards: table.yourPowerHand),
-              _Banner(text: _bannerText(table, prompt)),
-              _PeekToast(text: session.peek.value),
-              if (prompt != null) _promptPanel(context, prompt),
-              _HandResultFlash(result: session.handResult.value),
-            ],
-            if (over != null)
-              _GameOver(view: over, onExit: onExit, onPlayAgain: onPlayAgain),
-            if (over == null && phase != SessionPhase.active)
-              _ConnectionOverlay(
+          return Stack(
+            children: [
+              _ExitButton(onExit: onExit),
+              if (over == null) ...[
+                if (table != null) _StageChip(table: table),
+                if (table != null) _EventLog(lines: table.logTail),
+                if (table != null && table.yourPowerHand.isNotEmpty)
+                  _PowerHandFan(cards: table.yourPowerHand),
+                _Banner(text: _bannerText(table, prompt)),
+                _PeekToast(text: session.peek.value),
+                if (prompt != null) _promptPanel(context, prompt),
+                _HandResultFlash(result: session.handResult.value),
+              ],
+              if (over != null)
+                StandingsScreen(
+                  view: over,
+                  viewerSeat: session.viewerSeat,
+                  onExit: onExit,
+                  onPlayAgain: onPlayAgain,
+                ),
+              if (over == null && phase != SessionPhase.active)
+                _ConnectionOverlay(
                   phase: phase,
                   message: session.errorMessage.value,
-                  onExit: onExit),
-            // Deck viewer + Rules reference render last so they overlay
-            // everything (banner, panels, deck-build overlay, game-over).
-            _DeckOverlay(session: session, hidden: over != null),
-            _RulesOverlay(hidden: over != null),
-            // Card zoom renders above everything — tap any card art to enlarge.
-            _CardZoomOverlay(controller: _zoom),
-          ],
-        );
-      },
+                  onExit: onExit,
+                ),
+              // Deck viewer + Rules reference render last so they overlay
+              // everything (banner, panels, deck-build overlay, game-over).
+              _DeckOverlay(session: session, hidden: over != null),
+              _RulesOverlay(hidden: over != null),
+              // Card zoom renders above everything — tap any card art to enlarge.
+              _CardZoomOverlay(controller: _zoom),
+            ],
+          );
+        },
       ),
     );
   }
@@ -130,7 +138,9 @@ class _SessionHudState extends State<SessionHud> {
     final acting = t.seats.where((s) => s.isActing);
     if (acting.isEmpty) return '';
     final a = acting.first;
-    return a.seat == session.viewerSeat ? 'Your move' : '${a.name} is thinking…';
+    return a.seat == session.viewerSeat
+        ? 'Your move'
+        : '${a.name} is thinking…';
   }
 
   Widget _promptPanel(BuildContext context, PromptSpec p) {
@@ -140,80 +150,106 @@ class _SessionHudState extends State<SessionHud> {
       case PromptKind.setupWindow:
       case PromptKind.roundWindow:
       case PromptKind.showdownWindow:
-        return _bottom(_CardChoicePanel(
-          title: p.title,
-          borderColor: _purple,
-          options: p.options,
-          dismissLabel: 'Done',
-          onPick: (id) => session.answer(GameActionKind.playPower, {'cardId': id}),
-          onDismiss: () => session.answer(GameActionKind.pass),
-        ));
+        return _bottom(
+          _CardChoicePanel(
+            title: p.title,
+            borderColor: _purple,
+            options: p.options,
+            dismissLabel: 'Done',
+            onPick: (id) =>
+                session.answer(GameActionKind.playPower, {'cardId': id}),
+            onDismiss: () => session.answer(GameActionKind.pass),
+          ),
+        );
       case PromptKind.counterWindow:
-        return _bottom(_CardChoicePanel(
-          title: p.title,
-          borderColor: _purple,
-          options: p.options,
-          dismissLabel: 'Pass',
-          onPick: (id) => session.answer(GameActionKind.counter, {'cardId': id}),
-          onDismiss: () => session.answer(GameActionKind.pass),
-        ));
+        return _bottom(
+          _CardChoicePanel(
+            title: p.title,
+            borderColor: _purple,
+            options: p.options,
+            dismissLabel: 'Pass',
+            onPick: (id) =>
+                session.answer(GameActionKind.counter, {'cardId': id}),
+            onDismiss: () => session.answer(GameActionKind.pass),
+          ),
+        );
       case PromptKind.boardCounter:
-        return _bottom(_CardChoicePanel(
-          title: p.title,
-          borderColor: _purple,
-          options: p.options,
-          dismissLabel: 'Pass',
-          onPick: (id) =>
-              session.answer(GameActionKind.boardCounter, {'cardId': id}),
-          onDismiss: () => session.answer(GameActionKind.pass),
-        ));
+        return _bottom(
+          _CardChoicePanel(
+            title: p.title,
+            borderColor: _purple,
+            options: p.options,
+            dismissLabel: 'Pass',
+            onPick: (id) =>
+                session.answer(GameActionKind.boardCounter, {'cardId': id}),
+            onDismiss: () => session.answer(GameActionKind.pass),
+          ),
+        );
       case PromptKind.itemPlay:
-        return _bottom(_CardChoicePanel(
-          title: p.title,
-          borderColor: _teal,
-          options: p.options,
-          dismissLabel: 'Continue',
-          onPick: (id) => session.answer(GameActionKind.playItem, {'itemId': id}),
-          onDismiss: () => session.answer(GameActionKind.pass),
-        ));
+        return _bottom(
+          _CardChoicePanel(
+            title: p.title,
+            borderColor: _teal,
+            options: p.options,
+            dismissLabel: 'Continue',
+            onPick: (id) =>
+                session.answer(GameActionKind.playItem, {'itemId': id}),
+            onDismiss: () => session.answer(GameActionKind.pass),
+          ),
+        );
       case PromptKind.itemMode:
-        return _bottom(_ListChoicePanel(
-          title: p.title,
-          borderColor: _teal,
-          options: p.options,
-          onPick: (i) => session.answer(null, {'index': i}),
-        ));
+        return _bottom(
+          _ListChoicePanel(
+            title: p.title,
+            borderColor: _teal,
+            options: p.options,
+            onPick: (i) => session.answer(null, {'index': i}),
+          ),
+        );
       case PromptKind.itemPick:
-        return _bottom(_ListChoicePanel(
-          title: p.title,
-          borderColor: _teal,
-          options: p.options,
-          optional: p.optional,
-          skipLabel: 'None',
-          onPick: (i) => session.answer(null, {'index': i}),
-          onSkip: () => session.answer(null, {'index': -1}),
-        ));
+        return _bottom(
+          _ListChoicePanel(
+            title: p.title,
+            borderColor: _teal,
+            options: p.options,
+            optional: p.optional,
+            skipLabel: 'None',
+            onPick: (i) => session.answer(null, {'index': i}),
+            onSkip: () => session.answer(null, {'index': -1}),
+          ),
+        );
       case PromptKind.targetPick:
-        return _bottom(_TargetPanel(
-          title: p.title,
-          options: p.options,
-          onPick: (id) =>
-              session.answer(GameActionKind.targetPick, {'seat': int.parse(id)}),
-        ));
+        return _bottom(
+          _TargetPanel(
+            title: p.title,
+            options: p.options,
+            onPick: (id) => session.answer(GameActionKind.targetPick, {
+              'seat': int.parse(id),
+            }),
+          ),
+        );
       case PromptKind.payChoice:
-        return _bottom(_PayChoicePanel(
-          title: p.title,
-          onCoins: () => session.answer(GameActionKind.payChoice, {'useChip': false}),
-          onChip: () => session.answer(GameActionKind.payChoice, {'useChip': true}),
-        ));
+        return _bottom(
+          _PayChoicePanel(
+            title: p.title,
+            onCoins: () =>
+                session.answer(GameActionKind.payChoice, {'useChip': false}),
+            onChip: () =>
+                session.answer(GameActionKind.payChoice, {'useChip': true}),
+          ),
+        );
       case PromptKind.chipSell:
-        return _bottom(_TwoButtonPanel(
-          title: p.title,
-          leftLabel: 'Keep',
-          rightLabel: 'Sell ◉',
-          onLeft: () => session.answer(GameActionKind.sellChip, {'sell': false}),
-          onRight: () => session.answer(GameActionKind.sellChip, {'sell': true}),
-        ));
+        return _bottom(
+          _TwoButtonPanel(
+            title: p.title,
+            leftLabel: 'Keep',
+            rightLabel: 'Sell ◉',
+            onLeft: () =>
+                session.answer(GameActionKind.sellChip, {'sell': false}),
+            onRight: () =>
+                session.answer(GameActionKind.sellChip, {'sell': true}),
+          ),
+        );
       case PromptKind.classPick:
         return _ChoiceOverlay(
           title: 'Choose Your Class',
@@ -238,12 +274,12 @@ class _SessionHudState extends State<SessionHud> {
   }
 
   Widget _bottom(Widget child) => Align(
-        alignment: Alignment.bottomCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: _maxPanelWidth),
-          child: child,
-        ),
-      );
+    alignment: Alignment.bottomCenter,
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: _maxPanelWidth),
+      child: child,
+    ),
+  );
 }
 
 // ── Card zoom (tap any card art to enlarge; tap anywhere to close) ──────────
@@ -282,15 +318,17 @@ class _ZoomableThumb extends StatelessWidget {
     if (controller == null) return thumb;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: () => controller.show(CardZoomTarget(
-        assets: [
-          'assets/medieval_poker/power/$id.png',
-          'assets/medieval_poker/items/$id.png',
-        ],
-        title: title,
-        subtitle: subtitle,
-        fallback: '★',
-      )),
+      onTap: () => controller.show(
+        CardZoomTarget(
+          assets: [
+            'assets/medieval_poker/power/$id.png',
+            'assets/medieval_poker/items/$id.png',
+          ],
+          title: title,
+          subtitle: subtitle,
+          fallback: '★',
+        ),
+      ),
       child: thumb,
     );
   }
@@ -339,14 +377,17 @@ class _CardZoomOverlay extends StatelessWidget {
                           borderRadius: BorderRadius.circular(14),
                           boxShadow: [
                             BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.6),
-                                blurRadius: 30),
+                              color: Colors.black.withValues(alpha: 0.6),
+                              blurRadius: 30,
+                            ),
                           ],
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(14),
                           child: _CardFace(
-                              assets: target.assets, fallback: target.fallback),
+                            assets: target.assets,
+                            fallback: target.fallback,
+                          ),
                         ),
                       ),
                     ),
@@ -356,26 +397,36 @@ class _CardZoomOverlay extends StatelessWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(target.title,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                  fontFamily: 'GoudyHeavyface',
-                                  fontSize: 22,
-                                  color: _gold)),
+                          Text(
+                            target.title,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontFamily: 'GoudyHeavyface',
+                              fontSize: 22,
+                              color: _gold,
+                            ),
+                          ),
                           if (target.subtitle != null &&
                               target.subtitle!.isNotEmpty) ...[
                             const SizedBox(height: 6),
-                            Text(target.subtitle!,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 14,
-                                    height: 1.35)),
+                            Text(
+                              target.subtitle!,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 14,
+                                height: 1.35,
+                              ),
+                            ),
                           ],
                           const SizedBox(height: 14),
-                          const Text('tap anywhere to close',
-                              style: TextStyle(
-                                  color: Colors.white38, fontSize: 12)),
+                          const Text(
+                            'tap anywhere to close',
+                            style: TextStyle(
+                              color: Colors.white38,
+                              fontSize: 12,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -403,8 +454,10 @@ class _CardFace extends StatelessWidget {
   Widget _tryAsset(int i) {
     if (i >= assets.length) {
       return Center(
-        child: Text(fallback,
-            style: const TextStyle(color: Color(0xFFC79BE6), fontSize: 64)),
+        child: Text(
+          fallback,
+          style: const TextStyle(color: Color(0xFFC79BE6), fontSize: 64),
+        ),
       );
     }
     return Image.asset(
@@ -437,9 +490,14 @@ class _Banner extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: _panelBorder),
           ),
-          child: Text(text,
-              style: const TextStyle(
-                  color: _gold, fontSize: 14, fontWeight: FontWeight.w600)),
+          child: Text(
+            text,
+            style: const TextStyle(
+              color: _gold,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ),
       ),
     );
@@ -469,13 +527,17 @@ class _StageChip extends StatelessWidget {
           color: _panel,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-              color: sudden ? const Color(0xFFB3261E) : _panelBorder),
+            color: sudden ? const Color(0xFFB3261E) : _panelBorder,
+          ),
         ),
-        child: Text(label,
-            style: TextStyle(
-                color: sudden ? const Color(0xFFF3A0A0) : _gold,
-                fontSize: 11,
-                fontWeight: FontWeight.w700)),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: sudden ? const Color(0xFFF3A0A0) : _gold,
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       ),
     );
   }
@@ -507,16 +569,18 @@ class _EventLog extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               for (int i = 0; i < recent.length; i++)
-                Text(recent[i],
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: i == recent.length - 1
-                          ? _gold
-                          : Colors.white.withValues(alpha: 0.6),
-                      fontSize: 10,
-                      height: 1.35,
-                    )),
+                Text(
+                  recent[i],
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: i == recent.length - 1
+                        ? _gold
+                        : Colors.white.withValues(alpha: 0.6),
+                    fontSize: 10,
+                    height: 1.35,
+                  ),
+                ),
             ],
           ),
         ),
@@ -546,12 +610,15 @@ class _PeekToast extends StatelessWidget {
           children: [
             const Text('🔮  ', style: TextStyle(fontSize: 16)),
             Flexible(
-              child: Text(text,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      color: Color(0xFFC79BE6),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700)),
+              child: Text(
+                text,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Color(0xFFC79BE6),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
           ],
         ),
@@ -581,8 +648,9 @@ class _PowerHandFan extends StatelessWidget {
           final w = constraints.maxWidth;
           final n = cards.length;
           final mid = (n - 1) / 2.0;
-          final spacing =
-              n <= 1 ? 0.0 : ((w - _cardW - 24) / (n - 1)).clamp(16.0, 30.0);
+          final spacing = n <= 1
+              ? 0.0
+              : ((w - _cardW - 24) / (n - 1)).clamp(16.0, 30.0);
           final center = w / 2;
           return Stack(
             clipBehavior: Clip.none,
@@ -596,8 +664,13 @@ class _PowerHandFan extends StatelessWidget {
     );
   }
 
-  Widget _fanned(PowerCardView card, double off, double span, double center,
-      double spacing) {
+  Widget _fanned(
+    PowerCardView card,
+    double off,
+    double span,
+    double center,
+    double spacing,
+  ) {
     final x = center + off * spacing - _cardW / 2;
     final angle = (off / span) * 0.18;
     final dip = (off * off) / (span * span) * 14.0;
@@ -610,11 +683,12 @@ class _PowerHandFan extends StatelessWidget {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(5),
           child: _ZoomableThumb(
-              id: card.templateId,
-              title: card.name,
-              subtitle: card.description,
-              w: _cardW,
-              h: _cardH),
+            id: card.templateId,
+            title: card.name,
+            subtitle: card.description,
+            w: _cardW,
+            h: _cardH,
+          ),
         ),
       ),
     );
@@ -698,10 +772,11 @@ class _HandResultFlashState extends State<_HandResultFlash> {
                 ),
                 if (r.detail.isNotEmpty) ...[
                   const SizedBox(height: 4),
-                  Text(r.detail,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                          color: Colors.white70, fontSize: 13)),
+                  Text(
+                    r.detail,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.white70, fontSize: 13),
+                  ),
                 ],
               ],
             ),
@@ -758,8 +833,10 @@ class _ActionBarState extends State<_ActionBar> {
               ),
               child: Row(
                 children: [
-                  Text('${isBet ? 'Bet' : 'Raise to'}  $target',
-                      style: const TextStyle(color: _gold, fontSize: 14)),
+                  Text(
+                    '${isBet ? 'Bet' : 'Raise to'}  $target',
+                    style: const TextStyle(color: _gold, fontSize: 14),
+                  ),
                   Expanded(
                     child: Slider(
                       value: target.toDouble().clamp(min, max),
@@ -775,8 +852,10 @@ class _ActionBarState extends State<_ActionBar> {
                   _MiniButton(
                     label: 'Confirm',
                     onTap: () {
-                      answer(isBet ? GameActionKind.bet : GameActionKind.raise,
-                          {'to': target});
+                      answer(
+                        isBet ? GameActionKind.bet : GameActionKind.raise,
+                        {'to': target},
+                      );
                       setState(() => _raiseOpen = false);
                     },
                   ),
@@ -799,7 +878,8 @@ class _ActionBarState extends State<_ActionBar> {
                   label: canCheck ? 'Check' : 'Call $callAmt',
                   color: const Color(0xFF2E5A44),
                   onTap: () => answer(
-                      canCheck ? GameActionKind.check : GameActionKind.call),
+                    canCheck ? GameActionKind.check : GameActionKind.call,
+                  ),
                 ),
               ),
               if (canRaise) const SizedBox(width: 8),
@@ -855,11 +935,14 @@ class _CardChoicePanel extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(title,
-                style: const TextStyle(
-                    color: Color(0xFFC79BE6),
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13)),
+            Text(
+              title,
+              style: const TextStyle(
+                color: Color(0xFFC79BE6),
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
             const SizedBox(height: 8),
             for (final o in options)
               Padding(
@@ -868,9 +951,10 @@ class _CardChoicePanel extends StatelessWidget {
               ),
             const SizedBox(height: 2),
             _ActionButton(
-                label: dismissLabel,
-                color: const Color(0xFF2E5A44),
-                onTap: onDismiss),
+              label: dismissLabel,
+              color: const Color(0xFF2E5A44),
+              onTap: onDismiss,
+            ),
           ],
         ),
       ),
@@ -913,23 +997,29 @@ class _ListChoicePanel extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(title,
-                style: const TextStyle(
-                    color: Color(0xFFCFEAF2),
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13)),
+            Text(
+              title,
+              style: const TextStyle(
+                color: Color(0xFFCFEAF2),
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
             const SizedBox(height: 8),
             for (int i = 0; i < options.length; i++)
               Padding(
                 padding: const EdgeInsets.only(bottom: 6),
                 child: _PlainTile(
-                    label: options[i].label, onTap: () => onPick(i)),
+                  label: options[i].label,
+                  onTap: () => onPick(i),
+                ),
               ),
             if (optional && onSkip != null)
               _ActionButton(
-                  label: skipLabel ?? 'Skip',
-                  color: const Color(0xFF2E5A44),
-                  onTap: onSkip!),
+                label: skipLabel ?? 'Skip',
+                color: const Color(0xFF2E5A44),
+                onTap: onSkip!,
+              ),
           ],
         ),
       ),
@@ -941,8 +1031,11 @@ class _TargetPanel extends StatelessWidget {
   final String title;
   final List<PromptOption> options;
   final void Function(String id) onPick;
-  const _TargetPanel(
-      {required this.title, required this.options, required this.onPick});
+  const _TargetPanel({
+    required this.title,
+    required this.options,
+    required this.onPick,
+  });
   @override
   Widget build(BuildContext context) {
     final bottom = MediaQuery.paddingOf(context).bottom + 12;
@@ -959,11 +1052,14 @@ class _TargetPanel extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(title,
-                style: const TextStyle(
-                    color: Color(0xFFF3C0A0),
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13)),
+            Text(
+              title,
+              style: const TextStyle(
+                color: Color(0xFFF3C0A0),
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
             const SizedBox(height: 8),
             for (final o in options)
               Padding(
@@ -981,17 +1077,19 @@ class _PayChoicePanel extends StatelessWidget {
   final String title;
   final VoidCallback onCoins;
   final VoidCallback onChip;
-  const _PayChoicePanel(
-      {required this.title, required this.onCoins, required this.onChip});
+  const _PayChoicePanel({
+    required this.title,
+    required this.onCoins,
+    required this.onChip,
+  });
   @override
-  Widget build(BuildContext context) =>
-      _TwoButtonPanel(
-        title: title,
-        leftLabel: 'Pay coins',
-        rightLabel: '◉ Comp Chip',
-        onLeft: onCoins,
-        onRight: onChip,
-      );
+  Widget build(BuildContext context) => _TwoButtonPanel(
+    title: title,
+    leftLabel: 'Pay coins',
+    rightLabel: '◉ Comp Chip',
+    onLeft: onCoins,
+    onRight: onChip,
+  );
 }
 
 class _TwoButtonPanel extends StatelessWidget {
@@ -1023,25 +1121,32 @@ class _TwoButtonPanel extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(title,
-                style: const TextStyle(
-                    color: Color(0xFFCFEAF2),
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13)),
+            Text(
+              title,
+              style: const TextStyle(
+                color: Color(0xFFCFEAF2),
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
             const SizedBox(height: 10),
             Row(
               children: [
                 Expanded(
-                    child: _ActionButton(
-                        label: leftLabel,
-                        color: const Color(0xFF2E5A44),
-                        onTap: onLeft)),
+                  child: _ActionButton(
+                    label: leftLabel,
+                    color: const Color(0xFF2E5A44),
+                    onTap: onLeft,
+                  ),
+                ),
                 const SizedBox(width: 8),
                 Expanded(
-                    child: _ActionButton(
-                        label: rightLabel,
-                        color: const Color(0xFF1E5A6E),
-                        onTap: onRight)),
+                  child: _ActionButton(
+                    label: rightLabel,
+                    color: const Color(0xFF1E5A6E),
+                    onTap: onRight,
+                  ),
+                ),
               ],
             ),
           ],
@@ -1082,23 +1187,29 @@ class _ChoiceOverlay extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(title,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      fontFamily: 'GoudyHeavyface',
-                      fontSize: 26,
-                      color: _gold)),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontFamily: 'GoudyHeavyface',
+                  fontSize: 26,
+                  color: _gold,
+                ),
+              ),
               const SizedBox(height: 4),
-              Text(subtitle,
-                  textAlign: TextAlign.center,
-                  style:
-                      const TextStyle(color: Colors.white60, fontSize: 12)),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white60, fontSize: 12),
+              ),
               const SizedBox(height: 14),
               for (int i = 0; i < options.length; i++)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: _TargetTile(
-                      option: options[i], onTap: () => onPick(i)),
+                    option: options[i],
+                    onTap: () => onPick(i),
+                  ),
                 ),
             ],
           ),
@@ -1129,19 +1240,19 @@ class _DeckBuilderState extends State<_DeckBuilder> {
   }
 
   void _toggle(String id) => setState(() {
-        if (_selected.contains(id)) {
-          _selected.remove(id);
-        } else if (_selected.length < _target) {
-          _selected.add(id);
-        }
-      });
+    if (_selected.contains(id)) {
+      _selected.remove(id);
+    } else if (_selected.length < _target) {
+      _selected.add(id);
+    }
+  });
 
   void _autoFill() => setState(() {
-        for (final c in _pool) {
-          if (_selected.length >= _target) break;
-          _selected.add(c.id);
-        }
-      });
+    for (final c in _pool) {
+      if (_selected.length >= _target) break;
+      _selected.add(c.id);
+    }
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1155,73 +1266,86 @@ class _DeckBuilderState extends State<_DeckBuilder> {
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: _maxOverlayWidth),
         child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-            child: Column(
-              children: [
-                const Text('Build Your Power Deck',
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+              child: Column(
+                children: [
+                  const Text(
+                    'Build Your Power Deck',
                     style: TextStyle(
-                        fontFamily: 'GoudyHeavyface',
-                        fontSize: 24,
-                        color: _gold)),
-                const SizedBox(height: 2),
-                Text('Tap cards to add or remove. Choose $_target.',
-                    style:
-                        const TextStyle(color: Colors.white60, fontSize: 12)),
-              ],
-            ),
-          ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              children: [
-                for (final c in _pool)
-                  _DeckRow(
-                    option: c,
-                    selected: _selected.contains(c.id),
-                    atCap: _selected.length >= _target,
-                    onTap: () => _toggle(c.id),
+                      fontFamily: 'GoudyHeavyface',
+                      fontSize: 24,
+                      color: _gold,
+                    ),
                   ),
-                const SizedBox(height: 8),
-              ],
+                  const SizedBox(height: 2),
+                  Text(
+                    'Tap cards to add or remove. Choose $_target.',
+                    style: const TextStyle(color: Colors.white60, fontSize: 12),
+                  ),
+                ],
+              ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 6, 16, 4),
-            child: Row(
-              children: [
-                Text('${_selected.length} / $_target',
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                children: [
+                  for (final c in _pool)
+                    _DeckRow(
+                      option: c,
+                      selected: _selected.contains(c.id),
+                      atCap: _selected.length >= _target,
+                      onTap: () => _toggle(c.id),
+                    ),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 6, 16, 4),
+              child: Row(
+                children: [
+                  Text(
+                    '${_selected.length} / $_target',
                     style: TextStyle(
-                        color: ready ? const Color(0xFF7FE0A6) : _gold,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 18)),
-                const Spacer(),
-                if (_selected.length < _target)
-                  TextButton(
-                    onPressed: _autoFill,
-                    child: const Text('Auto-fill',
-                        style: TextStyle(color: Color(0xFFC79BE6))),
+                      color: ready ? const Color(0xFF7FE0A6) : _gold,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 18,
+                    ),
                   ),
-                const SizedBox(width: 6),
-                FilledButton(
-                  onPressed: ready
-                      ? () => widget.onConfirm(_selected.toList())
-                      : null,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: _gold,
-                    foregroundColor: Colors.black,
-                    disabledBackgroundColor: Colors.white24,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 22, vertical: 12),
+                  const Spacer(),
+                  if (_selected.length < _target)
+                    TextButton(
+                      onPressed: _autoFill,
+                      child: const Text(
+                        'Auto-fill',
+                        style: TextStyle(color: Color(0xFFC79BE6)),
+                      ),
+                    ),
+                  const SizedBox(width: 6),
+                  FilledButton(
+                    onPressed: ready
+                        ? () => widget.onConfirm(_selected.toList())
+                        : null,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: _gold,
+                      foregroundColor: Colors.black,
+                      disabledBackgroundColor: Colors.white24,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 22,
+                        vertical: 12,
+                      ),
+                    ),
+                    child: const Text(
+                      'Play',
+                      style: TextStyle(fontWeight: FontWeight.w800),
+                    ),
                   ),
-                  child: const Text('Play',
-                      style: TextStyle(fontWeight: FontWeight.w800)),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
         ),
       ),
     );
@@ -1266,29 +1390,37 @@ class _DeckRow extends StatelessWidget {
               child: Row(
                 children: [
                   _ZoomableThumb(
-                      id: option.id,
-                      title: option.label,
-                      subtitle: option.subtitle,
-                      w: 46,
-                      h: 74),
+                    id: option.id,
+                    title: option.label,
+                    subtitle: option.subtitle,
+                    w: 46,
+                    h: 74,
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(option.label,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 13)),
+                        Text(
+                          option.label,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                          ),
+                        ),
                         if (option.subtitle != null) ...[
                           const SizedBox(height: 2),
-                          Text(option.subtitle!,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  color: Colors.white54, fontSize: 11)),
+                          Text(
+                            option.subtitle!,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white54,
+                              fontSize: 11,
+                            ),
+                          ),
                         ],
                       ],
                     ),
@@ -1298,9 +1430,7 @@ class _DeckRow extends StatelessWidget {
                     selected
                         ? Icons.check_circle_rounded
                         : Icons.add_circle_outline_rounded,
-                    color: selected
-                        ? const Color(0xFF7FE0A6)
-                        : Colors.white38,
+                    color: selected ? const Color(0xFF7FE0A6) : Colors.white38,
                     size: 22,
                   ),
                 ],
@@ -1336,30 +1466,41 @@ class _CardTile extends StatelessWidget {
           child: Row(
             children: [
               _ZoomableThumb(
-                  id: option.id,
-                  title: option.label,
-                  subtitle: option.subtitle,
-                  w: 46,
-                  h: 74),
+                id: option.id,
+                title: option.label,
+                subtitle: option.subtitle,
+                w: 46,
+                h: 74,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(option.label,
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 13)),
+                    Text(
+                      option.label,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
+                    ),
                     if (option.subtitle != null)
-                      Text(option.subtitle!,
-                          style: const TextStyle(
-                              color: Colors.white60, fontSize: 11)),
+                      Text(
+                        option.subtitle!,
+                        style: const TextStyle(
+                          color: Colors.white60,
+                          fontSize: 11,
+                        ),
+                      ),
                   ],
                 ),
               ),
-              const Icon(Icons.play_arrow_rounded,
-                  color: Color(0xFFC79BE6), size: 20),
+              const Icon(
+                Icons.play_arrow_rounded,
+                color: Color(0xFFC79BE6),
+                size: 20,
+              ),
             ],
           ),
         ),
@@ -1386,8 +1527,10 @@ class _PlainTile extends StatelessWidget {
             borderRadius: BorderRadius.circular(10),
             border: Border.all(color: _teal),
           ),
-          child: Text(label,
-              style: const TextStyle(color: Colors.white, fontSize: 13)),
+          child: Text(
+            label,
+            style: const TextStyle(color: Colors.white, fontSize: 13),
+          ),
         ),
       ),
     );
@@ -1414,22 +1557,32 @@ class _TargetTile extends StatelessWidget {
           ),
           child: Row(
             children: [
-              const Icon(Icons.gps_fixed_rounded,
-                  color: Color(0xFFF3C0A0), size: 18),
+              const Icon(
+                Icons.gps_fixed_rounded,
+                color: Color(0xFFF3C0A0),
+                size: 18,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(option.label,
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 13)),
+                    Text(
+                      option.label,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
+                    ),
                     if (option.subtitle != null)
-                      Text(option.subtitle!,
-                          style: const TextStyle(
-                              color: Colors.white60, fontSize: 11)),
+                      Text(
+                        option.subtitle!,
+                        style: const TextStyle(
+                          color: Colors.white60,
+                          fontSize: 11,
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -1467,8 +1620,10 @@ class _PowerThumb extends StatelessWidget {
             width: w,
             height: h,
             child: const Center(
-              child: Text('★',
-                  style: TextStyle(color: Color(0xFFC79BE6), fontSize: 18)),
+              child: Text(
+                '★',
+                style: TextStyle(color: Color(0xFFC79BE6), fontSize: 18),
+              ),
             ),
           ),
         ),
@@ -1481,8 +1636,11 @@ class _ActionButton extends StatelessWidget {
   final String label;
   final Color color;
   final VoidCallback onTap;
-  const _ActionButton(
-      {required this.label, required this.color, required this.onTap});
+  const _ActionButton({
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
   @override
   Widget build(BuildContext context) {
     return Material(
@@ -1498,11 +1656,14 @@ class _ActionButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
           ),
-          child: Text(label,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700)),
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ),
       ),
     );
@@ -1523,85 +1684,13 @@ class _MiniButton extends StatelessWidget {
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          child: Text(label,
-              style: const TextStyle(
-                  color: Color(0xFF1B140C), fontWeight: FontWeight.w800)),
-        ),
-      ),
-    );
-  }
-}
-
-class _GameOver extends StatelessWidget {
-  final GameOverView view;
-  final VoidCallback onExit;
-  final VoidCallback? onPlayAgain;
-  const _GameOver({required this.view, required this.onExit, this.onPlayAgain});
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: Colors.black.withValues(alpha: 0.72),
-      alignment: Alignment.center,
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: _maxPanelWidth),
-        margin: const EdgeInsets.all(28),
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: _panel,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: _panelBorder, width: 1.5),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(view.youWon ? 'Victory' : 'Defeat',
-                style: TextStyle(
-                    fontFamily: 'GoudyHeavyface',
-                    fontSize: 34,
-                    color: view.youWon ? _gold : const Color(0xFFB3261E))),
-            const SizedBox(height: 12),
-            Text(view.detail,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white70, fontSize: 15)),
-            if (view.standings.isNotEmpty) ...[
-              const SizedBox(height: 14),
-              for (final s in view.standings)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: Text('${s.label}  ·  ${s.stack}',
-                      style:
-                          const TextStyle(color: Colors.white54, fontSize: 12)),
-                ),
-            ],
-            const SizedBox(height: 20),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (onPlayAgain != null) ...[
-                  _MiniButton(label: 'Play Again', onTap: onPlayAgain!),
-                  const SizedBox(width: 12),
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(10),
-                      onTap: onExit,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: _panelBorder),
-                        ),
-                        child: const Text('Leave',
-                            style: TextStyle(color: Colors.white70)),
-                      ),
-                    ),
-                  ),
-                ] else
-                  _MiniButton(label: 'Leave', onTap: onExit),
-              ],
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFF1B140C),
+              fontWeight: FontWeight.w800,
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -1645,8 +1734,10 @@ class _DeckOverlayState extends State<_DeckOverlay> {
               onTap: () => setState(() => _open = true),
               behavior: HitTestBehavior.opaque,
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: _panel,
                   borderRadius: BorderRadius.circular(14),
@@ -1657,11 +1748,14 @@ class _DeckOverlayState extends State<_DeckOverlay> {
                   children: [
                     Text('🂠', style: TextStyle(fontSize: 13)),
                     SizedBox(width: 5),
-                    Text('Deck',
-                        style: TextStyle(
-                            color: _gold,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700)),
+                    Text(
+                      'Deck',
+                      style: TextStyle(
+                        color: _gold,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -1676,55 +1770,69 @@ class _DeckOverlayState extends State<_DeckOverlay> {
                 padding: EdgeInsets.only(top: top + 8, bottom: bottom + 8),
                 alignment: Alignment.topCenter,
                 child: ConstrainedBox(
-                  constraints:
-                      const BoxConstraints(maxWidth: _maxOverlayWidth),
+                  constraints: const BoxConstraints(maxWidth: _maxOverlayWidth),
                   child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 8, 8),
-                      child: Row(
-                        children: [
-                          const Text('Your Power Deck',
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 4, 8, 8),
+                        child: Row(
+                          children: [
+                            const Text(
+                              'Your Power Deck',
                               style: TextStyle(
-                                  fontFamily: 'GoudyHeavyface',
-                                  fontSize: 22,
-                                  color: _gold)),
-                          const SizedBox(width: 10),
-                          Text('$total cards',
-                              style: const TextStyle(
-                                  color: Colors.white54, fontSize: 12)),
-                          const Spacer(),
-                          IconButton(
-                            onPressed: () => setState(() => _open = false),
-                            icon: const Icon(Icons.close_rounded,
-                                color: Colors.white70),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: ListView(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        children: [
-                          for (final s in sections)
-                            if (s.$2.isNotEmpty) ...[
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                    top: 10, bottom: 4, left: 4),
-                                child: Text('${s.$1}  ·  ${s.$2.length}',
-                                    style: const TextStyle(
-                                        color: _gold,
-                                        fontWeight: FontWeight.w800,
-                                        fontSize: 13)),
+                                fontFamily: 'GoudyHeavyface',
+                                fontSize: 22,
+                                color: _gold,
                               ),
-                              for (final c in s.$2) _DeckViewRow(card: c),
-                            ],
-                          const SizedBox(height: 12),
-                        ],
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              '$total cards',
+                              style: const TextStyle(
+                                color: Colors.white54,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const Spacer(),
+                            IconButton(
+                              onPressed: () => setState(() => _open = false),
+                              icon: const Icon(
+                                Icons.close_rounded,
+                                color: Colors.white70,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                      Expanded(
+                        child: ListView(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          children: [
+                            for (final s in sections)
+                              if (s.$2.isNotEmpty) ...[
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                    top: 10,
+                                    bottom: 4,
+                                    left: 4,
+                                  ),
+                                  child: Text(
+                                    '${s.$1}  ·  ${s.$2.length}',
+                                    style: const TextStyle(
+                                      color: _gold,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                                for (final c in s.$2) _DeckViewRow(card: c),
+                              ],
+                            const SizedBox(height: 12),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -1744,11 +1852,12 @@ class _DeckViewRow extends StatelessWidget {
       child: Row(
         children: [
           _ZoomableThumb(
-              id: card.templateId,
-              title: card.name,
-              subtitle: card.description,
-              w: 40,
-              h: 60),
+            id: card.templateId,
+            title: card.name,
+            subtitle: card.description,
+            w: 40,
+            h: 60,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -1757,32 +1866,40 @@ class _DeckViewRow extends StatelessWidget {
                 Row(
                   children: [
                     Flexible(
-                      child: Text(card.name,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13)),
+                      child: Text(
+                        card.name,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 6),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 1),
+                        horizontal: 6,
+                        vertical: 1,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFF33291C),
                         borderRadius: BorderRadius.circular(5),
                         border: Border.all(color: _panelBorder),
                       ),
-                      child: Text(card.timing,
-                          style: const TextStyle(color: _gold, fontSize: 9)),
+                      child: Text(
+                        card.timing,
+                        style: const TextStyle(color: _gold, fontSize: 9),
+                      ),
                     ),
                   ],
                 ),
-                Text(card.description,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style:
-                        const TextStyle(color: Colors.white54, fontSize: 11)),
+                Text(
+                  card.description,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white54, fontSize: 11),
+                ),
               ],
             ),
           ),
@@ -1826,8 +1943,10 @@ class _RulesOverlayState extends State<_RulesOverlay> {
               onTap: () => setState(() => _open = true),
               behavior: HitTestBehavior.opaque,
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: _panel,
                   borderRadius: BorderRadius.circular(14),
@@ -1838,11 +1957,14 @@ class _RulesOverlayState extends State<_RulesOverlay> {
                   children: [
                     Text('❔', style: TextStyle(fontSize: 13)),
                     SizedBox(width: 5),
-                    Text('Rules',
-                        style: TextStyle(
-                            color: _gold,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700)),
+                    Text(
+                      'Rules',
+                      style: TextStyle(
+                        color: _gold,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -1857,63 +1979,76 @@ class _RulesOverlayState extends State<_RulesOverlay> {
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: _maxOverlayWidth),
                 child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 8, 8),
-                    child: Row(
-                      children: [
-                        const Text('Rules Reference',
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 8, 8),
+                      child: Row(
+                        children: [
+                          const Text(
+                            'Rules Reference',
                             style: TextStyle(
-                                fontFamily: 'GoudyHeavyface',
-                                fontSize: 22,
-                                color: _gold)),
-                        const Spacer(),
-                        IconButton(
-                          onPressed: () => setState(() => _open = false),
-                          icon: const Icon(Icons.close_rounded,
-                              color: Colors.white70),
-                        ),
-                      ],
+                              fontFamily: 'GoudyHeavyface',
+                              fontSize: 22,
+                              color: _gold,
+                            ),
+                          ),
+                          const Spacer(),
+                          IconButton(
+                            onPressed: () => setState(() => _open = false),
+                            icon: const Icon(
+                              Icons.close_rounded,
+                              color: Colors.white70,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  Expanded(
-                    child: PageView.builder(
-                      itemCount: _pages.length,
-                      itemBuilder: (context, i) {
-                        final (title, path) = _pages[i];
-                        return Column(
-                          children: [
-                            Text(title,
+                    Expanded(
+                      child: PageView.builder(
+                        itemCount: _pages.length,
+                        itemBuilder: (context, i) {
+                          final (title, path) = _pages[i];
+                          return Column(
+                            children: [
+                              Text(
+                                title,
                                 style: const TextStyle(
-                                    color: Color(0xFFC79BE6),
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700)),
-                            const SizedBox(height: 6),
-                            Expanded(
-                              child: InteractiveViewer(
-                                minScale: 1,
-                                maxScale: 4,
-                                child: Image.asset(path,
+                                  color: Color(0xFFC79BE6),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Expanded(
+                                child: InteractiveViewer(
+                                  minScale: 1,
+                                  maxScale: 4,
+                                  child: Image.asset(
+                                    path,
                                     fit: BoxFit.contain,
                                     errorBuilder: (_, _, _) => const Center(
-                                          child: Text('Reference unavailable',
-                                              style: TextStyle(
-                                                  color: Colors.white54)),
-                                        )),
+                                      child: Text(
+                                        'Reference unavailable',
+                                        style: TextStyle(color: Colors.white54),
+                                      ),
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
-                          ],
-                        );
-                      },
+                            ],
+                          );
+                        },
+                      ),
                     ),
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.only(top: 6),
-                    child: Text('Swipe for more  ·  pinch to zoom',
-                        style: TextStyle(color: Colors.white38, fontSize: 11)),
-                  ),
-                ],
-              ),
+                    const Padding(
+                      padding: EdgeInsets.only(top: 6),
+                      child: Text(
+                        'Swipe for more  ·  pinch to zoom',
+                        style: TextStyle(color: Colors.white38, fontSize: 11),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -1926,8 +2061,11 @@ class _ConnectionOverlay extends StatelessWidget {
   final SessionPhase phase;
   final String? message;
   final VoidCallback onExit;
-  const _ConnectionOverlay(
-      {required this.phase, this.message, required this.onExit});
+  const _ConnectionOverlay({
+    required this.phase,
+    this.message,
+    required this.onExit,
+  });
   @override
   Widget build(BuildContext context) {
     final connecting = phase == SessionPhase.connecting;
@@ -1936,7 +2074,8 @@ class _ConnectionOverlay extends StatelessWidget {
     final specific = (!connecting && message != null && message!.isNotEmpty)
         ? message
         : null;
-    final msg = specific ??
+    final msg =
+        specific ??
         switch (phase) {
           SessionPhase.connecting => 'Connecting to the table…',
           SessionPhase.disconnected => 'Disconnected from the table.',
@@ -1954,8 +2093,10 @@ class _ConnectionOverlay extends StatelessWidget {
           else
             const Icon(Icons.wifi_off_rounded, color: Colors.white54, size: 40),
           const SizedBox(height: 14),
-          Text(msg,
-              style: const TextStyle(color: Colors.white70, fontSize: 15)),
+          Text(
+            msg,
+            style: const TextStyle(color: Colors.white70, fontSize: 15),
+          ),
           if (!connecting) ...[
             const SizedBox(height: 18),
             _MiniButton(label: 'Leave', onTap: onExit),
@@ -1988,12 +2129,15 @@ class _ExitButton extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Leave the game?',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      fontFamily: 'GoudyHeavyface',
-                      fontSize: 24,
-                      color: _gold)),
+              const Text(
+                'Leave the game?',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'GoudyHeavyface',
+                  fontSize: 24,
+                  color: _gold,
+                ),
+              ),
               const SizedBox(height: 10),
               const Text(
                 'You’ll forfeit your seat and your progress in this match.',

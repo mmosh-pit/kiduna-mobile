@@ -1,8 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kiduna_mobile/core/utils/sse_parser.dart';
-import 'package:kiduna_mobile/data/models/sse_event.dart';
+import 'package:kiduna/core/utils/sse_parser.dart';
+import 'package:kiduna/data/models/sse_event.dart';
 
 /// Helper: encode a string as a single-element byte stream.
 Stream<List<int>> _bytesFrom(String data) async* {

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kiduna_mobile/data/services/gdrive_service.dart';
+import 'package:kiduna/data/services/gdrive_service.dart';
 
 void main() {
   group('DriveFile', () {

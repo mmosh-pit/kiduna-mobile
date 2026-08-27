@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kiduna_mobile/app/routes.dart';
-import 'package:kiduna_mobile/config/theme.dart';
-import 'package:kiduna_mobile/l10n/app_localizations.dart';
-import 'package:kiduna_mobile/shared/widgets/app_header.dart';
+import 'package:kiduna/app/routes.dart';
+import 'package:kiduna/config/theme.dart';
+import 'package:kiduna/l10n/app_localizations.dart';
+import 'package:kiduna/shared/widgets/app_header.dart';
 
 const Key _viewKey = ValueKey('header-view-dropdown');
 const Key _personaKey = ValueKey('header-persona-dropdown');

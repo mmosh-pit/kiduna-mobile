@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kiduna_mobile/data/models/knowledge_base_model.dart';
-import 'package:kiduna_mobile/features/field/controllers/knowledge_controller.dart';
+import 'package:kiduna/data/models/knowledge_base_model.dart';
+import 'package:kiduna/features/field/controllers/knowledge_controller.dart';
 
 void main() {
   group('KnowledgeState', () {

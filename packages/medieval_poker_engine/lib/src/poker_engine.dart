@@ -72,6 +72,18 @@ class PokerPlayer {
   bool allIn = false;
   bool eliminated = false;
 
+  /// Hand number this player ran out of chips on; null while still in.
+  int? eliminatedAtHand;
+
+  /// 1 = first player out. Null while still in. Together with the survivors'
+  /// stacks this is what makes a finishing order — a busted player's [stack]
+  /// is 0, so stack alone cannot rank them.
+  int? eliminationOrder;
+
+  /// [stack] as it stood when the current hand began. Breaks ties when two
+  /// players bust on the same hand: the deeper stack finishes higher.
+  int stackAtHandStart = 0;
+
   /// Chips contributed during the current betting round.
   int roundBet = 0;
 
@@ -330,6 +342,9 @@ class PokerGame {
   int buttonSeat = 0;
   int handNumber = 0;
 
+  /// How many players have busted so far; assigns [PokerPlayer.eliminationOrder].
+  int _eliminatedCount = 0;
+
   /// Current ante-level index (0-based). >= anteLevels.length ⇒ Sudden Death.
   /// Advanced by the timer (live) and by a hand-count backstop (headless).
   int level = 0;
@@ -352,8 +367,8 @@ class PokerGame {
     Random? rng,
     this.onLog,
     this.onPeek,
-  })  : _deck = Deck(rng: rng, jokerCount: config.jokerCount),
-        _rng = rng ?? Random() {
+  }) : _deck = Deck(rng: rng, jokerCount: config.jokerCount),
+       _rng = rng ?? Random() {
     if (config.enablePowerCards) {
       for (final p in players) {
         p.powerDeck = PowerCards.starterDeck(_rng);
@@ -365,10 +380,10 @@ class PokerGame {
   /// The pool of Power Cards a player may include in their deck: every standard
   /// (non-promo) Neutral, plus their class's 12 cards and their Court's 9 cards.
   List<PowerCard> deckCandidatesFor(PokerPlayer p) => <PowerCard>[
-        ...PowerCards.standard,
-        ...ClassCards.forClass(p.personality),
-        ...CourtCards.forMember(p.court),
-      ];
+    ...PowerCards.standard,
+    ...ClassCards.forClass(p.personality),
+    ...CourtCards.forMember(p.court),
+  ];
 
   /// Target Power Deck size (players choose which cards to include).
   int get deckSize => config.powerDeckSize;
@@ -414,8 +429,9 @@ class PokerGame {
   bool get inSuddenDeath => level >= config.anteLevels.length;
 
   /// Which Sudden Death hand this is (1-based), or 0 if not in Sudden Death.
-  int get suddenDeathHand =>
-      inSuddenDeath ? (_suddenDeathDone + 1).clamp(1, config.suddenDeathHands) : 0;
+  int get suddenDeathHand => inSuddenDeath
+      ? (_suddenDeathDone + 1).clamp(1, config.suddenDeathHands)
+      : 0;
 
   int get ante => inSuddenDeath
       ? config.suddenDeathAnte
@@ -436,8 +452,7 @@ class PokerGame {
 
   int get pot => players.fold(0, (sum, p) => sum + p.totalBet);
 
-  List<PokerPlayer> get liveInHand =>
-      players.where((p) => p.inHand).toList();
+  List<PokerPlayer> get liveInHand => players.where((p) => p.inHand).toList();
 
   List<PokerPlayer> get contenders => liveInHand; // not folded, not out
 
@@ -468,10 +483,59 @@ class PokerGame {
     return null;
   }
 
+  /// Mark every chipless player as out, in finishing order.
+  ///
+  /// Called at the end of each hand. Public and idempotent because stacks can
+  /// also be drained out of band (Power Cards move chips without betting), so
+  /// a host may need to reconcile eliminations itself.
+  ///
+  /// Players who bust on the same hand are ordered by [PokerPlayer.stackAtHandStart]:
+  /// whoever began the hand with more chips finishes higher, the standard rule.
+  void applyEliminations() {
+    final busted = <PokerPlayer>[
+      for (final p in players)
+        if (!p.eliminated && p.stack <= 0) p,
+    ]..sort((a, b) => a.stackAtHandStart.compareTo(b.stackAtHandStart));
+
+    for (final p in busted) {
+      p.eliminated = true;
+      p.folded = true;
+      p.eliminatedAtHand = handNumber;
+      p.eliminationOrder = ++_eliminatedCount;
+      _log('${p.name} is out of chips.');
+    }
+  }
+
+  /// Every player, best finish first. Meaningful once [isGameOver].
+  ///
+  /// Survivors come first ordered by [PokerPlayer.stack] (this is how a Sudden
+  /// Death finish is decided), then the busted in reverse elimination order —
+  /// the last player out finishes above the first.
+  List<PokerPlayer> get finalStandings {
+    final survivors = <PokerPlayer>[
+      for (final p in players)
+        if (!p.eliminated) p,
+    ]..sort((a, b) => b.stack.compareTo(a.stack));
+
+    final busted =
+        <PokerPlayer>[
+          for (final p in players)
+            if (p.eliminated) p,
+        ]..sort(
+          (a, b) =>
+              (b.eliminationOrder ?? 0).compareTo(a.eliminationOrder ?? 0),
+        );
+
+    return [...survivors, ...busted];
+  }
+
+  /// 1-based finishing place for [p]; 1 is the champion.
+  int finalRankOf(PokerPlayer p) =>
+      finalStandings.indexWhere((o) => identical(o, p)) + 1;
+
   // ── Betting math for the acting player ────────────────────────────────
 
-  int callAmount(PokerPlayer p) =>
-      (currentBet - p.roundBet).clamp(0, p.stack);
+  int callAmount(PokerPlayer p) => (currentBet - p.roundBet).clamp(0, p.stack);
 
   bool get facingBet =>
       actingPlayer != null && currentBet - actingPlayer!.roundBet > 0;
@@ -527,6 +591,7 @@ class PokerGame {
     minRaiseSize = ante;
 
     for (final p in players) {
+      p.stackAtHandStart = p.stack;
       p.hole = [];
       p.folded = p.eliminated;
       p.allIn = false;
@@ -607,7 +672,12 @@ class PokerGame {
     _deck.shuffle();
     int cutValue(PlayingCard c) {
       if (c.isJoker) return 1000;
-      const suit = {Suit.spades: 3, Suit.hearts: 2, Suit.diamonds: 1, Suit.clubs: 0};
+      const suit = {
+        Suit.spades: 3,
+        Suit.hearts: 2,
+        Suit.diamonds: 1,
+        Suit.clubs: 0,
+      };
       return c.rank * 4 + suit[c.suit]!;
     }
 
@@ -658,8 +728,7 @@ class PokerGame {
       p.hasActed = false;
     }
     // If fewer than two players can act, skip straight to the next street.
-    if (players.where((p) => p.canAct).length < 2 &&
-        _playersToShowdown()) {
+    if (players.where((p) => p.canAct).length < 2 && _playersToShowdown()) {
       _actingIndex = -1;
       return;
     }
@@ -876,31 +945,35 @@ class PokerGame {
           .where((e) => e.value > 0)
           .map((e) => e.value)
           .reduce(min);
-      final contributors =
-          contrib.entries.where((e) => e.value > 0).map((e) => e.key).toList();
+      final contributors = contrib.entries
+          .where((e) => e.value > 0)
+          .map((e) => e.key)
+          .toList();
       int amount = 0;
       for (final p in contributors) {
         amount += level;
         contrib[p] = contrib[p]! - level;
       }
-      final eligible =
-          contributors.where((p) => p.inHand && p.showdownHand != null).toList();
+      final eligible = contributors
+          .where((p) => p.inHand && p.showdownHand != null)
+          .toList();
       if (eligible.isEmpty) continue;
 
       HandValue best = eligible.first.showdownHand!;
       for (final p in eligible) {
         if (p.showdownHand! > best) best = p.showdownHand!;
       }
-      final winners = eligible
-          .where((p) => p.showdownHand!.compareTo(best) == 0)
-          .toList()
-        ..sort((a, b) => a.seat.compareTo(b.seat));
+      final winners =
+          eligible.where((p) => p.showdownHand!.compareTo(best) == 0).toList()
+            ..sort((a, b) => a.seat.compareTo(b.seat));
 
       _payout(winners, amount);
       awards.add(PotAward(amount, winners, true));
-      _log('${winners.map((w) => w.name).join(', ')} '
-          'win${winners.length == 1 ? 's' : ''} $amount '
-          'with ${best.category.label}.');
+      _log(
+        '${winners.map((w) => w.name).join(', ')} '
+        'win${winners.length == 1 ? 's' : ''} $amount '
+        'with ${best.category.label}.',
+      );
       for (final w in winners) {
         // Snake Oil: draw 2 for winning a showdown holding it.
         if (_holdsItem(w, 'snake_oil')) {
@@ -949,13 +1022,7 @@ class PokerGame {
     // Fool's Gold Tilts the pot winner AFTER status transitions, so the
     // "won a pot → recover" step can't undo the curse.
     _awardFoolsGold(awards);
-    for (final p in players) {
-      if (!p.eliminated && p.stack <= 0) {
-        p.eliminated = true;
-        p.folded = true;
-        _log('${p.name} is out of chips.');
-      }
-    }
+    applyEliminations();
     if (_handInSuddenDeath) _suddenDeathDone++;
     street = Street.handOver;
   }
@@ -986,8 +1053,11 @@ class PokerGame {
         if (_hasToken(p, 'king_midas')) _gainCompChips(p, 1);
         // Press the Advantage: return a card from discard on a win.
         if (_hasToken(p, 'jack_press')) {
-          _returnFromDiscard(
-              p, const {PowerTiming.round, PowerTiming.counter, PowerTiming.setup});
+          _returnFromDiscard(p, const {
+            PowerTiming.round,
+            PowerTiming.counter,
+            PowerTiming.setup,
+          });
         }
       } else {
         p.consecutiveWins = 0;
@@ -1074,16 +1144,17 @@ class PokerGame {
     switch (card.templateId) {
       case 'trash_talker':
         return players
-            .where((o) =>
-                !identical(o, actor) &&
-                !o.eliminated &&
-                !o.heatingUp &&
-                !o.tilted)
+            .where(
+              (o) =>
+                  !identical(o, actor) &&
+                  !o.eliminated &&
+                  !o.heatingUp &&
+                  !o.tilted,
+            )
             .toList();
       case 'show_mercy':
         return players
-            .where((o) =>
-                !identical(o, actor) && (o.folded || o.eliminated))
+            .where((o) => !identical(o, actor) && (o.folded || o.eliminated))
             .toList();
       default:
         return targetableOpponents(actor);
@@ -1106,11 +1177,13 @@ class PokerGame {
   List<PowerCard> playableCounters(PokerPlayer p, ChainEntry top) {
     if (identical(p, top.player) || p.folded || p.eliminated) return [];
     return p.powerHand
-        .where((c) =>
-            c.timing == PowerTiming.counter &&
-            !c.justDealt &&
-            canPlayPower(p, c) &&
-            _canCounter(c, top))
+        .where(
+          (c) =>
+              c.timing == PowerTiming.counter &&
+              !c.justDealt &&
+              canPlayPower(p, c) &&
+              _canCounter(c, top),
+        )
         .toList();
   }
 
@@ -1120,15 +1193,18 @@ class PokerGame {
   List<PowerCard> playableJustDealt(PokerPlayer p) {
     if (p.folded || p.eliminated || _lastDealtCount <= 0) return [];
     return p.powerHand
-        .where((c) =>
-            c.justDealt &&
-            c.timing == PowerTiming.counter &&
-            canPlayPower(p, c))
+        .where(
+          (c) =>
+              c.justDealt &&
+              c.timing == PowerTiming.counter &&
+              canPlayPower(p, c),
+        )
         .toList();
   }
 
-  List<PokerPlayer> boardCounterResponders() =>
-      playersFromButton().where((p) => playableJustDealt(p).isNotEmpty).toList();
+  List<PokerPlayer> boardCounterResponders() => playersFromButton()
+      .where((p) => playableJustDealt(p).isNotEmpty)
+      .toList();
 
   /// Play a "Just Dealt" counter: re-deal the most recently dealt board card.
   void playBoardCounter(PokerPlayer p, PowerCard card) {
@@ -1170,8 +1246,9 @@ class PokerGame {
   }
 
   /// Players (in acting order) who could counter [top].
-  List<PokerPlayer> counterRespondersFor(ChainEntry top) =>
-      playersFromButton().where((p) => playableCounters(p, top).isNotEmpty).toList();
+  List<PokerPlayer> counterRespondersFor(ChainEntry top) => playersFromButton()
+      .where((p) => playableCounters(p, top).isNotEmpty)
+      .toList();
 
   /// Propose [card] onto the chain (removes it from hand) without resolving.
   /// For a counter, pass [targetEntry] = the entry it responds to.
@@ -1182,8 +1259,12 @@ class PokerGame {
     ChainEntry? targetEntry,
   }) {
     p.powerHand.remove(card);
-    final entry = ChainEntry(p, card,
-        targetPlayer: targetPlayer, targetEntry: targetEntry);
+    final entry = ChainEntry(
+      p,
+      card,
+      targetPlayer: targetPlayer,
+      targetEntry: targetEntry,
+    );
     _chain.add(entry);
     final on = targetPlayer != null ? ' on ${targetPlayer.name}' : '';
     _log('${p.name} plays ${card.name}$on.');
@@ -1482,7 +1563,10 @@ class PokerGame {
   void _mulliganLastBoardUntilFace() {
     final idx = _lastDealtStart + _lastDealtCount - 1;
     int guard = 0;
-    while (guard++ < 20 && idx >= 0 && idx < community.length && _deck.remaining > 0) {
+    while (guard++ < 20 &&
+        idx >= 0 &&
+        idx < community.length &&
+        _deck.remaining > 0) {
       final c = community[idx];
       if (c.isJoker || c.rank >= 11) break;
       community[idx] = _deck.draw();
@@ -1533,7 +1617,8 @@ class PokerGame {
     if (_hasToken(who, 'queen_favorite') && _deck.remaining > 0) {
       if (who.isHuman) {
         onPeek?.call(
-            'Bottom of deck: ${_deck.peekBottom(1).map((c) => c.label).join()}');
+          'Bottom of deck: ${_deck.peekBottom(1).map((c) => c.label).join()}',
+        );
       }
       if (who.hole.length < config.maxHoleCards) {
         who.hole.add(_deck.drawBottom());
@@ -1550,8 +1635,10 @@ class PokerGame {
           !identical(h, aggressor) &&
           _hasToken(h, 'queen_analytical')) {
         aggressor.revealedToHuman = true;
-        onPeek?.call('${aggressor.name}\'s hole: '
-            '${aggressor.hole.map((c) => c.label).join(' ')}');
+        onPeek?.call(
+          '${aggressor.name}\'s hole: '
+          '${aggressor.hole.map((c) => c.label).join(' ')}',
+        );
       }
     }
   }
@@ -1566,7 +1653,8 @@ class PokerGame {
           _hasToken(p, 'queen_ring') &&
           _deck.remaining > 0) {
         onPeek?.call(
-            'Next board card: ${_deck.peek(1).map((c) => c.label).join()}');
+          'Next board card: ${_deck.peek(1).map((c) => c.label).join()}',
+        );
       }
       // Drunken Boxing: a Tilted holder digs (mulligan a hole + retrieve).
       if (_hasToken(p, 'joker_drunken_boxing') && p.tilted) {
@@ -1644,15 +1732,16 @@ class PokerGame {
 
   /// All Item cards held in [p]'s hole cards.
   List<GameItem> heldItems(PokerPlayer p) => [
-        for (final c in p.hole)
-          if (c.isItem) Items.byId(c.itemId!)!,
-      ];
+    for (final c in p.hole)
+      if (c.isItem) Items.byId(c.itemId!)!,
+  ];
 
   /// Held Items [p] may actively play on their turn (active + in-pot items;
   /// showdown/on-win items trigger automatically).
   List<GameItem> playableItems(PokerPlayer p) => heldItems(p)
-      .where((it) =>
-          it.timing == ItemTiming.active || it.timing == ItemTiming.inPot)
+      .where(
+        (it) => it.timing == ItemTiming.active || it.timing == ItemTiming.inPot,
+      )
       .toList();
 
   bool _holdsItem(PokerPlayer p, String id) =>
@@ -1690,17 +1779,21 @@ class PokerGame {
     switch (item.id) {
       case 'monkey_paw':
         if (mode == 0 && p.powerHand.isNotEmpty) {
-          return ItemPick('Discard a Power Card',
-              [for (final c in p.powerHand) c.name]);
+          return ItemPick('Discard a Power Card', [
+            for (final c in p.powerHand) c.name,
+          ]);
         }
         if (mode == 1) {
-          final labels = _realHoleIndices(p).map((i) => p.hole[i].label).toList();
+          final labels = _realHoleIndices(
+            p,
+          ).map((i) => p.hole[i].label).toList();
           if (labels.isNotEmpty) return ItemPick('Discard a hole card', labels);
         }
         return null;
       case 'rabbit_foot':
-        final labels =
-            _lowBoardIndices().map((i) => community[i].label).toList();
+        final labels = _lowBoardIndices()
+            .map((i) => community[i].label)
+            .toList();
         if (labels.isNotEmpty) {
           return ItemPick('Mulligan a board card?', labels, optional: true);
         }
@@ -1730,23 +1823,25 @@ class PokerGame {
 
   /// Indices of [p]'s real (non-item) hole cards, in order.
   List<int> _realHoleIndices(PokerPlayer p) => [
-        for (int i = 0; i < p.hole.length; i++)
-          if (!p.hole[i].isItem) i,
-      ];
+    for (int i = 0; i < p.hole.length; i++)
+      if (!p.hole[i].isItem) i,
+  ];
 
   /// Board indices holding a 2-9 card (Rabbit Foot targets).
   List<int> _lowBoardIndices() => [
-        for (int i = 0; i < community.length; i++)
-          if (!community[i].isJoker &&
-              !community[i].isItem &&
-              community[i].rank <= 9)
-            i,
-      ];
+    for (int i = 0; i < community.length; i++)
+      if (!community[i].isJoker &&
+          !community[i].isItem &&
+          community[i].rank <= 9)
+        i,
+  ];
 
   /// Discard one Power Card from [p]'s hand — [pick] into powerHand, else first.
   void _discardOnePower(PokerPlayer p, [int? pick]) {
     if (p.powerHand.isEmpty) return;
-    final i = (pick != null && pick >= 0 && pick < p.powerHand.length) ? pick : 0;
+    final i = (pick != null && pick >= 0 && pick < p.powerHand.length)
+        ? pick
+        : 0;
     p.powerDiscard.add(p.powerHand.removeAt(i));
   }
 
@@ -1790,14 +1885,17 @@ class PokerGame {
         if (low.isNotEmpty && !(pick != null && pick < 0)) {
           final target = (pick != null && pick < low.length)
               ? low[pick]
-              : low.reduce((a, b) => community[a].rank <= community[b].rank ? a : b);
+              : low.reduce(
+                  (a, b) => community[a].rank <= community[b].rank ? a : b,
+                );
           _replaceBoardCard(target);
         }
         break;
       // lucky_charm / snake_oil / fools_gold are handled by their timing hooks
       // (_applyShowdownItems / _applyWinItems / pot-award), not here.
       case 'spare_change':
-        final rich = p.personality == AiPersonality.merchant ||
+        final rich =
+            p.personality == AiPersonality.merchant ||
             p.personality == AiPersonality.noble;
         _gainFromBank(p, rich ? 10 : 5);
         break;
@@ -1825,7 +1923,9 @@ class PokerGame {
       case 'smoke_bomb':
         p.folded = true;
         for (final o in players) {
-          if (!identical(o, p) && o.inHand && !o.heatingUp &&
+          if (!identical(o, p) &&
+              o.inHand &&
+              !o.heatingUp &&
               o.powerHand.isNotEmpty) {
             o.powerDiscard.add(o.powerHand.removeLast());
           }
@@ -1949,7 +2049,8 @@ class PokerGame {
         break;
       case 'warrior_check_it_down':
         _cardCall(p); // check or call
-        _coldNoRaise = true; // cold players can't bet/raise the rest of the hand
+        _coldNoRaise =
+            true; // cold players can't bet/raise the rest of the hand
         break;
       case 'warrior_ready_to_rumble':
         p.powerDiscard.addAll(p.powerHand);
@@ -2032,7 +2133,9 @@ class PokerGame {
         break;
       case 'merchant_expansion_plans':
         _grantItem(
-            p, _rng.nextBool() ? Items.merchStockpile : Items.insideConnections);
+          p,
+          _rng.nextBool() ? Items.merchStockpile : Items.insideConnections,
+        );
         break;
       case 'merchant_mystical_wares':
         _grantItem(p, _randomItemOfType(ItemType.merchantToken));
@@ -2124,8 +2227,11 @@ class PokerGame {
       case 'jack_tactical_retreat':
         p.folded = true;
         _setHeatingUp(p);
-        _tutor(p, (c) => _duelistFor(p) ? c.timing == PowerTiming.setup : c.tableTalk,
-            _duelistFor(p) ? 'Setup' : 'Table Talk');
+        _tutor(
+          p,
+          (c) => _duelistFor(p) ? c.timing == PowerTiming.setup : c.tableTalk,
+          _duelistFor(p) ? 'Setup' : 'Table Talk',
+        );
         break;
       case 'jack_royal_skill':
         _grantCourtToken(p, card);
@@ -2159,8 +2265,10 @@ class PokerGame {
         if (t != null) {
           if (p.isHuman) {
             t.revealedToHuman = true;
-            onPeek?.call('${t.name}\'s hole: '
-                '${t.hole.map((c) => c.label).join(' ')}');
+            onPeek?.call(
+              '${t.name}\'s hole: '
+              '${t.hole.map((c) => c.label).join(' ')}',
+            );
             _log('${p.name} peeks at ${t.name}\'s hole cards.');
           }
           if (t.heatingUp) {
@@ -2172,7 +2280,8 @@ class PokerGame {
       case 'queen_brilliant_strategist':
         if (p.isHuman) {
           onPeek?.call(
-              'Top of deck: ${_deck.peek(3).map((c) => c.label).join('  ')}');
+            'Top of deck: ${_deck.peek(3).map((c) => c.label).join('  ')}',
+          );
         }
         break;
       case 'queen_analytical':
@@ -2182,8 +2291,10 @@ class PokerGame {
         p.folded = true;
         _setHeatingUp(p);
         if (p.isHuman) {
-          final top =
-              p.powerDeck.reversed.take(3).map((c) => c.name).join(', ');
+          final top = p.powerDeck.reversed
+              .take(3)
+              .map((c) => c.name)
+              .join(', ');
           if (top.isNotEmpty) onPeek?.call('Your next Power Cards: $top');
         }
         break;
@@ -2499,8 +2610,7 @@ class PokerGame {
       p.courtTokens = [];
       p.consecutiveWins = 0;
       p.compChips = config.compChipsPerPlayer;
-      p.powerDeck =
-          config.enablePowerCards ? PowerCards.starterDeck(_rng) : [];
+      p.powerDeck = config.enablePowerCards ? PowerCards.starterDeck(_rng) : [];
     }
     handNumber = 0;
     level = 0;

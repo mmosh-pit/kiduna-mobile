@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kiduna_mobile/config/theme.dart';
-import 'package:kiduna_mobile/features/field/data/design_persona.dart';
-import 'package:kiduna_mobile/features/field/widgets/realm_constellation.dart';
+import 'package:kiduna/config/theme.dart';
+import 'package:kiduna/features/field/data/design_persona.dart';
+import 'package:kiduna/features/field/widgets/realm_constellation.dart';
 
 Future<void> _pump(WidgetTester tester, {DesignPersona? persona}) async {
   tester.view.physicalSize = const Size(1400, 820);

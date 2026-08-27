@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kiduna_mobile/shared/layouts/responsive_layout.dart';
+import 'package:kiduna/shared/layouts/responsive_layout.dart';
 
 Future<void> _pumpAt(
   WidgetTester tester,

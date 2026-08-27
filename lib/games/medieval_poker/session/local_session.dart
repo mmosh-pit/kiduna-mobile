@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:medieval_poker_engine/medieval_poker_engine.dart';
 import 'package:medieval_poker_engine/protocol.dart';
 import 'package:medieval_poker_engine/service.dart';
+
 import 'game_session.dart';
 
 /// An offline (single-player-vs-AI) game exposed through the **same**
@@ -55,16 +56,22 @@ class LocalSession implements GameSession {
   }) : _rng = seed != null ? Random(seed) : Random() {
     final players = <PokerPlayer>[
       PokerPlayer(
-          seat: 0, name: humanName, stack: config.startingStack, isHuman: true),
+        seat: 0,
+        name: humanName,
+        stack: config.startingStack,
+        isHuman: true,
+      ),
     ];
     for (var i = 0; i < opponentCount; i++) {
       final p = AiPersonality.values[i % AiPersonality.values.length];
-      players.add(PokerPlayer(
-        seat: i + 1,
-        name: p.title,
-        stack: config.startingStack,
-        personality: p,
-      )..court = CourtMember.values[(i + 1) % CourtMember.values.length]);
+      players.add(
+        PokerPlayer(
+          seat: i + 1,
+          name: p.title,
+          stack: config.startingStack,
+          personality: p,
+        )..court = CourtMember.values[(i + 1) % CourtMember.values.length],
+      );
     }
     _game = PokerGame(
       config: config,
@@ -77,8 +84,11 @@ class LocalSession implements GameSession {
     // The human plays through a loopback RemoteAgent: its prompts become
     // [prompt]; [answer] feeds its responses. A long timeout stands in for
     // "no turn clock offline" (it's cancelled the moment the player answers).
-    _human = RemoteAgent(0,
-        sink: _onHumanMessage, timeout: const Duration(hours: 6));
+    _human = RemoteAgent(
+      0,
+      sink: _onHumanMessage,
+      timeout: const Duration(hours: 6),
+    );
     _agents = <PlayerAgent>[
       _human,
       for (var i = 1; i <= opponentCount; i++)
@@ -120,12 +130,14 @@ class LocalSession implements GameSession {
     final active = _prompt.value;
     if (active == null) return;
     _prompt.value = null;
-    _human.onResponse(ClientMessage(
-      type: ClientMsgType.action,
-      promptId: active.promptId,
-      actionKind: kind,
-      payload: payload,
-    ));
+    _human.onResponse(
+      ClientMessage(
+        type: ClientMsgType.action,
+        promptId: active.promptId,
+        actionKind: kind,
+        payload: payload,
+      ),
+    );
   }
 
   @override
@@ -190,8 +202,11 @@ class LocalSession implements GameSession {
     } else {
       detail = '';
     }
-    _handResult.value =
-        HandResultView(won: won, inHand: human.inHand, detail: detail);
+    _handResult.value = HandResultView(
+      won: won,
+      inHand: human.inHand,
+      detail: detail,
+    );
   }
 
   void _onGameOver() {
@@ -207,16 +222,23 @@ class LocalSession implements GameSession {
     } else if (human.eliminated) {
       detail = 'Defeated. Your coffers are empty.';
     } else {
-      detail = '${winner?.name ?? 'A rival'} wins Sudden Death on the chip count.';
+      detail =
+          '${winner?.name ?? 'A rival'} wins Sudden Death on the chip count.';
     }
-    final standings = [..._game.players]
-      ..sort((a, b) => b.stack.compareTo(a.stack));
+    final standings = _game.finalStandings;
     _gameOver.value = GameOverView(
       youWon: won,
       winnerSeat: winner?.seat,
       detail: detail,
       standings: [
-        for (final p in standings) StandingView(p.seat, p.stack, name: p.name)
+        for (var i = 0; i < standings.length; i++)
+          StandingView(
+            standings[i].seat,
+            standings[i].stack,
+            name: standings[i].name,
+            rank: i + 1,
+            eliminatedAtHand: standings[i].eliminatedAtHand,
+          ),
       ],
     );
   }
@@ -227,8 +249,9 @@ class LocalSession implements GameSession {
     if (_log.length > 60) _log.removeRange(0, _log.length - 60);
   }
 
-  List<String> _logTail() =>
-      List.unmodifiable(_log.length > 12 ? _log.sublist(_log.length - 12) : _log);
+  List<String> _logTail() => List.unmodifiable(
+    _log.length > 12 ? _log.sublist(_log.length - 12) : _log,
+  );
 
   void _showPeek(String message) {
     if (_disposed) return;
@@ -243,15 +266,17 @@ class LocalSession implements GameSession {
   void _startLevelTimer() {
     if (!config.timedLevels) return;
     _levelStartedAt = DateTime.now();
-    _levelTimer = Timer.periodic(Duration(seconds: config.levelDurationSeconds),
-        (t) {
-      if (_disposed || _game.inSuddenDeath) {
-        t.cancel();
-        return;
-      }
-      _game.advanceLevel();
-      _levelStartedAt = DateTime.now();
-    });
+    _levelTimer = Timer.periodic(
+      Duration(seconds: config.levelDurationSeconds),
+      (t) {
+        if (_disposed || _game.inSuddenDeath) {
+          t.cancel();
+          return;
+        }
+        _game.advanceLevel();
+        _levelStartedAt = DateTime.now();
+      },
+    );
   }
 
   int? _levelSecondsLeft() {

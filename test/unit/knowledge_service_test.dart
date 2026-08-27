@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kiduna_mobile/data/models/knowledge_base_model.dart';
+import 'package:kiduna/data/models/knowledge_base_model.dart';
 
 /// KnowledgeService integration tests require a running backend and Dio setup.
 /// These tests validate the response shapes the service parses — the same

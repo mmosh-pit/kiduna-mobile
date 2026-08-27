@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kiduna_mobile/data/models/invitation_response.dart';
-import 'package:kiduna_mobile/features/field/controllers/field_controller.dart';
+import 'package:kiduna/data/models/invitation_response.dart';
+import 'package:kiduna/features/field/controllers/field_controller.dart';
 
 void main() {
   late ProviderContainer container;

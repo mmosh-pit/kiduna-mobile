@@ -39,6 +39,11 @@ class _LiveRoom {
   _LiveRoom(this.id, this.game, this.agents,
       {required this.config, this.startThreshold = 1});
 
+  /// Seats at THIS room's table. Rooms may differ in size — a tournament seats
+  /// short-handed tables when no-shows leave a heat light — so never consult
+  /// the server-wide default for a room that already exists.
+  int get seatCount => game.players.length;
+
   void disposeTimers() {
     levelTimer?.cancel();
     emptyTeardown?.cancel();
@@ -125,6 +130,13 @@ class GameServer {
         final timedHint = q['timed'] == null
             ? null
             : (q['timed'] == '1' || q['timed'] == 'true');
+        // Per-room table size. Only meaningful on the connection that creates
+        // the room; later joins to a live room inherit its size.
+        //
+        // ?seats= is a fallback for unauthenticated/local runs. When a token is
+        // configured the signed claim wins, because the first connection fixes
+        // the room's size and a client must not choose it.
+        var seatsHint = int.tryParse(q['seats'] ?? '');
 
         // Authorize before upgrading when a secret is configured.
         String? userId;
@@ -141,6 +153,7 @@ class GameServer {
           }
           seat = claims.seat ?? seat;
           userId = claims.userId;
+          if (claims.seats != null) seatsHint = claims.seats;
         }
 
         final socket = await WebSocketTransformer.upgrade(req);
@@ -148,6 +161,7 @@ class GameServer {
             humansHint: humansHint,
             userId: userId,
             timedHint: timedHint,
+            seatsHint: seatsHint,
             nameHint: nameHint,
             resume: resume);
         return;
@@ -199,14 +213,21 @@ class GameServer {
     _http = null;
   }
 
-  _LiveRoom _ensureRoom(String roomId, {bool? timedOverride}) {
+  /// Smallest and largest table the service will seat. Two is a real table —
+  /// the game is ante-based, so heads-up needs no special casing.
+  static const minSeats = 2;
+  static const maxSeats = 8;
+
+  _LiveRoom _ensureRoom(String roomId, {bool? timedOverride, int? seats}) {
     return _rooms.putIfAbsent(roomId, () {
-      // The lobby can override timed-vs-hand-count levels per room (?timed=).
+      // The lobby can override timed-vs-hand-count levels per room (?timed=)
+      // and the table size (?seats=).
       final cfg = timedOverride == null
           ? config
           : config.copyWith(timedLevels: timedOverride);
+      final n = (seats ?? seatsPerRoom).clamp(minSeats, maxSeats);
       final players = [
-        for (var i = 0; i < seatsPerRoom; i++)
+        for (var i = 0; i < n; i++)
           PokerPlayer(
               seat: i, name: 'Seat $i', stack: 100,
               personality: AiPersonality.values[i % AiPersonality.values.length])
@@ -215,7 +236,7 @@ class GameServer {
       final game = PokerGame(config: cfg, players: players, rng: _rng);
       // Start every seat as AI; a connecting human swaps their seat's agent.
       final agents = <PlayerAgent>[
-        for (var i = 0; i < seatsPerRoom; i++) AiAgent(i, brain: AiBrain(rng: _rng)),
+        for (var i = 0; i < n; i++) AiAgent(i, brain: AiBrain(rng: _rng)),
       ];
       final live = _LiveRoom(roomId, game, agents,
           config: cfg, startThreshold: humansToStart);
@@ -223,7 +244,7 @@ class GameServer {
         roomId: roomId,
         game: game,
         agents: agents,
-        aiSeats: {for (var i = 0; i < seatsPerRoom; i++) i},
+        aiSeats: {for (var i = 0; i < n; i++) i},
         send: (s, msg) => _sendTo(live, s, msg),
         levelSecondsLeft: () => _levelSecondsLeft(live),
       );
@@ -235,6 +256,7 @@ class GameServer {
       {int? humansHint,
       String? userId,
       bool? timedHint,
+      int? seatsHint,
       String? nameHint,
       bool resume = false}) {
     // A resume (auto-reconnect) targets an in-progress game. If this instance
@@ -254,8 +276,8 @@ class GameServer {
       return;
     }
 
-    final live = _ensureRoom(roomId, timedOverride: timedHint);
-    if (seat < 0 || seat >= seatsPerRoom) seat = 0;
+    final live = _ensureRoom(roomId, timedOverride: timedHint, seats: seatsHint);
+    if (seat < 0 || seat >= live.seatCount) seat = 0;
 
     // Stamp the real player name onto the seat (replacing the "Seat N" default)
     // so every snapshot, the turn banner, and result blurbs show it. AI-held
@@ -292,7 +314,7 @@ class GameServer {
     // A lobby-created room passes the seated-human count so the loop waits for
     // everyone; take the largest hint seen, clamped to the seat count.
     if (humansHint != null) {
-      final hint = humansHint.clamp(1, seatsPerRoom);
+      final hint = humansHint.clamp(1, live.seatCount);
       if (hint > live.startThreshold) live.startThreshold = hint;
     }
 
@@ -318,7 +340,13 @@ class GameServer {
       final old = live.sockets[seat];
       live.sockets[seat] = socket;
       _rawSend(socket,
-          ServerMessage(type: ServerMsgType.welcome, payload: {'seat': seat, 'room': roomId}));
+          ServerMessage(type: ServerMsgType.welcome, payload: {
+            'seat': seat,
+            'room': roomId,
+            // Table size varies per room, and setup prompts arrive before
+            // the first snapshot — so the client learns it at handshake.
+            'seats': live.seatCount,
+          }));
       if (live.started) _rawSend(socket, live.room.resyncFor(seat));
       existing.attach(sink); // re-sends any outstanding prompt
       if (old != null && old != socket) old.close();
@@ -330,7 +358,13 @@ class GameServer {
       live.room.aiSeats.remove(seat);
       live.sockets[seat] = socket;
       _rawSend(socket,
-          ServerMessage(type: ServerMsgType.welcome, payload: {'seat': seat, 'room': roomId}));
+          ServerMessage(type: ServerMsgType.welcome, payload: {
+            'seat': seat,
+            'room': roomId,
+            // Table size varies per room, and setup prompts arrive before
+            // the first snapshot — so the client learns it at handshake.
+            'seats': live.seatCount,
+          }));
       if (live.started) _rawSend(socket, live.room.resyncFor(seat));
     }
 
