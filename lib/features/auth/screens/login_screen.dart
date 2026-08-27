@@ -150,25 +150,37 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       color: colors.deep,
       child: LayoutBuilder(
         builder: (context, constraints) {
+          final form = Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: LoginForm(
+                onLogin: _login,
+                onCreateAccount: _navigateToSignup,
+                onForgotPassword: _navigateToForgotPassword,
+                isLoading: isLoading,
+                apiError: apiError,
+              ),
+            ),
+          );
+
+          // Mobile: this panel sits inside an outer scroll view, so its height
+          // is unbounded. Just pad the form — nesting another scroll view or
+          // deriving a minHeight from an infinite maxHeight throws during
+          // layout (the LayoutBuilder assertion seen on the iOS simulator).
+          if (!constraints.maxHeight.isFinite) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 40),
+              child: form,
+            );
+          }
+
+          // Desktop: fill the bounded panel and centre the form vertically,
+          // scrolling only if it doesn't fit.
           return SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 40),
             child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minHeight: constraints.maxHeight - 80,
-                maxWidth: double.infinity,
-              ),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 400),
-                  child: LoginForm(
-                    onLogin: _login,
-                    onCreateAccount: _navigateToSignup,
-                    onForgotPassword: _navigateToForgotPassword,
-                    isLoading: isLoading,
-                    apiError: apiError,
-                  ),
-                ),
-              ),
+              constraints: BoxConstraints(minHeight: constraints.maxHeight - 80),
+              child: form,
             ),
           );
         },

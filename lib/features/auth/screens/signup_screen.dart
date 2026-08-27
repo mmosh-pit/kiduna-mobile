@@ -723,40 +723,52 @@ class _SignupScreenState extends State<SignupScreen> {
       color: kidunaColors.deep,
       child: LayoutBuilder(
         builder: (context, constraints) {
+          final form = Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  KidunaProgressBar(
+                    totalSteps: 7,
+                    currentStep: _currentStep,
+                  ),
+                  const SizedBox(height: 28),
+                  if (_message != null) ...[
+                    KidunaMessageBox(
+                      message: _message!,
+                      type: _messageType,
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    child: _buildCurrentStep(),
+                  ),
+                ],
+              ),
+            ),
+          );
+
+          // Mobile: this panel sits inside an outer scroll view, so its height
+          // is unbounded. Just pad the form — nesting another scroll view or
+          // deriving a minHeight from an infinite maxHeight throws during
+          // layout (the LayoutBuilder assertion seen on the iOS simulator).
+          if (!constraints.maxHeight.isFinite) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 40),
+              child: form,
+            );
+          }
+
+          // Desktop: fill the bounded panel and centre the form vertically,
+          // scrolling only if it doesn't fit.
           return SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 40),
             child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minHeight: constraints.maxHeight - 80,
-                maxWidth: double.infinity,
-              ),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 400),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      KidunaProgressBar(
-                        totalSteps: 7,
-                        currentStep: _currentStep,
-                      ),
-                      const SizedBox(height: 28),
-                      if (_message != null) ...[
-                        KidunaMessageBox(
-                          message: _message!,
-                          type: _messageType,
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 300),
-                        child: _buildCurrentStep(),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              constraints: BoxConstraints(minHeight: constraints.maxHeight - 80),
+              child: form,
             ),
           );
         },
