@@ -22,7 +22,16 @@ import 'field_inputs.dart';
 ///   Registration Domain, Standing Doc URL, Contact, Email, Address.
 /// **Other types** — Name, Type, Purpose (local UI-only).
 class RealmPanel extends ConsumerStatefulWidget {
-  const RealmPanel({super.key});
+  const RealmPanel({super.key, this.initialType, this.initialParentId, this.onCreated});
+
+  /// Pre-set the realm type dropdown (e.g. 'Alliance', 'Cell').
+  final String? initialType;
+
+  /// Pre-set the parent realm ID (for creating cells inside an alliance).
+  final String? initialParentId;
+
+  /// Called after successful realm creation.
+  final VoidCallback? onCreated;
 
   @override
   ConsumerState<RealmPanel> createState() => _RealmPanelState();
@@ -47,12 +56,14 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
   final TextEditingController _address = TextEditingController();
 
   String _type = 'Organization';
+
   String _visibility = 'public';
   String _entityType = 'company';
   String? _primaryTheme;
   String? _primaryFocus;
   bool _submitting = false;
   String? _error;
+  final _scrollCtrl = ScrollController();
 
   // Handle availability state.
   bool? _handleAvailable;
@@ -62,6 +73,9 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialType != null) {
+      _type = widget.initialType!;
+    }
     final user = ref.read(authControllerProvider).user;
     if (user != null && user.email.isNotEmpty) _email.text = user.email;
     _name.addListener(_autoSuggestHandle);
@@ -71,6 +85,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
   void dispose() {
     _name.removeListener(_autoSuggestHandle);
     _handleDebounce?.cancel();
+    _scrollCtrl.dispose();
     for (final c in [_name, _purpose, _registration, _email, _handle,
         _description, _sharedPurpose, _regDomain, _standingDocUrl,
         _designateContact, _designateEmail, _address]) {
@@ -199,6 +214,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
     final validationError = _validate();
     if (validationError != null) {
       setState(() => _error = validationError);
+      _scrollCtrl.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
       return;
     }
 
@@ -214,7 +230,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
       if (_isAlliance) {
         final realm = await RealmService.instance.createRealm(
           name: nameText, type: 'alliance',
-          parentId: enteredParentId,
+          parentId: widget.initialParentId ?? enteredParentId,
           handle: _handle.text.trim(),
           description: _description.text.trim(),
           purpose: _sharedPurpose.text.trim(),
@@ -223,7 +239,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
           primaryFocus: _primaryFocus,
           authToken: auth.token,
         );
-        if (mounted) fieldCtrl.onRealmCreated(realm);
+        if (mounted) { fieldCtrl.onRealmCreated(realm); widget.onCreated?.call(); }
       } else if (_isInstitution) {
         final realm = await RealmService.instance.createRealm(
           name: nameText, type: 'institution',
@@ -249,7 +265,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
           primaryFocus: _primaryFocus,
           authToken: auth.token,
         );
-        if (mounted) fieldCtrl.onRealmCreated(realm);
+        if (mounted) { fieldCtrl.onRealmCreated(realm); widget.onCreated?.call(); }
       } else if (_isOrganization) {
         final ecosystemState = ref.read(ecosystemControllerProvider);
         final parentId = enteredParentId ?? ecosystemState.genesis?.id;
@@ -271,7 +287,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
           primaryFocus: _primaryFocus,
           authToken: auth.token,
         );
-        if (mounted) fieldCtrl.onRealmCreated(realm);
+        if (mounted) { fieldCtrl.onRealmCreated(realm); widget.onCreated?.call(); }
       } else if (_isCommunity) {
         final realm = await RealmService.instance.createRealm(
           name: nameText, type: 'community',
@@ -284,7 +300,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
           primaryFocus: _primaryFocus,
           authToken: auth.token,
         );
-        if (mounted) fieldCtrl.onRealmCreated(realm);
+        if (mounted) { fieldCtrl.onRealmCreated(realm); widget.onCreated?.call(); }
       } else if (_isProgram) {
         final realm = await RealmService.instance.createRealm(
           name: nameText, type: 'program',
@@ -297,7 +313,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
           primaryFocus: _primaryFocus,
           authToken: auth.token,
         );
-        if (mounted) fieldCtrl.onRealmCreated(realm);
+        if (mounted) { fieldCtrl.onRealmCreated(realm); widget.onCreated?.call(); }
       } else if (_isProject) {
         final realm = await RealmService.instance.createRealm(
           name: nameText, type: 'project',
@@ -310,7 +326,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
           primaryFocus: _primaryFocus,
           authToken: auth.token,
         );
-        if (mounted) fieldCtrl.onRealmCreated(realm);
+        if (mounted) { fieldCtrl.onRealmCreated(realm); widget.onCreated?.call(); }
       } else if (_isConcept) {
         final realm = await RealmService.instance.createRealm(
           name: nameText, type: 'concept',
@@ -323,11 +339,11 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
           primaryFocus: _primaryFocus,
           authToken: auth.token,
         );
-        if (mounted) fieldCtrl.onRealmCreated(realm);
+        if (mounted) { fieldCtrl.onRealmCreated(realm); widget.onCreated?.call(); }
       } else if (_isCell) {
         final realm = await RealmService.instance.createRealm(
           name: nameText, type: 'cell',
-          parentId: enteredParentId,
+          parentId: widget.initialParentId ?? enteredParentId,
           handle: _handle.text.trim(),
           description: _description.text.trim(),
           purpose: _sharedPurpose.text.trim(),
@@ -336,7 +352,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
           primaryFocus: _primaryFocus,
           authToken: auth.token,
         );
-        if (mounted) fieldCtrl.onRealmCreated(realm);
+        if (mounted) { fieldCtrl.onRealmCreated(realm); widget.onCreated?.call(); }
       } else if (_isDyad) {
         final realm = await RealmService.instance.createRealm(
           name: nameText, type: 'dyad',
@@ -349,7 +365,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
           primaryFocus: _primaryFocus,
           authToken: auth.token,
         );
-        if (mounted) fieldCtrl.onRealmCreated(realm);
+        if (mounted) { fieldCtrl.onRealmCreated(realm); widget.onCreated?.call(); }
       } else if (_isCouncil) {
         final realm = await RealmService.instance.createRealm(
           name: nameText, type: 'council',
@@ -362,7 +378,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
           primaryFocus: _primaryFocus,
           authToken: auth.token,
         );
-        if (mounted) fieldCtrl.onRealmCreated(realm);
+        if (mounted) { fieldCtrl.onRealmCreated(realm); widget.onCreated?.call(); }
       } else {
         // Fallback — local UI-only
         await fieldCtrl.createRealm(
@@ -370,9 +386,9 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
         );
       }
     } on AppException catch (e) {
-      if (mounted) setState(() => _error = e.message ?? 'Something went wrong.');
+      if (mounted) { setState(() => _error = e.message ?? 'Something went wrong.'); _scrollCtrl.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeOut); }
     } catch (e) {
-      if (mounted) setState(() => _error = 'Something went wrong. Please try again.');
+      if (mounted) { setState(() => _error = 'Something went wrong. Please try again.'); _scrollCtrl.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeOut); }
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -385,8 +401,9 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
     final text = context.kidunaText;
 
     return ConstrainedBox(
-      constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.6),
+      constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.75),
       child: SingleChildScrollView(
+        controller: _scrollCtrl,
         padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
