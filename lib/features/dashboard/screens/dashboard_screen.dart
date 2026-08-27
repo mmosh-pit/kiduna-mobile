@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../features/field/screens/field_screen.dart';
 import '../../../features/game/screens/game_screen.dart';
+import '../../alliance/screens/alliance_list_screen.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/layouts/responsive_layout.dart';
 import '../../../shared/widgets/app_header.dart';
@@ -408,15 +409,14 @@ Widget _buildLeftPanel(BuildContext context, int activeTab) {
   return switch (activeTab) {
     0 => const FieldStack(),
     1 => const GameScreen(),
+    3 => const AllianceListScreen(),
     _ => _ComingSoonPanel(
         title: switch (activeTab) {
           2 => l10n.tabStandings,
-          3 => l10n.tabGuilds,
           _ => '',
         },
         icon: switch (activeTab) {
           2 => Icons.emoji_events,
-          3 => Icons.shield,
           _ => Icons.hourglass_empty,
         },
       ),
