@@ -169,12 +169,19 @@ class LobbyException implements Exception {
   String toString() => message;
 }
 
-/// REST client for the Node lobby (`/games/*`). Uses the app's [DioClient],
-/// which targets `BACKEND_URL` and attaches the user's bearer token, so the
-/// caller must already be authenticated.
+/// REST client for the Node lobby (`/games/*`). Defaults to [ApiClient]'s
+/// `authDio`, which targets the Node backend (`AUTH_API_URL`) and attaches the
+/// user's bearer token — NOT the main `dio` (the FastAPI agent at
+/// `API_BASE_URL`), which does not serve `/games/*`. The caller must already be
+/// authenticated.
 class LobbyClient {
   final Dio _dio;
-  LobbyClient({Dio? dio}) : _dio = dio ?? ApiClient.instance.dio;
+  LobbyClient({Dio? dio}) : _dio = dio ?? ApiClient.instance.authDio;
+
+  /// Fastify rejects an empty body sent with `application/json` (authDio's
+  /// default content-type) with a 400 `FST_ERR_CTP_EMPTY_JSON_BODY`, so bodyless
+  /// mutations must still send a valid JSON payload — an empty object.
+  static const Map<String, dynamic> _emptyBody = <String, dynamic>{};
 
   Future<LobbyTicket> createRoom({int? seats, bool? timedLevels}) async {
     final res = await _call(() => _dio.post('/games/rooms', data: {
@@ -185,7 +192,8 @@ class LobbyClient {
   }
 
   Future<LobbyTicket> joinRoom(String code) async {
-    final res = await _call(() => _dio.post('/games/rooms/$code/join'));
+    final res =
+        await _call(() => _dio.post('/games/rooms/$code/join', data: _emptyBody));
     return _ticketOf(res);
   }
 
@@ -196,12 +204,13 @@ class LobbyClient {
   }
 
   Future<LobbyRoom> start(String code) async {
-    final res = await _call(() => _dio.post('/games/rooms/$code/start'));
+    final res =
+        await _call(() => _dio.post('/games/rooms/$code/start', data: _emptyBody));
     return LobbyRoom.fromJson(_data(res)['room'] as Map<String, dynamic>);
   }
 
   Future<void> leave(String code) async {
-    await _call(() => _dio.post('/games/rooms/$code/leave'));
+    await _call(() => _dio.post('/games/rooms/$code/leave', data: _emptyBody));
   }
 
   Future<LobbyRoom> getRoom(String code) async {
@@ -211,13 +220,13 @@ class LobbyClient {
 
   // ── Public matchmaking ─────────────────────────────────────────────────
   Future<QueueStatus> enqueue() async =>
-      _queueStatusOf(await _call(() => _dio.post('/games/queue')));
+      _queueStatusOf(await _call(() => _dio.post('/games/queue', data: _emptyBody)));
 
   Future<QueueStatus> queueStatus() async =>
       _queueStatusOf(await _call(() => _dio.get('/games/queue')));
 
   Future<void> leaveQueue() async {
-    await _call(() => _dio.delete('/games/queue'));
+    await _call(() => _dio.delete('/games/queue', data: _emptyBody));
   }
 
   // ── Results / leaderboard ──────────────────────────────────────────────
