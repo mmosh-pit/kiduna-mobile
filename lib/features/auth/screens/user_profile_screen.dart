@@ -100,14 +100,19 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
       // ── Load tree ──
       Map<String, dynamic>? tree;
       try {
+        print('[Profile] Loading tree for handle=${widget.handle}');
         final treeResp = await _dio.get<Map<String, dynamic>>(
             '/profile/${widget.handle}/tree?depth=4');
         tree = treeResp.data;
+        print('[Profile] Tree loaded: ${tree?.keys.toList()}');
+        print('[Profile] Tree children count: ${(tree?['children'] as List?)?.length ?? 0}');
       } catch (e) {
+        print('[Profile] Tree load FAILED: $e');
         AppLogger.warning('Tree load failed: $e', tag: 'Profile');
       }
 
       if (!mounted) return;
+      print('[Profile] Setting state — profile=${profile != null}, tree=${tree != null}');
       setState(() {
         _profile = profile;
         _tree = tree;
