@@ -6,22 +6,29 @@ import 'package:flutter/foundation.dart';
 class InvitationRequest {
   const InvitationRequest({
     required this.realmId,
-    required this.recipientName,
     required this.role,
     required this.expiration,
-    this.notes,
+    required this.maxUses,
+    this.recipientName,
+    this.label,
+    this.kidunaPerPerson = 0,
   });
 
   final String realmId;
-  final String recipientName;
   final String role;
   final String expiration;
-  final String? notes;
+  final int maxUses;
+  final String? recipientName;
+  final String? label;
+  final double kidunaPerPerson;
 
   Map<String, dynamic> toJson() => {
     'role': role.toLowerCase(),
     'expires_in': expiration,
-    'invited_name': recipientName,
-    if (notes != null && notes!.isNotEmpty) 'label': notes,
+    'max_uses': maxUses,
+    if (recipientName != null && recipientName!.isNotEmpty)
+      'invited_name': recipientName,
+    if (label != null && label!.isNotEmpty) 'label': label,
+    if (kidunaPerPerson > 0) 'kiduna_per_person': kidunaPerPerson,
   };
 }

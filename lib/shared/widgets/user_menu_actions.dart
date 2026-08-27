@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/extensions/context_extensions.dart';
 import '../../features/auth/controllers/auth_controller.dart';
 import '../../features/auth/screens/login_screen.dart';
+import '../../features/auth/screens/user_profile_screen.dart';
 
 /// Header trailing actions — the user avatar with its account popup
 /// (wallet copy + sign out). Shared by the dashboard and the web
@@ -48,6 +49,16 @@ class _UserAvatarPopupInternal extends StatelessWidget {
       elevation: 12,
       shadowColor: Colors.black54,
       onSelected: (value) async {
+        if (value == 'view_profile') {
+          final username = user?.username;
+          if (username != null && username.isNotEmpty) {
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => UserProfileScreen(handle: username),
+              ),
+            );
+          }
+        }
         if (value == 'copy_wallet') {
           final wallet = user?.wallet;
           if (wallet != null && wallet.isNotEmpty) {
@@ -127,6 +138,18 @@ class _UserAvatarPopupInternal extends StatelessWidget {
                   ),
                 ],
               ),
+            ),
+          ),
+          // View Profile
+          PopupMenuItem<String>(
+            value: 'view_profile',
+            child: Row(
+              children: [
+                Icon(Icons.person_outline, size: 18, color: colors.cream),
+                const SizedBox(width: 12),
+                Text('View Profile',
+                    style: text.body.copyWith(color: colors.cream)),
+              ],
             ),
           ),
           if (wallet.isNotEmpty)

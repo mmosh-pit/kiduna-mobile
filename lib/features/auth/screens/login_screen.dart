@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/extensions/context_extensions.dart';
+import '../../../core/utils/logger.dart';
 import '../../../shared/widgets/app_header.dart';
+import '../../../data/services/auth_service.dart';
 import '../../dashboard/screens/dashboard_screen.dart';
 import '../../download/screens/download_app_screen.dart';
 import '../controllers/auth_controller.dart';
@@ -12,6 +14,7 @@ import '../widgets/login_form.dart';
 import '../widgets/signup_left_panel.dart';
 import 'forgot_password_screen.dart';
 import 'signup_screen.dart';
+import '../../../main.dart' show pendingInviteCode;
 
 const _loginLeftPanel = SignupLeftPanel(
   tagline: 'The Genesis Ecosystem welcomes you back.',
@@ -62,6 +65,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     final authState = ref.read(authControllerProvider);
     if (authState.isAuthenticated) {
+      // Auto-join realm if user came from an invite URL
+      if (pendingInviteCode != null && pendingInviteCode!.isNotEmpty) {
+        try {
+          final result = await AuthService.instance.joinRealmViaInvite(
+            code: pendingInviteCode!,
+          );
+          final realmName = result['realmName'] as String? ?? 'the realm';
+          final kiduna = result['kidunaReceived'] as num? ?? 0;
+          AppLogger.info(
+            'Auto-joined $realmName after login'
+            '${kiduna > 0 ? ' (+$kiduna KIDUNA)' : ''}',
+            tag: 'Auth',
+          );
+        } catch (e) {
+          AppLogger.warning('Auto-join after login failed: $e', tag: 'Auth');
+        }
+        pendingInviteCode = null;
+      }
+
       final destination = kIsWeb
           ? const DownloadAppScreen()
           : const DashboardScreen();

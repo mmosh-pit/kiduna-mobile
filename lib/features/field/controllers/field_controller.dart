@@ -1488,12 +1488,15 @@ class FieldController extends Notifier<FieldState> {
   /// the form fields to `POST /api/v1/codes`, and stores the response so the
   /// review panel can display the real code, link, and message.
   Future<void> prepareInvitation({
-    required String recipientName,
     required String role,
     required String expiration,
-    String? notes,
+    required int maxUses,
+    String? recipientName,
+    String? label,
+    double kidunaPerPerson = 0,
   }) async {
     final realmId = state.currentRealmId;
+    print('[prepareInvitation] realmId=$realmId');
     if (realmId.isEmpty) {
       state = state.copyWith(invitationError: 'No realm selected.');
       return;
@@ -1504,10 +1507,12 @@ class FieldController extends Notifier<FieldState> {
     try {
       final request = InvitationRequest(
         realmId: realmId,
-        recipientName: recipientName,
         role: role,
         expiration: expiration,
-        notes: notes,
+        maxUses: maxUses,
+        recipientName: recipientName,
+        label: label,
+        kidunaPerPerson: kidunaPerPerson,
       );
 
       final response = await InvitationService.instance.generate(request);
@@ -1515,14 +1520,13 @@ class FieldController extends Notifier<FieldState> {
       state = state.copyWith(
         invitationResponse: response,
         invitationLoading: false,
-        kiTopic: const KiTopic(
+        kiTopic: KiTopic(
           title: 'Invitation prepared',
           body:
-              'Ki has prepared a personal invitation, a unique Kinship Link, '
-              'and its equivalent Kinship Code for review.',
+              'Your invitation is ready! ${response.summary}.',
           invitation:
-              'Copy the message, link, or code and share it with your '
-              'intended recipient.',
+              'Copy the invite link or code and share it. '
+              'Recipients will see your profile and can join directly.',
         ),
       );
 

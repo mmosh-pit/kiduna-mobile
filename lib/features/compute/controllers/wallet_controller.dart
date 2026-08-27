@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/utils/logger.dart';
 import '../../../core/wallet/phantom.dart';
+import '../../../data/local/secure_storage.dart';
 
 @immutable
 class WalletState {
@@ -48,8 +49,34 @@ class WalletState {
 /// Only meaningful on web — on other platforms [WalletState.isAvailable] is
 /// false and connecting is a no-op.
 class WalletController extends Notifier<WalletState> {
+  static const _disconnectedKey = 'wallet_disconnected';
+
   @override
-  WalletState build() => const WalletState();
+  WalletState build() {
+    _eagerConnect();
+    return const WalletState();
+  }
+
+  /// Silently reconnect if the user previously approved this site
+  /// AND has not explicitly disconnected.
+  Future<void> _eagerConnect() async {
+    if (!PhantomWallet.isAvailable) return;
+
+    try {
+      // User explicitly disconnected — don't auto-reconnect.
+      final disconnected =
+          await SecureStorage.instance.read(_disconnectedKey);
+      if (disconnected == 'true') return;
+
+      final address = await PhantomWallet.eagerConnect();
+      if (address != null && address.isNotEmpty) {
+        state = state.copyWith(address: address);
+        AppLogger.info('Wallet auto-reconnected: $address', tag: 'Wallet');
+      }
+    } catch (e) {
+      AppLogger.warning('Wallet eager connect failed: $e', tag: 'Wallet');
+    }
+  }
 
   Future<void> connect() async {
     if (!PhantomWallet.isAvailable) {
@@ -64,10 +91,11 @@ class WalletController extends Notifier<WalletState> {
     try {
       final address = await PhantomWallet.connect();
       if (address == null || address.isEmpty) {
-        // Phantom returns nothing when the user dismisses the prompt.
         state = state.copyWith(isConnecting: false);
         return;
       }
+      // Clear the disconnected flag — user explicitly reconnected.
+      await SecureStorage.instance.delete(_disconnectedKey);
       state = state.copyWith(address: address, isConnecting: false);
       AppLogger.info('Wallet connected: $address', tag: 'Wallet');
     } catch (e, st) {
@@ -81,6 +109,8 @@ class WalletController extends Notifier<WalletState> {
 
   Future<void> disconnect() async {
     await PhantomWallet.disconnect();
+    // Persist that the user chose to disconnect — prevents auto-reconnect.
+    await SecureStorage.instance.write(_disconnectedKey, 'true');
     state = const WalletState();
   }
 }

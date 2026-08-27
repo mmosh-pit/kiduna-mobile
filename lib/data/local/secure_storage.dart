@@ -171,4 +171,15 @@ class SecureStorage {
     await deleteUser();
     AppLogger.debug('All auth data cleared', tag: 'Storage');
   }
+
+  // ── Generic key-value (for flags like wallet_disconnected) ────────────
+
+  /// Write an arbitrary key-value pair.
+  Future<void> write(String key, String value) => _write(key, value);
+
+  /// Read an arbitrary key. Returns null if not set.
+  Future<String?> read(String key) => _read(key);
+
+  /// Delete an arbitrary key.
+  Future<void> delete(String key) => _delete(key);
 }

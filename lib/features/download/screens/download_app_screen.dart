@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/extensions/context_extensions.dart';
+import '../../../features/auth/controllers/auth_controller.dart';
 import '../../../shared/widgets/app_header.dart';
 
 /// Shown on web after login/signup — directs users to download native apps.
-class DownloadAppScreen extends StatelessWidget {
+class DownloadAppScreen extends ConsumerWidget {
   const DownloadAppScreen({super.key});
 
   static const _appStoreUrl =
@@ -27,9 +29,12 @@ class DownloadAppScreen extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.kiduna;
     final text = context.kidunaText;
+
+    // Watch auth state to ensure header rebuilds with user info
+    ref.watch(authControllerProvider);
 
     return Scaffold(
       backgroundColor: colors.deep,
