@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../config/kiduna_motion.dart';
 import '../../../core/extensions/context_extensions.dart';
@@ -130,6 +131,13 @@ class _InvitePanelState extends ConsumerState<InvitePanel> {
     });
   }
 
+  Future<void> _downloadQr(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri != null && await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final invLoading = ref.watch(
@@ -200,37 +208,39 @@ class _InvitePanelState extends ConsumerState<InvitePanel> {
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
               ],
+              onChanged: (_) => setState(() {}),
             ),
             FieldTextInput(
               label: 'Label',
               controller: _label,
               hint: 'e.g. ETH Denver 2026',
             ),
+
+            // Total KIDUNA lock — directly below sponsor row
+            if (_kidunaAmount > 0 && _maxUsesValue > 0)
+              _FullWidth(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: colors.gold.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: colors.gold.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Text(
+                    'Total KIDUNA to lock: ${_formatNumber(_totalKidunaLock)}'
+                    ' (${_formatNumber(_kidunaAmount)} × $_maxUsesValue people)',
+                    style: context.kidunaText.caption.copyWith(
+                      color: colors.gold,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
-
-        // Total KIDUNA lock summary
-        if (_kidunaAmount > 0 && _maxUsesValue > 0) ...[
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            decoration: BoxDecoration(
-              color: colors.gold.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(
-                color: colors.gold.withValues(alpha: 0.2),
-              ),
-            ),
-            child: Text(
-              'Total KIDUNA to lock: ${_formatNumber(_totalKidunaLock)}'
-              ' (${_formatNumber(_kidunaAmount)} × ${_maxUsesValue} people)',
-              style: context.kidunaText.caption.copyWith(
-                color: colors.gold,
-                height: 1.4,
-              ),
-            ),
-          ),
-        ],
 
         const SizedBox(height: 10),
         if (error != null) ...[
@@ -327,6 +337,104 @@ class _InvitePanelState extends ConsumerState<InvitePanel> {
         ),
         const SizedBox(height: 14),
 
+        // QR Code
+        if (invitation.qrCodeUrl.isNotEmpty) ...[
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color.fromRGBO(6, 3, 4, 0.4),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: colors.camel.withValues(alpha: 0.14),
+              ),
+            ),
+            child: Column(
+              children: [
+                // QR image
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Image.network(
+                    invitation.qrCodeUrl,
+                    width: 140,
+                    height: 140,
+                    fit: BoxFit.contain,
+                    loadingBuilder: (context, child, progress) {
+                      if (progress == null) return child;
+                      return SizedBox(
+                        width: 140,
+                        height: 140,
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: colors.sky,
+                          ),
+                        ),
+                      );
+                    },
+                    errorBuilder: (context, error, stack) {
+                      return SizedBox(
+                        width: 140,
+                        height: 140,
+                        child: Center(
+                          child: Text(
+                            'QR unavailable',
+                            style: text.caption.copyWith(color: colors.muted),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                // Download + Copy QR link row
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () => _copy(
+                        'QR link copied',
+                        invitation.qrCodeUrl,
+                      ),
+                      icon: Icon(Icons.link, size: 16, color: colors.sky),
+                      label: Text('Copy QR Link',
+                          style: text.caption.copyWith(color: colors.sky)),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(0, 32),
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        side: BorderSide(
+                            color: colors.sky.withValues(alpha: 0.24)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(5)),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    OutlinedButton.icon(
+                      onPressed: () => _downloadQr(invitation.qrCodeUrl),
+                      icon: Icon(Icons.download, size: 16, color: colors.sky),
+                      label: Text('Download',
+                          style: text.caption.copyWith(color: colors.sky)),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(0, 32),
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        side: BorderSide(
+                            color: colors.sky.withValues(alpha: 0.24)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(5)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+        ],
+
         // Copy invite text button
         Align(
           alignment: Alignment.centerLeft,
@@ -421,6 +529,7 @@ class _ValidatedInput extends StatelessWidget {
     this.hint,
     this.keyboardType,
     this.inputFormatters,
+    this.onChanged,
   });
 
   final String label;
@@ -429,6 +538,7 @@ class _ValidatedInput extends StatelessWidget {
   final String? hint;
   final TextInputType? keyboardType;
   final List<TextInputFormatter>? inputFormatters;
+  final ValueChanged<String>? onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -445,6 +555,7 @@ class _ValidatedInput extends StatelessWidget {
             controller: controller,
             keyboardType: keyboardType,
             inputFormatters: inputFormatters,
+            onChanged: onChanged,
             style: text.caption.copyWith(color: colors.text, height: 1.4),
             decoration: InputDecoration(
               hintText: hint,

@@ -11,6 +11,7 @@ class InvitationResponse {
     required this.realmName,
     required this.role,
     required this.maxUses,
+    this.qrCodeUrl = '',
     this.recipientName,
     this.inviterHandle,
     this.kidunaPerPerson = 0,
@@ -26,6 +27,9 @@ class InvitationResponse {
 
   /// Full deep-link URL (e.g. `https://kiduna.ai/ravi/code/RLM-ABC123`).
   final String invitationLink;
+
+  /// QR code image URL (e.g. `https://backend/realm-invites/qr/RLM-ABC123`).
+  final String qrCodeUrl;
 
   /// Realm name.
   final String realmName;
@@ -57,6 +61,7 @@ class InvitationResponse {
       id: data['id'] as String,
       code: data['code'] as String,
       invitationLink: (data['url'] as String?) ?? '',
+      qrCodeUrl: (data['qrCodeUrl'] as String?) ?? '',
       realmName: (data['realmName'] as String?) ?? '',
       role: (data['role'] as String?) ?? 'member',
       maxUses: int.tryParse(data['maxUses']?.toString() ?? '') ?? 1,
