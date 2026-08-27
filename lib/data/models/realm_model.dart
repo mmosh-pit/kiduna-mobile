@@ -36,6 +36,10 @@ class RealmModel {
     required this.createdAt,
     this.gravityLevel,
     this.gravityScore,
+    this.gameStatus,
+    this.gameRoomCode,
+    this.gamePlayerCount,
+    this.gameSeatCount,
   });
 
   final String id;
@@ -104,6 +108,11 @@ class RealmModel {
   /// Gravity score from the graph API (0.0–1.0).
   /// Null when loaded from the table API.
   final double? gravityScore;
+
+  final String? gameStatus;
+  final String? gameRoomCode;
+  final int? gamePlayerCount;
+  final int? gameSeatCount;
 
   // ── Config convenience getters for Institution type ──
 

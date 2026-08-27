@@ -141,6 +141,10 @@ class Realm {
     this.portrait,
     this.reason,
     this.themes = const [],
+    this.gameStatus,
+    this.gameRoomCode,
+    this.gamePlayerCount,
+    this.gameSeatCount,
   });
 
   final String id;
@@ -159,6 +163,10 @@ class Realm {
   final String? portrait;
   final String? reason;
   final List<String> themes;
+  final String? gameStatus;
+  final String? gameRoomCode;
+  final int? gamePlayerCount;
+  final int? gameSeatCount;
 
   String get emblemAsset => type?.emblemAsset ?? RealmType.unknownEmblemAsset;
 

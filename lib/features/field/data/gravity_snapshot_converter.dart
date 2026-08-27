@@ -210,6 +210,10 @@ FieldSnapshot gravityToSnapshot({
         fixture: false,
         reason: rg.reason,
         seed: seed,
+        gameStatus: rg.gameStatus,
+        gameRoomCode: rg.gameRoomCode,
+        gamePlayerCount: rg.gamePlayerCount,
+        gameSeatCount: rg.gameSeatCount,
       ),
     );
   }

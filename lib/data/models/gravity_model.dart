@@ -41,6 +41,10 @@ class RealmGravity {
     required this.reason,
     this.membership,
     this.role,
+    this.gameStatus,
+    this.gameRoomCode,
+    this.gamePlayerCount,
+    this.gameSeatCount,
   });
 
   final String id;
@@ -52,6 +56,10 @@ class RealmGravity {
   final String reason;
   final String? membership;
   final String? role;
+  final String? gameStatus;
+  final String? gameRoomCode;
+  final int? gamePlayerCount;
+  final int? gameSeatCount;
 
   factory RealmGravity.fromJson(Map<String, dynamic> json) {
     return RealmGravity(
@@ -66,6 +74,10 @@ class RealmGravity {
       reason: json['reason'] as String? ?? '',
       membership: json['membership'] as String?,
       role: json['role'] as String?,
+      gameStatus: json['game_status'] as String?,
+      gameRoomCode: json['game_room_code'] as String?,
+      gamePlayerCount: json['game_player_count'] as int?,
+      gameSeatCount: json['game_seat_count'] as int?,
     );
   }
 }

@@ -123,7 +123,6 @@ class EcosystemController extends Notifier<EcosystemState> {
       if (loaded) return;
     }
 
-    // Fallback: table API.
     await _loadChildrenFromTable(parentId);
   }
 
@@ -275,6 +274,10 @@ class EcosystemController extends Notifier<EcosystemState> {
       createdAt: DateTime.now(),
       gravityLevel: g.level,
       gravityScore: g.score,
+      gameStatus: g.gameStatus,
+      gameRoomCode: g.gameRoomCode,
+      gamePlayerCount: g.gamePlayerCount,
+      gameSeatCount: g.gameSeatCount,
     );
   }
 }

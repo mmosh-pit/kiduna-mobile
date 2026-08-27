@@ -101,9 +101,30 @@ class RemoteAgent implements PlayerAgent {
 
   int get _deadline => DateTime.now().millisecondsSinceEpoch + timeout.inMilliseconds;
 
+  static final _neutralIds =
+      PowerCards.standard.map((c) => c.templateId).toSet();
+  static final _classIds = {
+    for (final cls in AiPersonality.values)
+      for (final c in ClassCards.forClass(cls)) c.templateId,
+  };
+
+  static String _cardGroup(String templateId) {
+    if (_neutralIds.contains(templateId)) return 'Neutral';
+    if (_classIds.contains(templateId)) return 'Class';
+    return 'Court';
+  }
+
   List<PromptOption> _cardOptions(List<PowerCard> cards) => [
         for (final c in cards)
           PromptOption(c.templateId, c.name, subtitle: c.description),
+      ];
+
+  List<PromptOption> _deckOptions(List<PowerCard> cards) => [
+        for (final c in cards)
+          PromptOption(c.templateId, c.name,
+              subtitle: c.description,
+              group: _cardGroup(c.templateId),
+              badge: c.timing.label),
       ];
 
   @override
@@ -113,7 +134,14 @@ class RemoteAgent implements PlayerAgent {
   Future<int> chooseClass(List<String> classNames) async {
     final r = await _ask((id) => PromptSpec(
         promptId: id, kind: PromptKind.classPick, title: 'Choose your class',
-        options: [for (var i = 0; i < classNames.length; i++) PromptOption('$i', classNames[i])],
+        options: [
+          for (var i = 0; i < classNames.length; i++)
+            PromptOption('$i', classNames[i],
+                subtitle: AiPersonality.values
+                    .where((v) => v.title == classNames[i])
+                    .firstOrNull
+                    ?.subtitle),
+        ],
         deadlineMs: _deadline));
     return (r?.payload['index'] as int?) ?? 0;
   }
@@ -122,7 +150,14 @@ class RemoteAgent implements PlayerAgent {
   Future<int> chooseCourt(List<String> courtNames) async {
     final r = await _ask((id) => PromptSpec(
         promptId: id, kind: PromptKind.courtPick, title: 'Choose your Court',
-        options: [for (var i = 0; i < courtNames.length; i++) PromptOption('$i', courtNames[i])],
+        options: [
+          for (var i = 0; i < courtNames.length; i++)
+            PromptOption('$i', courtNames[i],
+                subtitle: CourtMember.values
+                    .where((v) => v.title == courtNames[i])
+                    .firstOrNull
+                    ?.trait),
+        ],
         deadlineMs: _deadline));
     return (r?.payload['index'] as int?) ?? 0;
   }
@@ -131,7 +166,7 @@ class RemoteAgent implements PlayerAgent {
   Future<List<String>?> buildDeck(List<PowerCard> pool, int target) async {
     final r = await _ask((id) => PromptSpec(
         promptId: id, kind: PromptKind.deckBuild, title: 'Build your Power Deck',
-        options: _cardOptions(pool), deckTarget: target, deadlineMs: _deadline));
+        options: _deckOptions(pool), deckTarget: target, deadlineMs: _deadline));
     final ids = (r?.payload['cardIds'] as List?)?.cast<String>();
     return ids; // null → auto full pool
   }

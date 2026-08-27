@@ -32,14 +32,19 @@ class PromptOption {
   final String label;
   final String? subtitle;
   final String? cardCode; // for rendering card art, when applicable
+  final String? group; // deck-build grouping: 'Neutral' / 'Class' / 'Court'
+  final String? badge; // deck-build timing label: 'Setup' / 'Round' / …
 
-  const PromptOption(this.id, this.label, {this.subtitle, this.cardCode});
+  const PromptOption(this.id, this.label,
+      {this.subtitle, this.cardCode, this.group, this.badge});
 
   Map<String, dynamic> toJson() => {
         'id': id,
         'label': label,
         if (subtitle != null) 'subtitle': subtitle,
         if (cardCode != null) 'cardCode': cardCode,
+        if (group != null) 'group': group,
+        if (badge != null) 'badge': badge,
       };
 
   factory PromptOption.fromJson(Map<String, dynamic> j) => PromptOption(
@@ -47,6 +52,8 @@ class PromptOption {
         j['label'] as String,
         subtitle: j['subtitle'] as String?,
         cardCode: j['cardCode'] as String?,
+        group: j['group'] as String?,
+        badge: j['badge'] as String?,
       );
 }
 

@@ -8,6 +8,7 @@ import '../../../core/errors/exceptions.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../data/services/realm_service.dart';
 import '../../auth/controllers/auth_controller.dart';
+import '../../dashboard/screens/dashboard_screen.dart';
 import '../controllers/ecosystem_controller.dart';
 import '../controllers/field_controller.dart';
 import '../data/field_fixtures.dart';
@@ -352,7 +353,16 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
           primaryFocus: _primaryFocus,
           authToken: auth.token,
         );
-        if (mounted) { fieldCtrl.onRealmCreated(realm); widget.onCreated?.call(); }
+
+        if (mounted) fieldCtrl.onRealmCreated(realm);
+        if (mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (_) => DashboardScreen(initialTab: 1, startGameInLobby: true, cellRealmId: realm.id),
+            ),
+            (route) => false,
+          );
+        }
       } else if (_isDyad) {
         final realm = await RealmService.instance.createRealm(
           name: nameText, type: 'dyad',

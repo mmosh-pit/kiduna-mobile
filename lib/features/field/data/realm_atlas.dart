@@ -87,6 +87,10 @@ class AtlasRealm {
     this.primaryTheme,
     this.gravityLevel,
     this.gravityScore,
+    this.gameStatus,
+    this.gameRoomCode,
+    this.gamePlayerCount,
+    this.gameSeatCount,
   });
 
   final String id;
@@ -114,6 +118,11 @@ class AtlasRealm {
 
   /// Gravity score from graph API (0.0–1.0).
   final double? gravityScore;
+
+  final String? gameStatus;
+  final String? gameRoomCode;
+  final int? gamePlayerCount;
+  final int? gameSeatCount;
 }
 
 // Compact constructor mirroring the TS `realm(...)` factory.
@@ -1233,5 +1242,9 @@ AtlasRealm atlasRealmFromModel(RealmModel model) {
     primaryTheme: model.primaryTheme,
     gravityLevel: model.gravityLevel,
     gravityScore: model.gravityScore,
+    gameStatus: model.gameStatus,
+    gameRoomCode: model.gameRoomCode,
+    gamePlayerCount: model.gamePlayerCount,
+    gameSeatCount: model.gameSeatCount,
   );
 }

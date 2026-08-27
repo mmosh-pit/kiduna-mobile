@@ -28,6 +28,19 @@ extension AiPersonalityLabel on AiPersonality {
         return 'The Noble';
     }
   }
+
+  String get subtitle {
+    switch (this) {
+      case AiPersonality.rogue:
+        return 'Tight / Aggressive';
+      case AiPersonality.merchant:
+        return 'Adaptive / Midrange';
+      case AiPersonality.warrior:
+        return 'Loose / Aggressive';
+      case AiPersonality.noble:
+        return 'Tight / Control';
+    }
+  }
 }
 
 /// The betting stages of a hand.

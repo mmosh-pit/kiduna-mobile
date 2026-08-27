@@ -183,10 +183,11 @@ class LobbyClient {
   /// mutations must still send a valid JSON payload — an empty object.
   static const Map<String, dynamic> _emptyBody = <String, dynamic>{};
 
-  Future<LobbyTicket> createRoom({int? seats, bool? timedLevels}) async {
+  Future<LobbyTicket> createRoom({int? seats, bool? timedLevels, String? realmId}) async {
     final res = await _call(() => _dio.post('/games/rooms', data: {
           if (seats != null) 'seats': seats,
           if (timedLevels != null) 'timedLevels': timedLevels,
+          if (realmId != null) 'realmId': realmId,
         }));
     return _ticketOf(res);
   }
