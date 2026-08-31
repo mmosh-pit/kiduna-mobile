@@ -15,6 +15,7 @@ import 'features/auth/screens/login_screen.dart';
 import 'features/auth/screens/signup_screen.dart';
 import 'features/compute/screens/buy_kiduna_screen.dart';
 import 'features/compute/screens/withdraw_screen.dart';
+import 'features/compute/screens/lineage_withdraw_screen.dart';
 import 'l10n/app_localizations.dart';
 
 /// Extracts an invite code from the URL on web.
@@ -131,6 +132,7 @@ String? pendingInviteHandle;
 /// Auth is resolved from the existing browser session, never from the URL.
 bool isBuyKidunaRoute = false;
 bool isWithdrawRoute = false;
+bool isLineageWithdrawRoute = false;
 
 /// Detects the /buy-kiduna route.
 void _detectBuyKidunaRoute() {
@@ -143,6 +145,11 @@ void _detectBuyKidunaRoute() {
         full.contains('/buy-kiduna')) {
       isBuyKidunaRoute = true;
       AppLogger.info('Buy KIDUNA route detected', tag: 'App');
+    } else if (uri.path.contains('/lineage-withdraw') ||
+        uri.fragment.contains('/lineage-withdraw') ||
+        full.contains('/lineage-withdraw')) {
+      isLineageWithdrawRoute = true;
+      AppLogger.info('Lineage withdraw route detected', tag: 'App');
     } else if (uri.path.contains('/withdraw') ||
         uri.fragment.contains('/withdraw') ||
         full.contains('/withdraw')) {
@@ -166,7 +173,7 @@ Future<void> main() async {
 
   // Route detection from URL before anything renders
   _detectBuyKidunaRoute();
-  if (!isBuyKidunaRoute && !isWithdrawRoute) {
+  if (!isBuyKidunaRoute && !isWithdrawRoute && !isLineageWithdrawRoute) {
     pendingInviteCode = _extractInviteCodeFromUrl();
   }
 
@@ -175,6 +182,7 @@ Future<void> main() async {
     'handle=$pendingInviteHandle, '
     'buyKiduna=$isBuyKidunaRoute, '
     'withdraw=$isWithdrawRoute, '
+    'lineageWithdraw=$isLineageWithdrawRoute, '
     'uri=${kIsWeb ? Uri.base.toString() : "non-web"}',
     tag: 'App',
   );
@@ -190,6 +198,9 @@ class KidunaApp extends StatelessWidget {
   Widget _resolveHome() {
     if (isBuyKidunaRoute) {
       return const BuyKidunaScreen();
+    }
+    if (isLineageWithdrawRoute) {
+      return const LineageWithdrawScreen();
     }
     if (isWithdrawRoute) {
       return const WithdrawScreen();
