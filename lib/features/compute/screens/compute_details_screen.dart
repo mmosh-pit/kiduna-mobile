@@ -1,10 +1,12 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../config/env.dart';
 import '../../../core/extensions/context_extensions.dart';
+import '../../../core/wallet/phantom.dart';
 import '../../../data/models/lineage_reward_model.dart';
 import '../../../data/services/auth_service.dart';
 import '../../../shared/layouts/responsive_layout.dart';
@@ -15,11 +17,11 @@ import '../../auth/controllers/auth_controller.dart';
 import '../../field/screens/field_screen.dart';
 import '../controllers/compute_controller.dart';
 import '../controllers/compute_history_controller.dart';
+import '../controllers/wallet_controller.dart';
 import '../models/compute_history_entry.dart';
 import '../open_buy_kiduna.dart';
 import '../widgets/compute_usage_bar.dart';
 import '../widgets/kiduna_purchase_panel.dart';
-import 'lineage_withdraw_screen.dart';
 
 /// Full Compute page — balance with a used/available bar, plus usage and
 /// purchase history.
@@ -499,57 +501,106 @@ class _RewardsTabState extends ConsumerState<_RewardsTab> {
   }
 
   Future<void> _withdraw() async {
-    final auth = ref.read(authControllerProvider);
-    final wallet = auth.user?.wallet;
-    if (wallet == null || wallet.isEmpty) return;
+    final walletCtrl = ref.read(walletControllerProvider);
+    final phantomAddress = walletCtrl.address;
 
-    // On web — navigate directly to LineageWithdrawScreen
-    if (kIsWeb) {
-      await Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => const LineageWithdrawScreen(),
-        ),
-      );
-      // Refresh on return
-      if (mounted) _load();
+    if (phantomAddress == null || phantomAddress.isEmpty) {
+      setState(() {
+        _withdrawResult = 'Please connect your Phantom wallet first.';
+        _withdrawSuccess = false;
+      });
       return;
     }
 
-    // On desktop/mobile — open browser
     setState(() {
       _withdrawing = true;
       _withdrawResult = null;
     });
 
     try {
-      final baseUrl =
-          Env.webAppUrl.isNotEmpty ? Env.webAppUrl : 'https://mobile.kiduna.dev';
-      final url = Uri.parse(
-        '$baseUrl/lineage-withdraw?wallet=$wallet',
+      // 1. Backend builds USDC transfer tx (admin signs)
+      final prepared = await AuthService.instance.postWithAuth(
+        '/kiduna/lineage-withdraw',
+        {'recipient': phantomAddress},
       );
-      await launchUrl(url, mode: LaunchMode.externalApplication);
 
       if (!mounted) return;
+
+      final data = prepared?['data'] as Map<String, dynamic>? ?? prepared;
+      final txBase64 = data?['transaction'] as String?;
+      final availableAmount =
+          double.tryParse(data?['available']?.toString() ?? '') ?? 0;
+
+      if (txBase64 == null || txBase64.isEmpty) {
+        setState(() {
+          _withdrawResult = data?['error'] as String? ??
+              'Could not prepare withdrawal.';
+          _withdrawSuccess = false;
+          _withdrawing = false;
+        });
+        return;
+      }
+
+      // 2. Phantom co-signs (user pays SOL fee)
+      final signed = await PhantomWallet.signTransaction(txBase64);
+      if (!mounted) return;
+
+      if (signed == null) {
+        setState(() {
+          _withdrawResult = 'Signature declined. No funds were moved.';
+          _withdrawSuccess = false;
+          _withdrawing = false;
+        });
+        return;
+      }
+
+      // 3. Backend broadcasts + records withdrawal
+      final result = await AuthService.instance.postWithAuth(
+        '/kiduna/lineage-withdraw/confirm',
+        {
+          'signedTransaction': signed,
+          'claimedAmount': availableAmount,
+        },
+      );
+
+      if (!mounted) return;
+
+      final resultData = result?['data'] as Map<String, dynamic>? ?? result;
+      final success = resultData?['success'] == true;
+      final txSig = resultData?['txSignature'] as String?;
+
+      if (!success) {
+        setState(() {
+          _withdrawResult = resultData?['error'] as String? ??
+              'Transaction failed. Your funds are safe.';
+          _withdrawSuccess = false;
+          _withdrawing = false;
+        });
+        return;
+      }
+
       setState(() {
         _withdrawing = false;
         _withdrawResult =
-            'Withdrawal page opened. Complete the transaction in your browser.';
+            'Withdrawn \$${availableAmount.toStringAsFixed(2)} USDC successfully!'
+            '${txSig != null ? '\nTx: ${txSig.substring(0, 20)}...' : ''}';
         _withdrawSuccess = true;
+        _txSignature = txSig;
       });
 
-      // Refresh rewards after a delay (user may have completed withdrawal)
-      Future.delayed(const Duration(seconds: 10), () {
-        if (mounted) _load();
-      });
+      // Refresh rewards
+      _load();
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _withdrawing = false;
-        _withdrawResult = 'Failed to open withdrawal page.';
+        _withdrawResult = 'Withdrawal failed. Please try again.';
         _withdrawSuccess = false;
       });
     }
   }
+
+  String? _txSignature;
 
   @override
   Widget build(BuildContext context) {
@@ -592,47 +643,238 @@ class _RewardsTabState extends ConsumerState<_RewardsTab> {
             available: s.available,
           ),
 
-          // ── Withdraw button ──
+          // ── Withdraw section ──
           if (s.available > 0) ...[
             const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: _withdrawing
-                  ? Center(
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: colors.gold,
-                      ),
-                    )
-                  : ElevatedButton(
-                      onPressed: _withdraw,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: colors.gold,
-                        foregroundColor: colors.field,
-                        minimumSize: const Size(double.infinity, 44),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+
+            // Phantom wallet connection
+            Builder(builder: (context) {
+              final walletState = ref.watch(walletControllerProvider);
+              final isConnected = walletState.address != null &&
+                  walletState.address!.isNotEmpty;
+
+              if (!isConnected) {
+                return Column(
+                  children: [
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          ref.read(walletControllerProvider.notifier).connect();
+                        },
+                        icon: Icon(Icons.account_balance_wallet,
+                            size: 18, color: colors.gold),
+                        label: Text('Connect Phantom to Withdraw',
+                            style: text.body.copyWith(color: colors.gold)),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(double.infinity, 44),
+                          side: BorderSide(
+                              color: colors.gold.withValues(alpha: 0.4)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
                         ),
-                        textStyle: text.body.copyWith(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
-                        ),
-                      ),
-                      child: Text(
-                        'Withdraw \$${s.available.toStringAsFixed(2)} USDC',
                       ),
                     ),
-            ),
-            if (_withdrawResult != null) ...[
+                  ],
+                );
+              }
+
+              return Column(
+                children: [
+                  // Connected wallet display
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: colors.mint.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                          color: colors.mint.withValues(alpha: 0.2)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.check_circle,
+                            size: 14, color: colors.mint),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${walletState.address!.substring(0, 6)}...${walletState.address!.substring(walletState.address!.length - 4)}',
+                          style: text.caption.copyWith(
+                            color: colors.mint,
+                            fontFamily: 'monospace',
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Withdraw button
+                  SizedBox(
+                    width: double.infinity,
+                    child: _withdrawing
+                        ? Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                CircularProgressIndicator(
+                                    strokeWidth: 2, color: colors.gold),
+                                const SizedBox(height: 8),
+                                Text('Waiting for signature...',
+                                    style: text.caption
+                                        .copyWith(color: colors.muted)),
+                              ],
+                            ),
+                          )
+                        : ElevatedButton(
+                            onPressed: _withdraw,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: colors.gold,
+                              foregroundColor: colors.field,
+                              minimumSize:
+                                  const Size(double.infinity, 44),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius:
+                                      BorderRadius.circular(8)),
+                              textStyle: text.body.copyWith(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 15,
+                              ),
+                            ),
+                            child: Text(
+                              'Withdraw \$${s.available.toStringAsFixed(2)} USDC',
+                            ),
+                          ),
+                  ),
+                ],
+              );
+            }),
+
+            // Result + tx inside availability block (when still available)
+            if (_withdrawResult != null && _txSignature != null && s.available > 0) ...[
               const SizedBox(height: 8),
-              Text(
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TextButton.icon(
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: _txSignature!));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text('Transaction ID copied'),
+                          duration: const Duration(seconds: 2),
+                          backgroundColor: colors.mint,
+                        ),
+                      );
+                    },
+                    icon: Icon(Icons.copy, size: 14, color: colors.sky),
+                    label: Text('Copy Tx',
+                        style: text.caption.copyWith(color: colors.sky)),
+                  ),
+                  TextButton.icon(
+                    onPressed: () {
+                      launchUrl(
+                        Uri.parse('https://solscan.io/tx/$_txSignature'),
+                        mode: LaunchMode.externalApplication,
+                      );
+                    },
+                    icon: Icon(Icons.open_in_new, size: 14, color: colors.sky),
+                    label: Text('View on Explorer',
+                        style: text.caption.copyWith(color: colors.sky)),
+                  ),
+                ],
+              ),
+            ],
+          ],
+
+          // ── Withdraw result (persists after refresh) ──
+          if (_withdrawResult != null) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: (_withdrawSuccess ? colors.mint : colors.orange)
+                    .withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: (_withdrawSuccess ? colors.mint : colors.orange)
+                      .withValues(alpha: 0.2),
+                ),
+              ),
+              child: Text(
                 _withdrawResult!,
                 style: text.caption.copyWith(
                   color: _withdrawSuccess ? colors.mint : colors.orange,
                   height: 1.4,
                 ),
               ),
-            ],
+            ),
+          ],
+
+          if (_txSignature != null && s.available <= 0) ...[
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: colors.surface,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: colors.camel.withValues(alpha: 0.14)),
+              ),
+              child: Column(
+                children: [
+                  Text('Last Transaction',
+                      style: text.caption.copyWith(color: colors.muted, fontSize: 11)),
+                  const SizedBox(height: 6),
+                  Text(
+                    _txSignature!,
+                    textAlign: TextAlign.center,
+                    style: text.caption.copyWith(
+                      color: colors.cream,
+                      fontFamily: 'monospace',
+                      fontSize: 10,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      TextButton.icon(
+                        onPressed: () {
+                          Clipboard.setData(
+                              ClipboardData(text: _txSignature!));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Text('Transaction ID copied'),
+                              duration: const Duration(seconds: 2),
+                              backgroundColor: colors.mint,
+                            ),
+                          );
+                        },
+                        icon: Icon(Icons.copy, size: 14, color: colors.sky),
+                        label: Text('Copy Tx',
+                            style: text.caption.copyWith(color: colors.sky)),
+                      ),
+                      TextButton.icon(
+                        onPressed: () {
+                          launchUrl(
+                            Uri.parse('https://solscan.io/tx/$_txSignature'),
+                            mode: LaunchMode.externalApplication,
+                          );
+                        },
+                        icon: Icon(Icons.open_in_new,
+                            size: 14, color: colors.sky),
+                        label: Text('View on Explorer',
+                            style: text.caption.copyWith(color: colors.sky)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ],
 
           const SizedBox(height: 20),
