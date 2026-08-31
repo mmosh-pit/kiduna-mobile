@@ -1,6 +1,9 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../../config/env.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../compute/controllers/compute_controller.dart';
 import '../../compute/open_buy_kiduna.dart';
@@ -47,9 +50,20 @@ class _ComputeCardState extends ConsumerState<ComputeCard>
   }
 
   Future<void> _openDetails() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const ComputeDetailsScreen()),
-    );
+    if (kIsWeb) {
+      // Web — navigate in-app
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => const ComputeDetailsScreen()),
+      );
+    } else {
+      // Desktop/mobile — open in browser
+      final base =
+          Env.webAppUrl.isNotEmpty ? Env.webAppUrl : 'https://mobile.kiduna.dev';
+      final uri = Uri.parse('$base/compute-details');
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    }
     if (!mounted) return;
     ref.read(computeControllerProvider.notifier).refresh();
   }
@@ -78,53 +92,10 @@ class _ComputeCardState extends ConsumerState<ComputeCard>
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // ── Header + balance ─────────────────────────────────
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                context.l10n.compute.toUpperCase(),
-                style: text.eyebrowSmall.copyWith(color: colors.gold),
-              ),
-              Flexible(
-                child: compute.isLoading
-                    ? SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 1.6,
-                          color: colors.gold,
-                        ),
-                      )
-                    : Text(
-                        '${KidunaPurchasePanel.formatKiduna(compute.balance)} KIDUNA',
-                        textAlign: TextAlign.right,
-                        style: text.body.copyWith(color: colors.cream),
-                      ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 10),
-
-          // ── Rate + total value ───────────────────────────────
-          Row(
-            children: [
-              Expanded(
-                child: _Rate(
-                  label: '1 KIDUNA',
-                  value: '\$${compute.tokenPrice}',
-                ),
-              ),
-              const SizedBox(width: 7),
-              Expanded(
-                child: _Rate(
-                  label: 'Total value',
-                  value: _formatUsd(compute.totalValueUsd),
-                ),
-              ),
-            ],
+          // ── Header ─────────────────────────────────────────
+          Text(
+            context.l10n.compute.toUpperCase(),
+            style: text.eyebrowSmall.copyWith(color: colors.gold),
           ),
 
           const SizedBox(height: 10),
