@@ -147,6 +147,12 @@ class RealmModel {
   String? get capacities =>
       config['capacities'] as String?;
 
+  // ── Config convenience getters for Cell type ──
+
+  String get cellType => config['cellType'] as String? ?? 'temporary';
+  bool get isPermanentCell => type == 'cell' && cellType == 'permanent';
+  bool get isTemporaryCell => type == 'cell' && cellType != 'permanent';
+
   /// Whether this is a genesis Ecosystem (root, no parent).
   bool get isGenesis => type == 'ecosystem' && parentId == null;
 

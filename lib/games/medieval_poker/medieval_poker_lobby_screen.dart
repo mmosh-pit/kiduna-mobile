@@ -23,6 +23,7 @@ class MedievalPokerLobbyScreen extends StatefulWidget {
     this.cellRealmId,
     this.initialTicket,
     this.onGameLaunch,
+    this.onGameExit,
   });
 
   /// Called when the leaderboard icon is tapped.
@@ -36,6 +37,9 @@ class MedievalPokerLobbyScreen extends StatefulWidget {
   /// Called when the game starts, with the online screen widget params.
   /// If set, the lobby will NOT push a route — the parent renders the game.
   final void Function(MedievalPokerOnlineScreen screen)? onGameLaunch;
+
+  /// Called when the player leaves the online game (inline render only).
+  final VoidCallback? onGameExit;
 
   @override
   State<MedievalPokerLobbyScreen> createState() =>
@@ -210,6 +214,7 @@ class _MedievalPokerLobbyScreenState extends State<MedievalPokerLobbyScreen> {
       token: _gameToken,
       timedLevels: r.timedLevels,
       playerName: _mySeatName(r),
+      onExit: widget.onGameExit,
     );
 
     if (widget.onGameLaunch != null) {

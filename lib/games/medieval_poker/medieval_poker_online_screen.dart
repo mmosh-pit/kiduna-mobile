@@ -31,6 +31,11 @@ class MedievalPokerOnlineScreen extends StatefulWidget {
   /// sees real names instead of "Seat N".
   final String? playerName;
 
+  /// Called when the player exits the game. When the screen is rendered inline
+  /// (via onGameLaunch), this replaces Navigator.pop so the parent can switch
+  /// views instead of popping the wrong route.
+  final VoidCallback? onExit;
+
   const MedievalPokerOnlineScreen({
     super.key,
     required this.wsUrl,
@@ -40,6 +45,7 @@ class MedievalPokerOnlineScreen extends StatefulWidget {
     this.token,
     this.timedLevels,
     this.playerName,
+    this.onExit,
   });
 
   @override
@@ -79,9 +85,10 @@ class _MedievalPokerOnlineScreenState extends State<MedievalPokerOnlineScreen> {
   }
 
   void _handleExit() {
-    if (Navigator.of(context).canPop()) {
-      Navigator.of(context).pop();
-    } else {
+    final cb = widget.onExit;
+    if (cb != null) {
+      cb();
+    } else if (Navigator.of(context).canPop()) {
       Navigator.of(context).pop();
     }
   }

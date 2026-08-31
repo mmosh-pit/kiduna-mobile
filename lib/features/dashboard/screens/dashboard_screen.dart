@@ -9,16 +9,18 @@ import '../../../l10n/app_localizations.dart';
 import '../../../shared/layouts/responsive_layout.dart';
 import '../../../shared/widgets/app_header.dart';
 import '../../../shared/widgets/ki_agent.dart';
+import '../../cell/screens/cell_detail_screen.dart';
 import '../controllers/ecosystem_controller.dart';
 import '../../../features/ki_chat/controllers/ki_chat_controller.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
-  const DashboardScreen({super.key, this.initialTab = 0, this.startGameInLobby = false, this.cellRealmId, this.joinTicket});
+  const DashboardScreen({super.key, this.initialTab = 0, this.startGameInLobby = false, this.cellRealmId, this.joinTicket, this.permanentCellRealmId});
 
   final int initialTab;
   final bool startGameInLobby;
   final String? cellRealmId;
   final Object? joinTicket;
+  final String? permanentCellRealmId;
 
   @override
   ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
@@ -147,8 +149,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           const AppHeader(),
           Expanded(
             child: ResponsiveLayout(
-              desktop: (_) => _ContentWide(activeTab: _activeTab, startInLobby: widget.startGameInLobby, cellRealmId: widget.cellRealmId, joinTicket: widget.joinTicket),
-              mobile: (_) => _ContentNarrow(activeTab: _activeTab, startInLobby: widget.startGameInLobby, cellRealmId: widget.cellRealmId, joinTicket: widget.joinTicket),
+              desktop: (_) => _ContentWide(activeTab: _activeTab, startInLobby: widget.startGameInLobby, cellRealmId: widget.cellRealmId, joinTicket: widget.joinTicket, permanentCellRealmId: widget.permanentCellRealmId),
+              mobile: (_) => _ContentNarrow(activeTab: _activeTab, startInLobby: widget.startGameInLobby, cellRealmId: widget.cellRealmId, joinTicket: widget.joinTicket, permanentCellRealmId: widget.permanentCellRealmId),
             ),
           ),
         ],
@@ -266,12 +268,13 @@ class _TabItem extends StatelessWidget {
 /// Desktop layout — left panel (based on tab) + Ki chat right.
 /// The boundary between them is draggable to resize the Ki chat.
 class _ContentWide extends StatefulWidget {
-  const _ContentWide({required this.activeTab, this.startInLobby = false, this.cellRealmId, this.joinTicket});
+  const _ContentWide({required this.activeTab, this.startInLobby = false, this.cellRealmId, this.joinTicket, this.permanentCellRealmId});
 
   final int activeTab;
   final bool startInLobby;
   final String? cellRealmId;
   final Object? joinTicket;
+  final String? permanentCellRealmId;
 
   @override
   State<_ContentWide> createState() => _ContentWideState();
@@ -292,7 +295,7 @@ class _ContentWideState extends State<_ContentWide> {
           children: [
             SizedBox(
               width: contentWidth,
-              child: _buildLeftPanel(context, widget.activeTab, startInLobby: widget.startInLobby, cellRealmId: widget.cellRealmId, joinTicket: widget.joinTicket),
+              child: _buildLeftPanel(context, widget.activeTab, startInLobby: widget.startInLobby, cellRealmId: widget.cellRealmId, joinTicket: widget.joinTicket, permanentCellRealmId: widget.permanentCellRealmId),
             ),
             _ResizeBoundary(
               onDrag: (dx) {
@@ -395,18 +398,19 @@ class _ResizeBoundaryState extends State<_ResizeBoundary> {
 
 /// Mobile layout — left panel top + Ki chat bottom.
 class _ContentNarrow extends StatelessWidget {
-  const _ContentNarrow({required this.activeTab, this.startInLobby = false, this.cellRealmId, this.joinTicket});
+  const _ContentNarrow({required this.activeTab, this.startInLobby = false, this.cellRealmId, this.joinTicket, this.permanentCellRealmId});
 
   final int activeTab;
   final bool startInLobby;
   final String? cellRealmId;
   final Object? joinTicket;
+  final String? permanentCellRealmId;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Expanded(flex: 5, child: _buildLeftPanel(context, activeTab, startInLobby: startInLobby, cellRealmId: cellRealmId, joinTicket: joinTicket)),
+        Expanded(flex: 5, child: _buildLeftPanel(context, activeTab, startInLobby: startInLobby, cellRealmId: cellRealmId, joinTicket: joinTicket, permanentCellRealmId: permanentCellRealmId)),
         const Expanded(flex: 5, child: KiAgent()),
       ],
     );
@@ -414,7 +418,11 @@ class _ContentNarrow extends StatelessWidget {
 }
 
 /// Returns the left panel widget based on active tab.
-Widget _buildLeftPanel(BuildContext context, int activeTab, {bool startInLobby = false, String? cellRealmId, Object? joinTicket}) {
+Widget _buildLeftPanel(BuildContext context, int activeTab, {bool startInLobby = false, String? cellRealmId, Object? joinTicket, String? permanentCellRealmId}) {
+  if (permanentCellRealmId != null) {
+    return CellDetailScreen(realmId: permanentCellRealmId);
+  }
+
   final l10n = AppLocalizations.of(context)!;
 
   return switch (activeTab) {

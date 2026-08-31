@@ -126,14 +126,6 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   _PokerTableView? _pokerView;
   MedievalPokerOnlineScreen? _onlineScreen;
 
-  @override
-  void dispose() {
-    final ki = ref.read(kiChatControllerProvider.notifier);
-    ki.clearGameContext();
-    ki.clearLocalTips();
-    super.dispose();
-  }
-
   void _goToModeSelector() {
     final ki = ref.read(kiChatControllerProvider.notifier);
     ki.clearGameContext();
@@ -179,6 +171,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             _onlineScreen = screen;
             _view = _GameView.onlinePlay;
           });
+        },
+        onGameExit: () {
+          setState(() {
+            _onlineScreen = null;
+          });
+          _goToModeSelector();
         },
       );
     }
@@ -292,12 +290,13 @@ class _ExitOverlay extends StatelessWidget {
 // ── Lobby + Leaderboard ──────────────────────────────────────────────
 
 class _LobbyView extends StatelessWidget {
-  const _LobbyView({required this.onBack, required this.onLeaderboard, this.cellRealmId, this.joinTicket, this.onGameLaunch});
+  const _LobbyView({required this.onBack, required this.onLeaderboard, this.cellRealmId, this.joinTicket, this.onGameLaunch, this.onGameExit});
   final VoidCallback onBack;
   final VoidCallback onLeaderboard;
   final String? cellRealmId;
   final Object? joinTicket;
   final void Function(MedievalPokerOnlineScreen screen)? onGameLaunch;
+  final VoidCallback? onGameExit;
 
   @override
   Widget build(BuildContext context) {
@@ -320,6 +319,7 @@ class _LobbyView extends StatelessWidget {
             cellRealmId: cellRealmId,
             initialTicket: ticket,
             onGameLaunch: onGameLaunch,
+            onGameExit: onGameExit,
           )),
     ]);
   }

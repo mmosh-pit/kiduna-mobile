@@ -604,5 +604,22 @@
   "tabMatching": "Matching",
   "tabCards": "Cards",
   "tabStandings": "Standings",
-  "tabGuilds": "Associations"
+  "tabGuilds": "Associations",
+
+  "cellTypeLabel": "Cell Type",
+  "permanentCell": "Permanent",
+  "temporaryCell": "Temporary",
+  "permanentCellHint": "Fixed group of 4 players with game history",
+  "temporaryCellHint": "Single game session, no history",
+  "cellMembers": "Members",
+  "cellOpenSlot": "Open Slot",
+  "cellGameHistory": "Game History",
+  "noGamesPlayedYet": "No games played yet.",
+  "cellActiveGames": "Active Games",
+  "noActiveGames": "No active games",
+  "startNewGame": "Start New Game",
+  "inviteMembers": "Invite Members",
+  "permanentCellBadge": "Permanent Cell",
+  "openCell": "Open Cell",
+  "joinGame": "Join"
 }
