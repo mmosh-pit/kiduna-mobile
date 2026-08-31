@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/errors/exceptions.dart';
 import '../../../core/extensions/context_extensions.dart';
@@ -99,7 +101,7 @@ class _LineageWithdrawScreenState extends ConsumerState<LineageWithdrawScreen> {
   }
 
   Future<void> _withdraw() async {
-    if (_summary == null || _summary!.readyToClaim <= 0) return;
+    if (_summary == null || _summary!.available <= 0) return;
 
     final walletState = ref.read(walletControllerProvider);
     final phantomAddress = walletState.address;
@@ -130,7 +132,7 @@ class _LineageWithdrawScreenState extends ConsumerState<LineageWithdrawScreen> {
               .toList() ??
           [];
       final readyAmount =
-          double.tryParse(data?['readyToClaim']?.toString() ?? '') ?? 0;
+          double.tryParse(data?['available']?.toString() ?? '') ?? 0;
 
       if (txBase64 == null || txBase64.isEmpty) {
         setState(() {
@@ -319,13 +321,63 @@ class _LineageWithdrawScreenState extends ConsumerState<LineageWithdrawScreen> {
           style: text.body.copyWith(color: colors.cream, fontSize: 16),
         ),
         if (_txSignature != null) ...[
-          const SizedBox(height: 8),
-          Text(
-            'Tx: ${_txSignature!.length > 20 ? '${_txSignature!.substring(0, 20)}...' : _txSignature}',
-            style: text.caption.copyWith(
-              color: colors.muted,
-              fontFamily: 'monospace',
-              fontSize: 11,
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: colors.surface,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: colors.camel.withValues(alpha: 0.14)),
+            ),
+            child: Column(
+              children: [
+                Text('Transaction ID',
+                    style: text.caption.copyWith(color: colors.muted, fontSize: 11)),
+                const SizedBox(height: 6),
+                Text(
+                  _txSignature!,
+                  textAlign: TextAlign.center,
+                  style: text.caption.copyWith(
+                    color: colors.cream,
+                    fontFamily: 'monospace',
+                    fontSize: 11,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _TxActionButton(
+                      icon: Icons.copy,
+                      label: 'Copy',
+                      onPressed: () async {
+                        await Clipboard.setData(
+                            ClipboardData(text: _txSignature!));
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text('Transaction ID copied'),
+                            duration: const Duration(seconds: 2),
+                            backgroundColor: colors.mint,
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 12),
+                    _TxActionButton(
+                      icon: Icons.open_in_new,
+                      label: 'Explorer',
+                      onPressed: () {
+                        final url = Uri.parse(
+                          'https://solscan.io/tx/$_txSignature',
+                        );
+                        launchUrl(url, mode: LaunchMode.externalApplication);
+                      },
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ],
@@ -339,8 +391,7 @@ class _LineageWithdrawScreenState extends ConsumerState<LineageWithdrawScreen> {
   }
 
   Widget _buildWithdrawForm(dynamic colors, dynamic text) {
-    final ready = _summary?.readyToClaim ?? 0;
-    final notReady = _summary?.notReadyToClaim ?? 0;
+    final ready = _summary?.available ?? 0;
     final claimed = _summary?.totalClaimed ?? 0;
     final walletState = ref.watch(walletControllerProvider);
     final isConnected =
@@ -373,9 +424,6 @@ class _LineageWithdrawScreenState extends ConsumerState<LineageWithdrawScreen> {
             children: [
               _summaryRow(colors, text, 'Available',
                   '\$${ready.toStringAsFixed(2)}', colors.gold),
-              const SizedBox(height: 8),
-              _summaryRow(colors, text, 'Not Available',
-                  '\$${notReady.toStringAsFixed(2)}', colors.orange),
               const SizedBox(height: 8),
               _summaryRow(colors, text, 'Previously Claimed',
                   '\$${claimed.toStringAsFixed(2)}', colors.mint),
@@ -493,6 +541,36 @@ class _LineageWithdrawScreenState extends ConsumerState<LineageWithdrawScreen> {
               text.body.copyWith(color: color, fontWeight: FontWeight.w700),
         ),
       ],
+    );
+  }
+}
+
+class _TxActionButton extends StatelessWidget {
+  const _TxActionButton({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.kiduna;
+    final text = context.kidunaText;
+
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 14, color: colors.sky),
+      label: Text(label, style: text.caption.copyWith(color: colors.sky)),
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(0, 32),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        side: BorderSide(color: colors.sky.withValues(alpha: 0.3)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+      ),
     );
   }
 }

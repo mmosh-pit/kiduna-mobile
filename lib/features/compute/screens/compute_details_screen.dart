@@ -589,12 +589,11 @@ class _RewardsTabState extends ConsumerState<_RewardsTab> {
           // ── Summary card ──
           _SummaryCard(
             totalClaimed: s.totalClaimed,
-            readyToClaim: s.readyToClaim,
-            notReadyToClaim: s.notReadyToClaim,
+            available: s.available,
           ),
 
           // ── Withdraw button ──
-          if (s.readyToClaim > 0) ...[
+          if (s.available > 0) ...[
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
@@ -620,7 +619,7 @@ class _RewardsTabState extends ConsumerState<_RewardsTab> {
                         ),
                       ),
                       child: Text(
-                        'Withdraw \$${s.readyToClaim.toStringAsFixed(2)} USDC',
+                        'Withdraw \$${s.available.toStringAsFixed(2)} USDC',
                       ),
                     ),
             ),
@@ -723,18 +722,15 @@ class _RewardsTabState extends ConsumerState<_RewardsTab> {
 class _SummaryCard extends StatelessWidget {
   const _SummaryCard({
     required this.totalClaimed,
-    required this.readyToClaim,
-    required this.notReadyToClaim,
+    required this.available,
   });
 
   final double totalClaimed;
-  final double readyToClaim;
-  final double notReadyToClaim;
+  final double available;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.kiduna;
-    final text = context.kidunaText;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -750,29 +746,21 @@ class _SummaryCard extends StatelessWidget {
             value: '\$${totalClaimed.toStringAsFixed(2)}',
             color: colors.mint,
           ),
-          _divider(colors),
+          Container(
+            width: 1,
+            height: 36,
+            margin: const EdgeInsets.symmetric(horizontal: 12),
+            color: colors.camel.withValues(alpha: 0.15),
+          ),
           _SummaryColumn(
             label: 'Available',
-            value: '\$${readyToClaim.toStringAsFixed(2)}',
+            value: '\$${available.toStringAsFixed(2)}',
             color: colors.gold,
-          ),
-          _divider(colors),
-          _SummaryColumn(
-            label: 'Not\nAvailable',
-            value: '\$${notReadyToClaim.toStringAsFixed(2)}',
-            color: colors.orange,
           ),
         ],
       ),
     );
   }
-
-  Widget _divider(dynamic colors) => Container(
-        width: 1,
-        height: 36,
-        margin: const EdgeInsets.symmetric(horizontal: 12),
-        color: colors.camel.withValues(alpha: 0.15),
-      );
 }
 
 class _SummaryColumn extends StatelessWidget {

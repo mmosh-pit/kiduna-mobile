@@ -16,6 +16,7 @@ import 'features/auth/screens/signup_screen.dart';
 import 'features/compute/screens/buy_kiduna_screen.dart';
 import 'features/compute/screens/withdraw_screen.dart';
 import 'features/compute/screens/lineage_withdraw_screen.dart';
+import 'features/compute/screens/compute_details_screen.dart';
 import 'l10n/app_localizations.dart';
 
 /// Extracts an invite code from the URL on web.
@@ -133,6 +134,7 @@ String? pendingInviteHandle;
 bool isBuyKidunaRoute = false;
 bool isWithdrawRoute = false;
 bool isLineageWithdrawRoute = false;
+bool isComputeDetailsRoute = false;
 
 /// Detects the /buy-kiduna route.
 void _detectBuyKidunaRoute() {
@@ -145,6 +147,11 @@ void _detectBuyKidunaRoute() {
         full.contains('/buy-kiduna')) {
       isBuyKidunaRoute = true;
       AppLogger.info('Buy KIDUNA route detected', tag: 'App');
+    } else if (uri.path.contains('/compute-details') ||
+        uri.fragment.contains('/compute-details') ||
+        full.contains('/compute-details')) {
+      isComputeDetailsRoute = true;
+      AppLogger.info('Compute details route detected', tag: 'App');
     } else if (uri.path.contains('/lineage-withdraw') ||
         uri.fragment.contains('/lineage-withdraw') ||
         full.contains('/lineage-withdraw')) {
@@ -173,7 +180,7 @@ Future<void> main() async {
 
   // Route detection from URL before anything renders
   _detectBuyKidunaRoute();
-  if (!isBuyKidunaRoute && !isWithdrawRoute && !isLineageWithdrawRoute) {
+  if (!isBuyKidunaRoute && !isWithdrawRoute && !isLineageWithdrawRoute && !isComputeDetailsRoute) {
     pendingInviteCode = _extractInviteCodeFromUrl();
   }
 
@@ -183,6 +190,7 @@ Future<void> main() async {
     'buyKiduna=$isBuyKidunaRoute, '
     'withdraw=$isWithdrawRoute, '
     'lineageWithdraw=$isLineageWithdrawRoute, '
+    'computeDetails=$isComputeDetailsRoute, '
     'uri=${kIsWeb ? Uri.base.toString() : "non-web"}',
     tag: 'App',
   );
@@ -198,6 +206,9 @@ class KidunaApp extends StatelessWidget {
   Widget _resolveHome() {
     if (isBuyKidunaRoute) {
       return const BuyKidunaScreen();
+    }
+    if (isComputeDetailsRoute) {
+      return const ComputeDetailsScreen();
     }
     if (isLineageWithdrawRoute) {
       return const LineageWithdrawScreen();

@@ -7,8 +7,7 @@ class LineageRewardSummary {
     required this.wallet,
     required this.totalEarned,
     required this.totalClaimed,
-    required this.readyToClaim,
-    required this.notReadyToClaim,
+    required this.available,
     required this.perGeneration,
     required this.rewardCount,
     required this.rewards,
@@ -17,8 +16,7 @@ class LineageRewardSummary {
   final String wallet;
   final double totalEarned;
   final double totalClaimed;
-  final double readyToClaim;
-  final double notReadyToClaim;
+  final double available;
   final Map<String, double> perGeneration;
   final int rewardCount;
   final List<LineageReward> rewards;
@@ -37,10 +35,8 @@ class LineageRewardSummary {
       totalEarned: double.tryParse(json['totalEarned']?.toString() ?? '') ?? 0,
       totalClaimed:
           double.tryParse(json['totalClaimed']?.toString() ?? '') ?? 0,
-      readyToClaim:
-          double.tryParse(json['readyToClaim']?.toString() ?? '') ?? 0,
-      notReadyToClaim:
-          double.tryParse(json['notReadyToClaim']?.toString() ?? '') ?? 0,
+      available:
+          double.tryParse(json['available']?.toString() ?? '') ?? 0,
       perGeneration: perGen,
       rewardCount: (json['rewardCount'] as int?) ?? rawRewards.length,
       rewards: rawRewards
