@@ -91,6 +91,7 @@ class AtlasRealm {
     this.gameRoomCode,
     this.gamePlayerCount,
     this.gameSeatCount,
+    this.cellType,
   });
 
   final String id;
@@ -123,6 +124,12 @@ class AtlasRealm {
   final String? gameRoomCode;
   final int? gamePlayerCount;
   final int? gameSeatCount;
+
+  /// Cell sub-type: 'permanent' or 'temporary'. Null for non-cell realms.
+  final String? cellType;
+
+  bool get isPermanentCell => type == AtlasRealmType.cell && cellType == 'permanent';
+  bool get isTemporaryCell => type == AtlasRealmType.cell && cellType != 'permanent';
 }
 
 // Compact constructor mirroring the TS `realm(...)` factory.
@@ -1246,5 +1253,6 @@ AtlasRealm atlasRealmFromModel(RealmModel model) {
     gameRoomCode: model.gameRoomCode,
     gamePlayerCount: model.gamePlayerCount,
     gameSeatCount: model.gameSeatCount,
+    cellType: model.type == 'cell' ? model.cellType : null,
   );
 }

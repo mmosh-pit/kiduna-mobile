@@ -74,13 +74,19 @@ class RealmDetailPopup extends ConsumerWidget {
             _WhySection(reason: placement.reason, accent: accent),
           _ActionRow(onEnter: () => onEnter(realm)),
           if (realm.type == AtlasRealmType.cell)
-            _CellGameSection(
-              gameStatus: realm.gameStatus,
-              gameRoomCode: realm.gameRoomCode,
-              gamePlayerCount: realm.gamePlayerCount,
-              gameSeatCount: realm.gameSeatCount,
-              onClosePopup: onClose,
-            ),
+            if (realm.isPermanentCell)
+              _PermanentCellSection(
+                realmId: realm.id,
+                onClosePopup: onClose,
+              )
+            else
+              _CellGameSection(
+                gameStatus: realm.gameStatus,
+                gameRoomCode: realm.gameRoomCode,
+                gamePlayerCount: realm.gamePlayerCount,
+                gameSeatCount: realm.gameSeatCount,
+                onClosePopup: onClose,
+              ),
           _LevelFooter(
             level: level,
             realmId: realm.id,
@@ -344,6 +350,127 @@ class _LevelFooter extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PermanentCellSection extends StatelessWidget {
+  const _PermanentCellSection({
+    required this.realmId,
+    this.onClosePopup,
+  });
+
+  final String realmId;
+  final VoidCallback? onClosePopup;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.kiduna;
+    final text = context.kidunaText;
+    final l10n = context.l10n;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFC8A24B).withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFC8A24B).withValues(alpha: 0.2)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFC8A24B).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    l10n.permanentCellBadge.toUpperCase(),
+                    style: text.eyebrowSmall.copyWith(
+                      color: const Color(0xFFC8A24B),
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '2/4 ${l10n.cellMembers}',
+                  style: TextStyle(fontSize: 10, color: colors.muted),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 36,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        onClosePopup?.call();
+                        Navigator.of(context).pushAndRemoveUntil(
+                          MaterialPageRoute(
+                            builder: (_) => DashboardScreen(permanentCellRealmId: realmId),
+                          ),
+                          (route) => false,
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFC8A24B),
+                        foregroundColor: const Color(0xFF14100A),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: Text(
+                        l10n.openCell,
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: SizedBox(
+                    height: 36,
+                    child: OutlinedButton(
+                      onPressed: () {
+                        onClosePopup?.call();
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => DashboardScreen(
+                              initialTab: 1,
+                              startGameInLobby: true,
+                              cellRealmId: realmId,
+                            ),
+                          ),
+                        );
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: colors.sky,
+                        side: BorderSide(color: colors.sky),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: Text(
+                        l10n.startNewGame,
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

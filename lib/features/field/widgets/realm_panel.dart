@@ -59,6 +59,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
   String _type = 'Organization';
 
   String _visibility = 'public';
+  String _cellType = 'temporary';
   String _entityType = 'company';
   String? _primaryTheme;
   String? _primaryFocus;
@@ -349,6 +350,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
           description: _description.text.trim(),
           purpose: _sharedPurpose.text.trim(),
           visibility: _visibility,
+          config: {'cellType': _cellType},
           primaryTheme: _primaryTheme,
           primaryFocus: _primaryFocus,
           authToken: auth.token,
@@ -356,12 +358,21 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
 
         if (mounted) fieldCtrl.onRealmCreated(realm);
         if (mounted) {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(
-              builder: (_) => DashboardScreen(initialTab: 1, startGameInLobby: true, cellRealmId: realm.id),
-            ),
-            (route) => false,
-          );
+          if (_cellType == 'permanent') {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(
+                builder: (_) => DashboardScreen(permanentCellRealmId: realm.id),
+              ),
+              (route) => false,
+            );
+          } else {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(
+                builder: (_) => DashboardScreen(initialTab: 1, startGameInLobby: true, cellRealmId: realm.id),
+              ),
+              (route) => false,
+            );
+          }
         }
       } else if (_isDyad) {
         final realm = await RealmService.instance.createRealm(
@@ -617,13 +628,16 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
             // ── Cell-specific fields ────────────────────────────────────
             // ═════════════════════════════════════════════════════════════
             if (_isCell) ...[
+              _CellTypeSelector(
+                value: _cellType,
+                onChanged: (v) => setState(() => _cellType = v),
+              ),
+              const SizedBox(height: 12),
               FieldTextInput(label: l10n.descriptionLabel, controller: _description,
                   hint: l10n.cellDescriptionHint, maxLines: 3),
               const SizedBox(height: 12),
               FieldTextInput(label: l10n.purposeProjectLabel, controller: _sharedPurpose,
                   hint: l10n.cellPurposeHint),
-              const SizedBox(height: 12),
-              _VisibilitySelector(value: _visibility, onChanged: (v) => setState(() => _visibility = v)),
             ],
 
             // ═════════════════════════════════════════════════════════════
@@ -966,6 +980,59 @@ class _ThemeFocusSelector extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+class _CellTypeSelector extends StatelessWidget {
+  const _CellTypeSelector({required this.value, required this.onChanged});
+  final String value;
+  final ValueChanged<String> onChanged;
+  static const _options = ['temporary', 'permanent'];
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.kiduna;
+    final textTheme = context.kidunaText;
+    final l10n = context.l10n;
+    final labels = [l10n.temporaryCell, l10n.permanentCell];
+    final hints = [l10n.temporaryCellHint, l10n.permanentCellHint];
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      FieldLabel(text: l10n.cellTypeLabel),
+      const SizedBox(height: 8),
+      Row(children: List.generate(_options.length, (i) {
+        final selected = value == _options[i];
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(right: i < _options.length - 1 ? 8 : 0),
+            child: GestureDetector(
+              onTap: () => onChanged(_options[i]),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: selected ? colors.gold.withValues(alpha: 0.15) : const Color.fromRGBO(6, 3, 4, 0.66),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: selected ? colors.gold : colors.camel.withValues(alpha: 0.24)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(labels[i], style: textTheme.label.copyWith(
+                      color: selected ? colors.gold : colors.quiet,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    )),
+                    const SizedBox(height: 4),
+                    Text(hints[i], style: textTheme.micro.copyWith(
+                      color: selected ? colors.muted : colors.quiet.withValues(alpha: 0.6),
+                      fontSize: 9,
+                    )),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      })),
+    ]);
   }
 }
 
