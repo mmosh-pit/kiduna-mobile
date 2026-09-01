@@ -46,7 +46,8 @@ jobs:
             libsecret-1-dev \
             libjsoncpp-dev \
             libgstreamer1.0-dev \
-            libgstreamer-plugins-base1.0-dev
+            libgstreamer-plugins-base1.0-dev \
+            libpulse-dev
 
       - run: flutter pub get
 

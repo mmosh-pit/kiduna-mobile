@@ -7,6 +7,8 @@ import 'session/game_session.dart';
 import 'session/paced_session.dart';
 import 'session/remote_session.dart';
 import 'session/session_hud.dart';
+import 'voice/game_voice_service.dart';
+import 'voice/voice_controls.dart';
 
 /// Full-screen host for an ONLINE Medieval Poker table. Connects a
 /// [RemoteSession] to the authoritative game-service and renders it through the
@@ -56,13 +58,12 @@ class MedievalPokerOnlineScreen extends StatefulWidget {
 class _MedievalPokerOnlineScreenState extends State<MedievalPokerOnlineScreen> {
   late final GameSession _session;
   late final TableRenderer _renderer;
+  late final GameVoiceService _voiceService;
   final CardZoomController _cardZoom = CardZoomController();
 
   @override
   void initState() {
     super.initState();
-    // Pace the authoritative snapshot stream so AI-only runs are watchable
-    // rather than flashing past; the renderer/HUD bind to the paced session.
     _session = PacedSession(RemoteSession.connect(
       wsUrl: widget.wsUrl,
       room: widget.room,
@@ -72,13 +73,21 @@ class _MedievalPokerOnlineScreenState extends State<MedievalPokerOnlineScreen> {
       timedLevels: widget.timedLevels,
       name: widget.playerName,
     ));
-    // Shared zoom controller: the table (Flame) sets it on a card tap, the HUD
-    // renders the enlarged overlay.
     _renderer = TableRenderer(session: _session, cardZoom: _cardZoom);
+
+    // Voice service — user can join/leave voluntarily
+    _voiceService = GameVoiceService(
+      wsUrl: widget.wsUrl,
+      roomCode: widget.room,
+      mySeat: widget.seat,
+      token: widget.token ?? '',
+      playerName: widget.playerName,
+    );
   }
 
   @override
   void dispose() {
+    _voiceService.dispose();
     _session.dispose();
     _cardZoom.dispose();
     super.dispose();
@@ -103,13 +112,23 @@ class _MedievalPokerOnlineScreenState extends State<MedievalPokerOnlineScreen> {
       child: Scaffold(
         backgroundColor: Colors.black,
         resizeToAvoidBottomInset: false,
-        body: GameWidget<TableRenderer>(
-          game: _renderer,
-          overlayBuilderMap: {
-            'hud': (context, game) => SessionHud(
-                session: _session, onExit: _handleExit, cardZoom: _cardZoom),
-          },
-          initialActiveOverlays: const ['hud'],
+        body: Stack(
+          children: [
+            GameWidget<TableRenderer>(
+              game: _renderer,
+              overlayBuilderMap: {
+                'hud': (context, game) => SessionHud(
+                    session: _session, onExit: _handleExit, cardZoom: _cardZoom),
+              },
+              initialActiveOverlays: const ['hud'],
+            ),
+            // Voice controls — bottom-left
+            Positioned(
+              left: 12,
+              bottom: 12,
+              child: VoiceControls(voiceService: _voiceService),
+            ),
+          ],
         ),
       ),
     );
