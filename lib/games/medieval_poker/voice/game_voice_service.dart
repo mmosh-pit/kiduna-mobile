@@ -304,6 +304,19 @@ class GameVoiceService {
       );
 
       print('[GameVoice] Auto-reconnected successfully!');
+
+      // Force recreate peer connections for all current participants
+      // (signaling server will send voice-participants list on connect,
+      // which triggers _onParticipants → creates new peers)
+      // If participants don't arrive within 2s, log it
+      Future.delayed(const Duration(seconds: 2), () {
+        if (!_disposed && _wasInVoice && _peers.isEmpty && state.value.participants.isNotEmpty) {
+          print('[GameVoice] Warning: participants exist but no peers — recreating');
+          for (final p in state.value.participants.values) {
+            _createPeerForSeat(p.seat, createOffer: true);
+          }
+        }
+      });
     } catch (e) {
       print('[GameVoice] Reconnect attempt $_reconnectAttempts error: $e');
       _signaling?.dispose();
@@ -316,6 +329,7 @@ class GameVoiceService {
   // ── Signaling callbacks ────────────────────────────────────────────
 
   void _onParticipants(List<Map<String, dynamic>> list) {
+    print('[GameVoice] Received participants list: ${list.length} players');
     final participants = <int, VoiceParticipant>{};
     for (final p in list) {
       final seat = p['seat'] as int;
