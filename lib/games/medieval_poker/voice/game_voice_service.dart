@@ -174,9 +174,23 @@ class GameVoiceService {
 
   // ── Auto-reconnect ──────────────────────────────────────────────────
 
+  bool _reconnecting = false;
+
   void _onSignalingDisconnected() {
-    if (_disposed) return;
-    if (!_wasInVoice) return;
+    if (_disposed) {
+      print('[GameVoice] Disconnected but disposed — ignoring');
+      return;
+    }
+    if (!_wasInVoice) {
+      print('[GameVoice] Disconnected but wasInVoice=false — ignoring');
+      return;
+    }
+    if (_reconnecting) {
+      print('[GameVoice] Disconnected during reconnect — ignoring');
+      return;
+    }
+
+    print('[GameVoice] Disconnected — starting auto-reconnect');
 
     // Save mute state before cleanup
     _wasMuted = state.value.muted;
@@ -187,8 +201,7 @@ class GameVoiceService {
     }
     _peers.clear();
     _remoteStreams.clear();
-    _signaling?.dispose();
-    _signaling = null;
+    _signaling = null; // Don't dispose — already disconnected
 
     state.value = state.value.copyWith(
       connecting: true,
@@ -196,42 +209,50 @@ class GameVoiceService {
       participants: const {},
     );
 
-    print('[GameVoice] Disconnected — attempting auto-reconnect '
-        '(${_reconnectAttempts + 1}/$_maxReconnectAttempts)');
-
     _attemptReconnect();
   }
 
   Future<void> _attemptReconnect() async {
     if (_disposed || !_wasInVoice) return;
 
+    _reconnecting = true;
     _reconnectAttempts++;
 
     if (_reconnectAttempts > _maxReconnectAttempts) {
       print('[GameVoice] Auto-reconnect failed after $_maxReconnectAttempts attempts');
-      _cleanup();
+      _reconnecting = false;
       _wasInVoice = false;
+      _localStream?.dispose();
+      _localStream = null;
       state.value = const VoiceState(
         error: 'Voice disconnected. Tap Join Voice to reconnect.',
       );
       return;
     }
 
+    print('[GameVoice] Reconnect attempt $_reconnectAttempts/$_maxReconnectAttempts — waiting ${_reconnectDelay.inSeconds}s');
+
     // Wait before retry
     await Future.delayed(_reconnectDelay);
-    if (_disposed || !_wasInVoice) return;
+    if (_disposed || !_wasInVoice) {
+      _reconnecting = false;
+      return;
+    }
 
-    print('[GameVoice] Reconnect attempt $_reconnectAttempts/$_maxReconnectAttempts');
+    print('[GameVoice] Reconnecting now...');
 
     try {
       // Get mic again if lost
-      _localStream ??= await navigator.mediaDevices.getUserMedia({
-        'audio': true,
-        'video': false,
-      });
+      if (_localStream == null) {
+        print('[GameVoice] Re-acquiring microphone');
+        _localStream = await navigator.mediaDevices.getUserMedia({
+          'audio': true,
+          'video': false,
+        });
+      }
 
       // Reconnect signaling
-      _signaling = VoiceSignalingClient(
+      final signaling = VoiceSignalingClient(
         wsUrl: wsUrl,
         roomCode: roomCode,
         token: token,
@@ -242,22 +263,32 @@ class GameVoiceService {
         onVoiceMute: _onPlayerMute,
         onSignaling: _onSignaling,
         onError: (e) {
-          state.value = state.value.copyWith(error: e);
+          print('[GameVoice] Signaling error during reconnect: $e');
         },
         onDisconnected: _onSignalingDisconnected,
       );
 
-      final connected = await _signaling!.connect();
+      final connected = await signaling.connect();
+
       if (!connected) {
-        print('[GameVoice] Reconnect attempt $_reconnectAttempts failed');
-        _signaling?.dispose();
-        _signaling = null;
+        print('[GameVoice] Reconnect attempt $_reconnectAttempts — signaling failed');
+        signaling.dispose();
+        _reconnecting = false;
         _attemptReconnect();
         return;
       }
 
+      if (_disposed || !_wasInVoice) {
+        signaling.dispose();
+        _reconnecting = false;
+        return;
+      }
+
+      _signaling = signaling;
+
       // Reconnected successfully
       _reconnectAttempts = 0;
+      _reconnecting = false;
 
       // Restore mute state
       if (_wasMuted) {
@@ -272,11 +303,12 @@ class GameVoiceService {
         clearError: true,
       );
 
-      print('[GameVoice] Auto-reconnected successfully');
+      print('[GameVoice] Auto-reconnected successfully!');
     } catch (e) {
       print('[GameVoice] Reconnect attempt $_reconnectAttempts error: $e');
       _signaling?.dispose();
       _signaling = null;
+      _reconnecting = false;
       _attemptReconnect();
     }
   }
