@@ -276,43 +276,46 @@ class _ActiveVoicePanel extends StatelessWidget {
 
           // ── Controls bar ──
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.03),
               borderRadius: const BorderRadius.vertical(
                   bottom: Radius.circular(13)),
             ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 // Mic toggle
-                _ControlButton(
-                  onTap: onMuteToggle,
-                  icon: state.muted
-                      ? Icons.mic_off_rounded
-                      : Icons.mic_rounded,
-                  color: state.muted
-                      ? const Color(0xFFEF5350)
-                      : const Color(0xFF4CAF50),
-                  bgColor: state.muted
-                      ? const Color(0xFFEF5350).withValues(alpha: 0.2)
-                      : const Color(0xFF4CAF50).withValues(alpha: 0.15),
-                  label: state.muted ? 'Unmute' : 'Mute',
+                Expanded(
+                  child: _ControlButton(
+                    onTap: onMuteToggle,
+                    icon: state.muted
+                        ? Icons.mic_off_rounded
+                        : Icons.mic_rounded,
+                    color: state.muted
+                        ? const Color(0xFFEF5350)
+                        : const Color(0xFF4CAF50),
+                    bgColor: state.muted
+                        ? const Color(0xFFEF5350).withValues(alpha: 0.2)
+                        : const Color(0xFF4CAF50).withValues(alpha: 0.15),
+                    label: state.muted ? 'Unmute' : 'Mute',
+                  ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 6),
                 // Speaker toggle
-                _ControlButton(
-                  onTap: onSpeakerToggle,
-                  icon: state.speakerOff
-                      ? Icons.volume_off_rounded
-                      : Icons.volume_up_rounded,
-                  color: state.speakerOff
-                      ? const Color(0xFFEF5350)
-                      : const Color(0xFF64B5F6),
-                  bgColor: state.speakerOff
-                      ? const Color(0xFFEF5350).withValues(alpha: 0.2)
-                      : const Color(0xFF64B5F6).withValues(alpha: 0.15),
-                  label: state.speakerOff ? 'Speaker On' : 'Speaker Off',
+                Expanded(
+                  child: _ControlButton(
+                    onTap: onSpeakerToggle,
+                    icon: state.speakerOff
+                        ? Icons.volume_off_rounded
+                        : Icons.volume_up_rounded,
+                    color: state.speakerOff
+                        ? const Color(0xFFEF5350)
+                        : const Color(0xFF64B5F6),
+                    bgColor: state.speakerOff
+                        ? const Color(0xFFEF5350).withValues(alpha: 0.2)
+                        : const Color(0xFF64B5F6).withValues(alpha: 0.15),
+                    label: state.speakerOff ? 'On' : 'Off',
+                  ),
                 ),
               ],
             ),
