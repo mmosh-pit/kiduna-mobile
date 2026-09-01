@@ -17,12 +17,14 @@ class GameVoiceService {
     required this.roomCode,
     required this.mySeat,
     required this.token,
+    this.playerName,
   });
 
   final String wsUrl;
   final String roomCode;
   final int mySeat;
   final String token;
+  final String? playerName;
 
   final state = ValueNotifier<VoiceState>(const VoiceState());
 
@@ -60,6 +62,7 @@ class GameVoiceService {
         wsUrl: wsUrl,
         roomCode: roomCode,
         token: token,
+        playerName: playerName,
         onVoiceParticipants: _onParticipants,
         onVoiceJoined: _onPlayerJoined,
         onVoiceLeft: _onPlayerLeft,
@@ -134,22 +137,22 @@ class GameVoiceService {
     final participants = <int, VoiceParticipant>{};
     for (final p in list) {
       final seat = p['seat'] as int;
-      if (seat == mySeat) continue; // Don't track self
+      if (seat == mySeat) continue;
       participants[seat] = VoiceParticipant(
         seat: seat,
         userId: p['userId'] as String? ?? '',
         muted: p['muted'] as bool? ?? false,
+        name: p['name'] as String?,
       );
-      // Create peer connection for existing participants
       _createPeerForSeat(seat, createOffer: true);
     }
     state.value = state.value.copyWith(participants: participants);
   }
 
-  void _onPlayerJoined(int seat, String userId) {
+  void _onPlayerJoined(int seat, String userId, String? name) {
     if (seat == mySeat) return;
     final updated = Map<int, VoiceParticipant>.from(state.value.participants);
-    updated[seat] = VoiceParticipant(seat: seat, userId: userId);
+    updated[seat] = VoiceParticipant(seat: seat, userId: userId, name: name);
     state.value = state.value.copyWith(participants: updated);
 
     // New player joined — they will send us an offer (we wait)

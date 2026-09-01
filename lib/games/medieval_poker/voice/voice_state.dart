@@ -5,17 +5,20 @@ class VoiceParticipant {
   final int seat;
   final String userId;
   final bool muted;
+  final String? name;
 
   const VoiceParticipant({
     required this.seat,
     required this.userId,
     this.muted = false,
+    this.name,
   });
 
-  VoiceParticipant copyWith({bool? muted}) => VoiceParticipant(
+  VoiceParticipant copyWith({bool? muted, String? name}) => VoiceParticipant(
         seat: seat,
         userId: userId,
         muted: muted ?? this.muted,
+        name: name ?? this.name,
       );
 }
 

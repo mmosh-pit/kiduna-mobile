@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 /// Callback types for signaling events.
-typedef OnVoiceJoined = void Function(int seat, String userId);
+typedef OnVoiceJoined = void Function(int seat, String userId, String? name);
 typedef OnVoiceLeft = void Function(int seat);
 typedef OnVoiceMute = void Function(int seat, bool muted);
 typedef OnVoiceParticipants = void Function(
@@ -21,6 +21,7 @@ class VoiceSignalingClient {
     required this.wsUrl,
     required this.roomCode,
     required this.token,
+    this.playerName,
     this.onVoiceJoined,
     this.onVoiceLeft,
     this.onVoiceMute,
@@ -33,6 +34,7 @@ class VoiceSignalingClient {
   final String wsUrl;
   final String roomCode;
   final String token;
+  final String? playerName;
 
   final OnVoiceJoined? onVoiceJoined;
   final OnVoiceLeft? onVoiceLeft;
@@ -67,7 +69,10 @@ class VoiceSignalingClient {
         base = base.substring(0, base.length - 5);
       }
 
-      final uri = Uri.parse('$base/games/voice/$roomCode?token=$token');
+      final nameParam = playerName != null && playerName!.isNotEmpty
+          ? '&name=${Uri.encodeComponent(playerName!)}'
+          : '';
+      final uri = Uri.parse('$base/games/voice/$roomCode?token=$token$nameParam');
       print('[VoiceSignaling] Connecting to $uri');
 
       _channel = WebSocketChannel.connect(uri);
@@ -110,6 +115,7 @@ class VoiceSignalingClient {
           onVoiceJoined?.call(
             msg['seat'] as int,
             msg['userId'] as String? ?? '',
+            msg['name'] as String?,
           );
 
         case 'voice-left':

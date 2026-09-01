@@ -81,6 +81,7 @@ class _MedievalPokerOnlineScreenState extends State<MedievalPokerOnlineScreen> {
       roomCode: widget.room,
       mySeat: widget.seat,
       token: widget.token ?? '',
+      playerName: widget.playerName,
     );
   }
 
