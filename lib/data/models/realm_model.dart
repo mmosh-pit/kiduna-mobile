@@ -204,11 +204,17 @@ class RealmModel {
 @immutable
 class RealmMemberModel {
   const RealmMemberModel({
+    this.id,
     required this.wallet,
     required this.role,
     required this.isSigner,
+    this.username,
+    this.displayName,
+    this.name,
+    this.picture,
   });
 
+  final String? id;
   final String wallet;
 
   /// One of 9 roles from the Canon Taxonomy:
@@ -218,11 +224,24 @@ class RealmMemberModel {
   /// Whether this member is a signer on the Squads multisig on-chain.
   final bool isSigner;
 
+  final String? username;
+  final String? displayName;
+  final String? name;
+  final String? picture;
+
+  String get label =>
+      displayName ?? username ?? name ?? '${wallet.substring(0, 4)}...${wallet.substring(wallet.length - 4)}';
+
   factory RealmMemberModel.fromJson(Map<String, dynamic> json) {
     return RealmMemberModel(
+      id: json['id'] as String?,
       wallet: json['wallet'] as String? ?? '',
       role: json['role'] as String? ?? 'member',
       isSigner: json['isSigner'] as bool? ?? json['is_signer'] as bool? ?? false,
+      username: json['username'] as String?,
+      displayName: json['displayName'] as String? ?? json['display_name'] as String?,
+      name: json['name'] as String?,
+      picture: json['picture'] as String?,
     );
   }
 }

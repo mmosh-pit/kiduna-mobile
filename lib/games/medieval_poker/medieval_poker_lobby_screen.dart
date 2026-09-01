@@ -55,6 +55,7 @@ class _MedievalPokerLobbyScreenState extends State<MedievalPokerLobbyScreen> {
   String? _gameToken;
   String? _wsUrl;
   bool _isHost = false;
+  bool _isViewer = false;
 
   String? _error;
   bool _busy = false;
@@ -73,6 +74,7 @@ class _MedievalPokerLobbyScreenState extends State<MedievalPokerLobbyScreen> {
       _gameToken = ticket.gameToken;
       _wsUrl = ticket.wsUrl;
       _isHost = false;
+      _isViewer = ticket.isViewer;
       _startPolling();
       AppLogger.debug('[Lobby] room set, polling started', tag: 'Lobby');
     }
@@ -215,6 +217,7 @@ class _MedievalPokerLobbyScreenState extends State<MedievalPokerLobbyScreen> {
       timedLevels: r.timedLevels,
       playerName: _mySeatName(r),
       onExit: widget.onGameExit,
+      isViewer: _isViewer,
     );
 
     if (widget.onGameLaunch != null) {
