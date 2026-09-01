@@ -64,7 +64,7 @@ class RestTournamentSource implements TournamentSource {
   @override
   Future<TournamentDetail> register(String id) async {
     try {
-      final res = await dio.post<dynamic>('/tournaments/$id/register');
+      final res = await dio.post<dynamic>('/tournaments/$id/register', data: {});
       return TournamentDetail.fromJson(_data(res));
     } catch (e) {
       _fail(e);
