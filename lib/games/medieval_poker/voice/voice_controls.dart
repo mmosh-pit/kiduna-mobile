@@ -4,9 +4,6 @@ import 'game_voice_service.dart';
 import 'voice_state.dart';
 
 /// Voice chat controls overlay for the game screen.
-///
-/// Shows a join button when not in voice, or mute/leave controls + participant
-/// list when joined. Positioned by the parent (typically bottom-left).
 class VoiceControls extends StatelessWidget {
   const VoiceControls({super.key, required this.voiceService});
 
@@ -29,10 +26,18 @@ class VoiceControls extends StatelessWidget {
         }
 
         return _ActiveVoicePanel(
-          muted: state.muted,
+          state: state,
           mySeat: voiceService.mySeat,
-          participants: state.participants,
           onMuteToggle: state.muted ? voiceService.unmute : voiceService.mute,
+          onSpeakerToggle:
+              state.speakerOff ? voiceService.speakerOn : voiceService.speakerOff,
+          onMuteUser: (seat) {
+            if (state.isUserMuted(seat)) {
+              voiceService.unmuteUser(seat);
+            } else {
+              voiceService.muteUser(seat);
+            }
+          },
           onLeave: voiceService.leave,
         );
       },
@@ -40,11 +45,10 @@ class VoiceControls extends StatelessWidget {
   }
 }
 
-// ── Connecting indicator ───────────────────────────────────────────────
+// ── Connecting ─────────────────────────────────────────────────────────
 
 class _ConnectingIndicator extends StatefulWidget {
   const _ConnectingIndicator();
-
   @override
   State<_ConnectingIndicator> createState() => _ConnectingIndicatorState();
 }
@@ -57,44 +61,33 @@ class _ConnectingIndicatorState extends State<_ConnectingIndicator>
   void initState() {
     super.initState();
     _pulse = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1000),
+      vsync: this, duration: const Duration(milliseconds: 1000),
     )..repeat(reverse: true);
   }
 
   @override
-  void dispose() {
-    _pulse.dispose();
-    super.dispose();
-  }
+  void dispose() { _pulse.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) {
     return FadeTransition(
       opacity: Tween(begin: 0.5, end: 1.0).animate(_pulse),
       child: _Pill(
-        color: Colors.white10,
-        borderColor: Colors.white24,
+        color: Colors.black87,
+        borderColor: const Color(0xFFEDC169).withValues(alpha: 0.4),
         child: const Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             SizedBox(
-              width: 14,
-              height: 14,
+              width: 14, height: 14,
               child: CircularProgressIndicator(
-                strokeWidth: 1.5,
-                color: Color(0xFFEDC169),
+                strokeWidth: 1.5, color: Color(0xFFEDC169),
               ),
             ),
             SizedBox(width: 8),
-            Text(
-              'Connecting...',
-              style: TextStyle(
-                color: Color(0xFFEDC169),
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+            Text('Connecting...', style: TextStyle(
+              color: Color(0xFFEDC169), fontSize: 11, fontWeight: FontWeight.w500,
+            )),
           ],
         ),
       ),
@@ -108,7 +101,6 @@ class _JoinButton extends StatefulWidget {
   const _JoinButton({required this.onPressed, this.error});
   final Future<void> Function() onPressed;
   final String? error;
-
   @override
   State<_JoinButton> createState() => _JoinButtonState();
 }
@@ -121,16 +113,12 @@ class _JoinButtonState extends State<_JoinButton>
   void initState() {
     super.initState();
     _glow = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2000),
+      vsync: this, duration: const Duration(milliseconds: 2000),
     )..repeat(reverse: true);
   }
 
   @override
-  void dispose() {
-    _glow.dispose();
-    super.dispose();
-  }
+  void dispose() { _glow.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) {
@@ -140,22 +128,19 @@ class _JoinButtonState extends State<_JoinButton>
       children: [
         AnimatedBuilder(
           animation: _glow,
-          builder: (context, child) {
-            final glowOpacity = 0.15 + (_glow.value * 0.15);
-            return Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(22),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF4CAF50).withValues(alpha: glowOpacity),
-                    blurRadius: 12,
-                    spreadRadius: 1,
-                  ),
-                ],
-              ),
-              child: child,
-            );
-          },
+          builder: (context, child) => Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(22),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF4CAF50)
+                      .withValues(alpha: 0.15 + _glow.value * 0.15),
+                  blurRadius: 12, spreadRadius: 1,
+                ),
+              ],
+            ),
+            child: child,
+          ),
           child: Material(
             color: Colors.transparent,
             child: InkWell(
@@ -169,15 +154,10 @@ class _JoinButtonState extends State<_JoinButton>
                   children: [
                     Icon(Icons.headset_mic, size: 16, color: Color(0xFF4CAF50)),
                     SizedBox(width: 6),
-                    Text(
-                      'Join Voice',
-                      style: TextStyle(
-                        color: Color(0xFF4CAF50),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
+                    Text('Join Voice', style: TextStyle(
+                      color: Color(0xFF4CAF50), fontSize: 12,
+                      fontWeight: FontWeight.w600, letterSpacing: 0.3,
+                    )),
                   ],
                 ),
               ),
@@ -193,10 +173,8 @@ class _JoinButtonState extends State<_JoinButton>
               color: Colors.red.withValues(alpha: 0.85),
               borderRadius: BorderRadius.circular(6),
             ),
-            child: Text(
-              widget.error!,
-              style: const TextStyle(color: Colors.white, fontSize: 10),
-            ),
+            child: Text(widget.error!,
+                style: const TextStyle(color: Colors.white, fontSize: 10)),
           ),
         ],
       ],
@@ -208,204 +186,135 @@ class _JoinButtonState extends State<_JoinButton>
 
 class _ActiveVoicePanel extends StatelessWidget {
   const _ActiveVoicePanel({
-    required this.muted,
+    required this.state,
     required this.mySeat,
-    required this.participants,
     required this.onMuteToggle,
+    required this.onSpeakerToggle,
+    required this.onMuteUser,
     required this.onLeave,
   });
 
-  final bool muted;
+  final VoiceState state;
   final int mySeat;
-  final Map<int, VoiceParticipant> participants;
   final VoidCallback onMuteToggle;
+  final VoidCallback onSpeakerToggle;
+  final void Function(int seat) onMuteUser;
   final VoidCallback onLeave;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // ── Participant avatars ──
-        _ParticipantRow(
-          mySeat: mySeat,
-          myMuted: muted,
-          participants: participants,
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 220),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.8),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: const Color(0xFF4CAF50).withValues(alpha: 0.25),
         ),
-        const SizedBox(height: 6),
-
-        // ── Controls row ──
-        _Pill(
-          color: Colors.black.withValues(alpha: 0.75),
-          borderColor: const Color(0xFF4CAF50).withValues(alpha: 0.3),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Live indicator
-              const _LiveDot(),
-              const SizedBox(width: 6),
-              Text(
-                '${participants.length + 1} in voice',
-                style: const TextStyle(
-                  color: Colors.white60,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // ── Header ──
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFF4CAF50).withValues(alpha: 0.1),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(13)),
+            ),
+            child: Row(
+              children: [
+                const _LiveDot(),
+                const SizedBox(width: 6),
+                Text(
+                  'Voice Chat · ${state.participants.length + 1}',
+                  style: const TextStyle(
+                    color: Colors.white70, fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 10),
-
-              // Mute button
-              _ControlButton(
-                onTap: onMuteToggle,
-                icon: muted ? Icons.mic_off_rounded : Icons.mic_rounded,
-                color: muted ? const Color(0xFFEF5350) : const Color(0xFF4CAF50),
-                bgColor: muted
-                    ? const Color(0xFFEF5350).withValues(alpha: 0.2)
-                    : const Color(0xFF4CAF50).withValues(alpha: 0.15),
-                tooltip: muted ? 'Unmute' : 'Mute',
-              ),
-              const SizedBox(width: 6),
-
-              // Leave button
-              _ControlButton(
-                onTap: onLeave,
-                icon: Icons.call_end_rounded,
-                color: const Color(0xFFEF5350),
-                bgColor: const Color(0xFFEF5350).withValues(alpha: 0.2),
-                tooltip: 'Leave voice',
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Participant row (avatars + names) ──────────────────────────────────
-
-class _ParticipantRow extends StatelessWidget {
-  const _ParticipantRow({
-    required this.mySeat,
-    required this.myMuted,
-    required this.participants,
-  });
-
-  final int mySeat;
-  final bool myMuted;
-  final Map<int, VoiceParticipant> participants;
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 4,
-      runSpacing: 4,
-      children: [
-        // Self
-        _ParticipantChip(
-          label: 'You',
-          muted: myMuted,
-          isSelf: true,
-        ),
-        // Others
-        for (final p in participants.values)
-          _ParticipantChip(
-            label: p.name ?? 'Seat ${p.seat + 1}',
-            muted: p.muted,
-            isSelf: false,
-          ),
-      ],
-    );
-  }
-}
-
-class _ParticipantChip extends StatefulWidget {
-  const _ParticipantChip({
-    required this.label,
-    required this.muted,
-    required this.isSelf,
-  });
-
-  final String label;
-  final bool muted;
-  final bool isSelf;
-
-  @override
-  State<_ParticipantChip> createState() => _ParticipantChipState();
-}
-
-class _ParticipantChipState extends State<_ParticipantChip>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _speakPulse;
-
-  @override
-  void initState() {
-    super.initState();
-    _speakPulse = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    );
-    if (!widget.muted) _speakPulse.repeat(reverse: true);
-  }
-
-  @override
-  void didUpdateWidget(_ParticipantChip old) {
-    super.didUpdateWidget(old);
-    if (widget.muted && _speakPulse.isAnimating) {
-      _speakPulse.stop();
-      _speakPulse.value = 0;
-    } else if (!widget.muted && !_speakPulse.isAnimating) {
-      _speakPulse.repeat(reverse: true);
-    }
-  }
-
-  @override
-  void dispose() {
-    _speakPulse.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final micColor = widget.muted
-        ? const Color(0xFFEF5350)
-        : const Color(0xFF4CAF50);
-
-    return AnimatedBuilder(
-      animation: _speakPulse,
-      builder: (context, child) {
-        final borderOpacity = widget.muted ? 0.3 : (0.3 + _speakPulse.value * 0.4);
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.6),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: micColor.withValues(alpha: borderOpacity),
-              width: widget.muted ? 1 : 1.5,
+                const Spacer(),
+                // Leave button
+                _MiniButton(
+                  onTap: onLeave,
+                  icon: Icons.call_end_rounded,
+                  color: const Color(0xFFEF5350),
+                  bgColor: const Color(0xFFEF5350).withValues(alpha: 0.2),
+                  size: 22,
+                ),
+              ],
             ),
           ),
-          child: child,
-        );
-      },
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            widget.muted ? Icons.mic_off_rounded : Icons.mic_rounded,
-            size: 11,
-            color: micColor,
+
+          // ── Participant list ──
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Self
+                _ParticipantTile(
+                  label: 'You',
+                  isSelf: true,
+                  micMuted: state.muted,
+                  locallyMuted: false,
+                  onMuteToggle: null,
+                ),
+                // Others
+                for (final p in state.participants.values)
+                  _ParticipantTile(
+                    label: p.name ?? 'Seat ${p.seat + 1}',
+                    isSelf: false,
+                    micMuted: p.muted,
+                    locallyMuted: state.isUserMuted(p.seat),
+                    onMuteToggle: () => onMuteUser(p.seat),
+                  ),
+              ],
+            ),
           ),
-          const SizedBox(width: 4),
-          Text(
-            widget.label,
-            style: TextStyle(
-              color: widget.isSelf
-                  ? const Color(0xFFEDC169)
-                  : Colors.white70,
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
+
+          // ── Controls bar ──
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.03),
+              borderRadius: const BorderRadius.vertical(
+                  bottom: Radius.circular(13)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Mic toggle
+                _ControlButton(
+                  onTap: onMuteToggle,
+                  icon: state.muted
+                      ? Icons.mic_off_rounded
+                      : Icons.mic_rounded,
+                  color: state.muted
+                      ? const Color(0xFFEF5350)
+                      : const Color(0xFF4CAF50),
+                  bgColor: state.muted
+                      ? const Color(0xFFEF5350).withValues(alpha: 0.2)
+                      : const Color(0xFF4CAF50).withValues(alpha: 0.15),
+                  label: state.muted ? 'Unmute' : 'Mute',
+                ),
+                const SizedBox(width: 12),
+                // Speaker toggle
+                _ControlButton(
+                  onTap: onSpeakerToggle,
+                  icon: state.speakerOff
+                      ? Icons.volume_off_rounded
+                      : Icons.volume_up_rounded,
+                  color: state.speakerOff
+                      ? const Color(0xFFEF5350)
+                      : const Color(0xFF64B5F6),
+                  bgColor: state.speakerOff
+                      ? const Color(0xFFEF5350).withValues(alpha: 0.2)
+                      : const Color(0xFF64B5F6).withValues(alpha: 0.15),
+                  label: state.speakerOff ? 'Speaker On' : 'Speaker Off',
+                ),
+              ],
             ),
           ),
         ],
@@ -414,11 +323,82 @@ class _ParticipantChipState extends State<_ParticipantChip>
   }
 }
 
-// ── Live dot (pulsing green) ───────────────────────────────────────────
+// ── Participant tile ───────────────────────────────────────────────────
+
+class _ParticipantTile extends StatelessWidget {
+  const _ParticipantTile({
+    required this.label,
+    required this.isSelf,
+    required this.micMuted,
+    required this.locallyMuted,
+    this.onMuteToggle,
+  });
+
+  final String label;
+  final bool isSelf;
+  final bool micMuted;
+  final bool locallyMuted;
+  final VoidCallback? onMuteToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    final nameColor = isSelf
+        ? const Color(0xFFEDC169)
+        : locallyMuted
+            ? Colors.white38
+            : Colors.white70;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          // Mic status icon
+          Icon(
+            micMuted ? Icons.mic_off_rounded : Icons.mic_rounded,
+            size: 13,
+            color: micMuted
+                ? const Color(0xFFEF5350).withValues(alpha: 0.7)
+                : const Color(0xFF4CAF50),
+          ),
+          const SizedBox(width: 6),
+          // Name
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: nameColor,
+                fontSize: 11,
+                fontWeight: isSelf ? FontWeight.w600 : FontWeight.w400,
+                decoration: locallyMuted ? TextDecoration.lineThrough : null,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          // Per-user mute button (not for self)
+          if (!isSelf)
+            _MiniButton(
+              onTap: onMuteToggle,
+              icon: locallyMuted
+                  ? Icons.volume_off_rounded
+                  : Icons.volume_up_rounded,
+              color: locallyMuted
+                  ? const Color(0xFFEF5350)
+                  : Colors.white38,
+              bgColor: locallyMuted
+                  ? const Color(0xFFEF5350).withValues(alpha: 0.15)
+                  : Colors.white.withValues(alpha: 0.05),
+              size: 20,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Live dot ───────────────────────────────────────────────────────────
 
 class _LiveDot extends StatefulWidget {
   const _LiveDot();
-
   @override
   State<_LiveDot> createState() => _LiveDotState();
 }
@@ -431,43 +411,37 @@ class _LiveDotState extends State<_LiveDot>
   void initState() {
     super.initState();
     _pulse = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      vsync: this, duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
   }
 
   @override
-  void dispose() {
-    _pulse.dispose();
-    super.dispose();
-  }
+  void dispose() { _pulse.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _pulse,
-      builder: (context, _) {
-        return Container(
-          width: 7,
-          height: 7,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: const Color(0xFF4CAF50),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF4CAF50).withValues(alpha: 0.3 + _pulse.value * 0.4),
-                blurRadius: 4 + _pulse.value * 4,
-                spreadRadius: _pulse.value * 2,
-              ),
-            ],
-          ),
-        );
-      },
+      builder: (context, _) => Container(
+        width: 7, height: 7,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: const Color(0xFF4CAF50),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF4CAF50)
+                  .withValues(alpha: 0.3 + _pulse.value * 0.4),
+              blurRadius: 4 + _pulse.value * 4,
+              spreadRadius: _pulse.value * 2,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
 
-// ── Control button ─────────────────────────────────────────────────────
+// ── Control button (with label) ────────────────────────────────────────
 
 class _ControlButton extends StatelessWidget {
   const _ControlButton({
@@ -475,42 +449,79 @@ class _ControlButton extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.bgColor,
-    this.tooltip,
+    required this.label,
   });
 
   final VoidCallback onTap;
   final IconData icon;
   final Color color;
   final Color bgColor;
-  final String? tooltip;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
-    final button = Material(
+    return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(8),
         child: Container(
-          width: 30,
-          height: 30,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(
-            shape: BoxShape.circle,
             color: bgColor,
+            borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(icon, size: 16, color: color),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 15, color: color),
+              const SizedBox(width: 4),
+              Text(label, style: TextStyle(
+                color: color, fontSize: 10, fontWeight: FontWeight.w600,
+              )),
+            ],
+          ),
         ),
       ),
     );
-
-    if (tooltip != null) {
-      return Tooltip(message: tooltip!, child: button);
-    }
-    return button;
   }
 }
 
-// ── Shared pill container ──────────────────────────────────────────────
+// ── Mini button ────────────────────────────────────────────────────────
+
+class _MiniButton extends StatelessWidget {
+  const _MiniButton({
+    this.onTap,
+    required this.icon,
+    required this.color,
+    required this.bgColor,
+    this.size = 24,
+  });
+
+  final VoidCallback? onTap;
+  final IconData icon;
+  final Color color;
+  final Color bgColor;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(size / 2),
+        child: Container(
+          width: size, height: size,
+          decoration: BoxDecoration(shape: BoxShape.circle, color: bgColor),
+          child: Icon(icon, size: size * 0.6, color: color),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Pill container ─────────────────────────────────────────────────────
 
 class _Pill extends StatelessWidget {
   const _Pill({required this.child, required this.color, required this.borderColor});

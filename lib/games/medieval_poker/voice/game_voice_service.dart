@@ -125,6 +125,36 @@ class GameVoiceService {
     state.value = state.value.copyWith(muted: false);
   }
 
+  /// Turn speaker off — mute all incoming audio.
+  void speakerOff() {
+    _setAllRemoteAudioEnabled(false);
+    state.value = state.value.copyWith(speakerOff: true);
+  }
+
+  /// Turn speaker on — unmute all incoming audio (except individually muted).
+  void speakerOn() {
+    _setAllRemoteAudioEnabled(true);
+    // Re-apply individual mutes
+    for (final seat in state.value.mutedUsers) {
+      _setRemoteAudioEnabled(seat, false);
+    }
+    state.value = state.value.copyWith(speakerOff: false);
+  }
+
+  /// Mute a specific user's audio (local only — they don't know).
+  void muteUser(int seat) {
+    _setRemoteAudioEnabled(seat, false);
+    final updated = Set<int>.from(state.value.mutedUsers)..add(seat);
+    state.value = state.value.copyWith(mutedUsers: updated);
+  }
+
+  /// Unmute a specific user's audio.
+  void unmuteUser(int seat) {
+    _setRemoteAudioEnabled(seat, true);
+    final updated = Set<int>.from(state.value.mutedUsers)..remove(seat);
+    state.value = state.value.copyWith(mutedUsers: updated);
+  }
+
   /// Dispose everything.
   void dispose() {
     _cleanup();
@@ -298,6 +328,24 @@ class GameVoiceService {
     if (_localStream == null) return;
     for (final track in _localStream!.getAudioTracks()) {
       track.enabled = enabled;
+    }
+  }
+
+  /// Enable/disable audio from a specific remote peer.
+  void _setRemoteAudioEnabled(int seat, bool enabled) {
+    final stream = _remoteStreams[seat];
+    if (stream == null) return;
+    for (final track in stream.getAudioTracks()) {
+      track.enabled = enabled;
+    }
+  }
+
+  /// Enable/disable ALL remote audio.
+  void _setAllRemoteAudioEnabled(bool enabled) {
+    for (final stream in _remoteStreams.values) {
+      for (final track in stream.getAudioTracks()) {
+        track.enabled = enabled;
+      }
     }
   }
 
