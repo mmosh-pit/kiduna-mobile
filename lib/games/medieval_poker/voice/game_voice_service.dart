@@ -430,6 +430,16 @@ class GameVoiceService {
 
     pc.onIceConnectionState = (iceState) {
       print('[GameVoice] ICE state for seat=$seat: $iceState');
+      
+      if (iceState == RTCIceConnectionState.RTCIceConnectionStateFailed) {
+        print('[GameVoice] ICE failed for seat=$seat — recreating peer');
+        // Delay slightly to avoid race conditions
+        Future.delayed(const Duration(seconds: 2), () {
+          if (!_disposed && _wasInVoice && state.value.participants.containsKey(seat)) {
+            _createPeerForSeat(seat, createOffer: true);
+          }
+        });
+      }
     };
 
     // Create offer if we're the initiator
