@@ -37,6 +37,14 @@ class GameVoiceService {
   /// Seat → remote audio renderer
   final _remoteStreams = <int, MediaStream>{};
 
+  /// Auto-reconnect state
+  bool _wasInVoice = false;
+  bool _wasMuted = false;
+  int _reconnectAttempts = 0;
+  static const _maxReconnectAttempts = 3;
+  static const _reconnectDelay = Duration(seconds: 5);
+  bool _disposed = false;;
+
   static const _iceServers = <Map<String, dynamic>>[
     {'urls': 'stun:stun.l.google.com:19302'},
     {'urls': 'stun:stun1.l.google.com:19302'},
@@ -71,12 +79,7 @@ class GameVoiceService {
         onError: (e) {
           state.value = state.value.copyWith(error: e);
         },
-        onDisconnected: () {
-          if (state.value.joined) {
-            _cleanup();
-            state.value = const VoiceState(error: 'Voice disconnected.');
-          }
-        },
+        onDisconnected: _onSignalingDisconnected,
       );
 
       final connected = await _signaling!.connect();
@@ -88,6 +91,11 @@ class GameVoiceService {
         );
         return;
       }
+
+      // Track for auto-reconnect
+      _wasInVoice = true;
+      _wasMuted = false;
+      _reconnectAttempts = 0;
 
       state.value = state.value.copyWith(
         joined: true,
@@ -107,6 +115,7 @@ class GameVoiceService {
   /// Leave voice chat — close all connections.
   void leave() {
     print('[GameVoice] Leaving voice chat');
+    _wasInVoice = false; // Manual leave — don't auto-reconnect
     _cleanup();
     state.value = const VoiceState();
   }
@@ -157,8 +166,119 @@ class GameVoiceService {
 
   /// Dispose everything.
   void dispose() {
+    _disposed = true;
+    _wasInVoice = false;
     _cleanup();
     state.dispose();
+  }
+
+  // ── Auto-reconnect ──────────────────────────────────────────────────
+
+  void _onSignalingDisconnected() {
+    if (_disposed) return;
+    if (!_wasInVoice) return;
+
+    // Save mute state before cleanup
+    _wasMuted = state.value.muted;
+
+    // Close peer connections but keep local stream
+    for (final pc in _peers.values) {
+      pc.close();
+    }
+    _peers.clear();
+    _remoteStreams.clear();
+    _signaling?.dispose();
+    _signaling = null;
+
+    state.value = state.value.copyWith(
+      connecting: true,
+      error: null,
+      participants: const {},
+    );
+
+    print('[GameVoice] Disconnected — attempting auto-reconnect '
+        '(${_reconnectAttempts + 1}/$_maxReconnectAttempts)');
+
+    _attemptReconnect();
+  }
+
+  Future<void> _attemptReconnect() async {
+    if (_disposed || !_wasInVoice) return;
+
+    _reconnectAttempts++;
+
+    if (_reconnectAttempts > _maxReconnectAttempts) {
+      print('[GameVoice] Auto-reconnect failed after $_maxReconnectAttempts attempts');
+      _cleanup();
+      _wasInVoice = false;
+      state.value = const VoiceState(
+        error: 'Voice disconnected. Tap Join Voice to reconnect.',
+      );
+      return;
+    }
+
+    // Wait before retry
+    await Future.delayed(_reconnectDelay);
+    if (_disposed || !_wasInVoice) return;
+
+    print('[GameVoice] Reconnect attempt $_reconnectAttempts/$_maxReconnectAttempts');
+
+    try {
+      // Get mic again if lost
+      _localStream ??= await navigator.mediaDevices.getUserMedia({
+        'audio': true,
+        'video': false,
+      });
+
+      // Reconnect signaling
+      _signaling = VoiceSignalingClient(
+        wsUrl: wsUrl,
+        roomCode: roomCode,
+        token: token,
+        playerName: playerName,
+        onVoiceParticipants: _onParticipants,
+        onVoiceJoined: _onPlayerJoined,
+        onVoiceLeft: _onPlayerLeft,
+        onVoiceMute: _onPlayerMute,
+        onSignaling: _onSignaling,
+        onError: (e) {
+          state.value = state.value.copyWith(error: e);
+        },
+        onDisconnected: _onSignalingDisconnected,
+      );
+
+      final connected = await _signaling!.connect();
+      if (!connected) {
+        print('[GameVoice] Reconnect attempt $_reconnectAttempts failed');
+        _signaling?.dispose();
+        _signaling = null;
+        _attemptReconnect();
+        return;
+      }
+
+      // Reconnected successfully
+      _reconnectAttempts = 0;
+
+      // Restore mute state
+      if (_wasMuted) {
+        _setLocalAudioEnabled(false);
+        _signaling?.sendMute();
+      }
+
+      state.value = state.value.copyWith(
+        joined: true,
+        connecting: false,
+        muted: _wasMuted,
+        clearError: true,
+      );
+
+      print('[GameVoice] Auto-reconnected successfully');
+    } catch (e) {
+      print('[GameVoice] Reconnect attempt $_reconnectAttempts error: $e');
+      _signaling?.dispose();
+      _signaling = null;
+      _attemptReconnect();
+    }
   }
 
   // ── Signaling callbacks ────────────────────────────────────────────
