@@ -389,6 +389,23 @@ class AuthService {
     }
   }
 
+  /// Fetch lineage rewards earned by the current user.
+  Future<Map<String, dynamic>> getLineageRewards() async {
+    try {
+      final token = await SecureStorage.instance.getToken();
+      final response = await _authDio.get(
+        '/kiduna/lineage-rewards',
+        options: token != null && token.isNotEmpty
+            ? Options(headers: {'Authorization': 'Bearer $token'})
+            : null,
+      );
+      return response.data as Map<String, dynamic>? ?? {};
+    } on DioException catch (e, st) {
+      _handleDioError(e, st, 'getLineageRewards');
+      return {};
+    }
+  }
+
   /// Debit the balance and get a transaction awaiting the user's signature.
   ///
   /// The returned transaction already carries the admin signature. The
@@ -683,6 +700,30 @@ class AuthService {
         );
       default:
         throw const ServerException();
+    }
+  }
+
+  /// Generic authenticated POST request to kinship-backend.
+  Future<Map<String, dynamic>?> postWithAuth(
+    String path,
+    Map<String, dynamic> body,
+  ) async {
+    try {
+      final token = await SecureStorage.instance.getToken();
+      final response = await _authDio.post<Map<String, dynamic>>(
+        path,
+        data: body,
+        options: token != null && token.isNotEmpty
+            ? Options(headers: {'Authorization': 'Bearer $token'})
+            : null,
+      );
+      return response.data;
+    } on DioException catch (e, st) {
+      if (e.response?.data is Map) {
+        return e.response!.data as Map<String, dynamic>;
+      }
+      _handleDioError(e, st, 'postWithAuth:$path');
+      return null;
     }
   }
 }

@@ -1,7 +1,14 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../../config/env.dart';
 import '../../../core/extensions/context_extensions.dart';
+import '../../../core/wallet/phantom.dart';
+import '../../../data/models/lineage_reward_model.dart';
+import '../../../data/services/auth_service.dart';
 import '../../../shared/layouts/responsive_layout.dart';
 import '../../../shared/widgets/app_header.dart';
 import '../../../shared/widgets/kiduna_gold_button.dart';
@@ -10,6 +17,7 @@ import '../../auth/controllers/auth_controller.dart';
 import '../../field/screens/field_screen.dart';
 import '../controllers/compute_controller.dart';
 import '../controllers/compute_history_controller.dart';
+import '../controllers/wallet_controller.dart';
 import '../models/compute_history_entry.dart';
 import '../open_buy_kiduna.dart';
 import '../widgets/compute_usage_bar.dart';
@@ -96,52 +104,52 @@ class _ComputeDetailsScreenState extends ConsumerState<ComputeDetailsScreen>
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 640),
-          // Desktop and web draw a scrollbar by default. This is a short
-          // scroll inside a narrow column, where the track reads as chrome
-          // rather than a useful cue.
-          child: ScrollConfiguration(
-            behavior:
-                ScrollConfiguration.of(context).copyWith(scrollbars: false),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeader(context),
+          child: Column(
+            children: [
+              // Fixed header — does not scroll
+              _buildHeader(context),
 
-                  Container(
-                    decoration: BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(
-                          color: colors.camel.withValues(alpha: 0.18),
-                        ),
-                      ),
-                    ),
-                    child: TabBar(
-                      controller: _tabs,
-                      indicatorColor: colors.gold,
-                      labelColor: colors.gold,
-                      unselectedLabelColor: colors.muted,
-                      labelStyle: context.kidunaText.label.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                      tabs: const [
-                        Tab(text: 'Purchases'),
-                        Tab(text: 'Rewards'),
-                      ],
+              // Fixed tab bar — does not scroll
+              Container(
+                decoration: BoxDecoration(
+                  color: colors.deep,
+                  border: Border(
+                    bottom: BorderSide(
+                      color: colors.camel.withValues(alpha: 0.18),
                     ),
                   ),
-
-                  // Only the selected tab is built. TabBarView would need a
-                  // bounded height, which is what forced the blank space.
-                  AnimatedBuilder(
-                    animation: _tabs,
-                    builder: (context, _) => _tabs.index == 0
-                        ? const _PurchasesTab()
-                        : const _RewardsTab(),
+                ),
+                child: TabBar(
+                  controller: _tabs,
+                  indicatorColor: colors.gold,
+                  labelColor: colors.gold,
+                  unselectedLabelColor: colors.muted,
+                  labelStyle: context.kidunaText.label.copyWith(
+                    fontWeight: FontWeight.w700,
                   ),
-                ],
+                  tabs: const [
+                    Tab(text: 'Purchases'),
+                    Tab(text: 'Rewards'),
+                  ],
+                ),
               ),
-            ),
+
+              // Scrollable tab content
+              Expanded(
+                child: ScrollConfiguration(
+                  behavior: ScrollConfiguration.of(context)
+                      .copyWith(scrollbars: false),
+                  child: SingleChildScrollView(
+                    child: AnimatedBuilder(
+                      animation: _tabs,
+                      builder: (context, _) => _tabs.index == 0
+                          ? const _PurchasesTab()
+                          : const _RewardsTab(),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -438,56 +446,685 @@ class _PurchaseRow extends StatelessWidget {
 // Rewards tab
 // ═══════════════════════════════════════════════════════════════════════
 
-/// Placeholder for KIDUNA rewards. Nothing is earned or tracked yet, so this
-/// states that plainly rather than showing an empty list that could read as a
-/// zero balance.
-class _RewardsTab extends StatelessWidget {
+/// Shows the user's lineage rewards earned from compute purchases.
+/// Fetches from GET /kiduna/lineage-rewards.
+class _RewardsTab extends ConsumerStatefulWidget {
   const _RewardsTab();
+
+  @override
+  ConsumerState<_RewardsTab> createState() => _RewardsTabState();
+}
+
+class _RewardsTabState extends ConsumerState<_RewardsTab> {
+  LineageRewardSummary? _summary;
+  bool _loading = true;
+  String? _error;
+  bool _withdrawing = false;
+  String? _withdrawResult;
+  bool _withdrawSuccess = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final data = await AuthService.instance.getLineageRewards();
+      if (!mounted) return;
+
+      if (data.isEmpty) {
+        setState(() {
+          _summary = null;
+          _loading = false;
+        });
+        return;
+      }
+
+      setState(() {
+        _summary = LineageRewardSummary.fromJson(data);
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Failed to load rewards.';
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _withdraw() async {
+    final walletCtrl = ref.read(walletControllerProvider);
+    final phantomAddress = walletCtrl.address;
+
+    if (phantomAddress == null || phantomAddress.isEmpty) {
+      setState(() {
+        _withdrawResult = 'Please connect your Phantom wallet first.';
+        _withdrawSuccess = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _withdrawing = true;
+      _withdrawResult = null;
+    });
+
+    try {
+      // 1. Backend builds USDC transfer tx (admin signs)
+      final prepared = await AuthService.instance.postWithAuth(
+        '/kiduna/lineage-withdraw',
+        {'recipient': phantomAddress},
+      );
+
+      if (!mounted) return;
+
+      final data = prepared?['data'] as Map<String, dynamic>? ?? prepared;
+      final txBase64 = data?['transaction'] as String?;
+      final availableAmount =
+          double.tryParse(data?['available']?.toString() ?? '') ?? 0;
+
+      if (txBase64 == null || txBase64.isEmpty) {
+        setState(() {
+          _withdrawResult = data?['error'] as String? ??
+              'Could not prepare withdrawal.';
+          _withdrawSuccess = false;
+          _withdrawing = false;
+        });
+        return;
+      }
+
+      // 2. Phantom co-signs (user pays SOL fee)
+      final signed = await PhantomWallet.signTransaction(txBase64);
+      if (!mounted) return;
+
+      if (signed == null) {
+        setState(() {
+          _withdrawResult = 'Signature declined. No funds were moved.';
+          _withdrawSuccess = false;
+          _withdrawing = false;
+        });
+        return;
+      }
+
+      // 3. Backend broadcasts + records withdrawal
+      final result = await AuthService.instance.postWithAuth(
+        '/kiduna/lineage-withdraw/confirm',
+        {
+          'signedTransaction': signed,
+          'claimedAmount': availableAmount,
+        },
+      );
+
+      if (!mounted) return;
+
+      final resultData = result?['data'] as Map<String, dynamic>? ?? result;
+      final success = resultData?['success'] == true;
+      final txSig = resultData?['txSignature'] as String?;
+
+      if (!success) {
+        setState(() {
+          _withdrawResult = resultData?['error'] as String? ??
+              'Transaction failed. Your funds are safe.';
+          _withdrawSuccess = false;
+          _withdrawing = false;
+        });
+        return;
+      }
+
+      setState(() {
+        _withdrawing = false;
+        _withdrawResult =
+            'Withdrawn \$${availableAmount.toStringAsFixed(2)} USDC successfully!'
+            '${txSig != null ? '\nTx: ${txSig.substring(0, 20)}...' : ''}';
+        _withdrawSuccess = true;
+        _txSignature = txSig;
+      });
+
+      // Refresh rewards
+      _load();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _withdrawing = false;
+        _withdrawResult = 'Withdrawal failed. Please try again.';
+        _withdrawSuccess = false;
+      });
+    }
+  }
+
+  String? _txSignature;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.kiduna;
     final text = context.kidunaText;
 
+    if (_loading) {
+      return Padding(
+        padding: const EdgeInsets.all(48),
+        child: Center(
+          child: CircularProgressIndicator(strokeWidth: 2, color: colors.gold),
+        ),
+      );
+    }
+
+    if (_error != null) {
+      return _EmptyState(icon: Icons.error_outline, message: _error!);
+    }
+
+    if (_summary == null || _summary!.rewardCount == 0) {
+      return const _EmptyState(
+        icon: Icons.card_giftcard_outlined,
+        message:
+            'No rewards yet. You earn USDC rewards when people '
+            'in your lineage purchase compute.',
+      );
+    }
+
+    final s = _summary!;
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(32, 48, 32, 48),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
+          // ── Summary card ──
+          _SummaryCard(
+            totalClaimed: s.totalClaimed,
+            available: s.available,
+          ),
+
+          // ── Withdraw section ──
+          if (s.available > 0) ...[
+            const SizedBox(height: 12),
+
+            // Phantom wallet connection
+            Builder(builder: (context) {
+              final walletState = ref.watch(walletControllerProvider);
+              final isConnected = walletState.address != null &&
+                  walletState.address!.isNotEmpty;
+
+              if (!isConnected) {
+                return Column(
+                  children: [
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          ref.read(walletControllerProvider.notifier).connect();
+                        },
+                        icon: Icon(Icons.account_balance_wallet,
+                            size: 18, color: colors.gold),
+                        label: Text('Connect Phantom to Withdraw',
+                            style: text.body.copyWith(color: colors.gold)),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(double.infinity, 44),
+                          side: BorderSide(
+                              color: colors.gold.withValues(alpha: 0.4)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              }
+
+              return Column(
+                children: [
+                  // Connected wallet display
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: colors.mint.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                          color: colors.mint.withValues(alpha: 0.2)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.check_circle,
+                            size: 14, color: colors.mint),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${walletState.address!.substring(0, 6)}...${walletState.address!.substring(walletState.address!.length - 4)}',
+                          style: text.caption.copyWith(
+                            color: colors.mint,
+                            fontFamily: 'monospace',
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Withdraw button
+                  SizedBox(
+                    width: double.infinity,
+                    child: _withdrawing
+                        ? Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                CircularProgressIndicator(
+                                    strokeWidth: 2, color: colors.gold),
+                                const SizedBox(height: 8),
+                                Text('Waiting for signature...',
+                                    style: text.caption
+                                        .copyWith(color: colors.muted)),
+                              ],
+                            ),
+                          )
+                        : ElevatedButton(
+                            onPressed: _withdraw,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: colors.gold,
+                              foregroundColor: colors.field,
+                              minimumSize:
+                                  const Size(double.infinity, 44),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius:
+                                      BorderRadius.circular(8)),
+                              textStyle: text.body.copyWith(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 15,
+                              ),
+                            ),
+                            child: Text(
+                              'Withdraw \$${s.available.toStringAsFixed(2)} USDC',
+                            ),
+                          ),
+                  ),
+                ],
+              );
+            }),
+
+            // Result + tx inside availability block (when still available)
+            if (_withdrawResult != null && _txSignature != null && s.available > 0) ...[
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TextButton.icon(
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: _txSignature!));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text('Transaction ID copied'),
+                          duration: const Duration(seconds: 2),
+                          backgroundColor: colors.mint,
+                        ),
+                      );
+                    },
+                    icon: Icon(Icons.copy, size: 14, color: colors.sky),
+                    label: Text('Copy Tx',
+                        style: text.caption.copyWith(color: colors.sky)),
+                  ),
+                  TextButton.icon(
+                    onPressed: () {
+                      launchUrl(
+                        Uri.parse('https://solscan.io/tx/$_txSignature'),
+                        mode: LaunchMode.externalApplication,
+                      );
+                    },
+                    icon: Icon(Icons.open_in_new, size: 14, color: colors.sky),
+                    label: Text('View on Explorer',
+                        style: text.caption.copyWith(color: colors.sky)),
+                  ),
+                ],
+              ),
+            ],
+          ],
+
+          // ── Withdraw result (persists after refresh) ──
+          if (_withdrawResult != null) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: (_withdrawSuccess ? colors.mint : colors.orange)
+                    .withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: (_withdrawSuccess ? colors.mint : colors.orange)
+                      .withValues(alpha: 0.2),
+                ),
+              ),
+              child: Text(
+                _withdrawResult!,
+                style: text.caption.copyWith(
+                  color: _withdrawSuccess ? colors.mint : colors.orange,
+                  height: 1.4,
+                ),
+              ),
+            ),
+          ],
+
+          if (_txSignature != null && s.available <= 0) ...[
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: colors.surface,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: colors.camel.withValues(alpha: 0.14)),
+              ),
+              child: Column(
+                children: [
+                  Text('Last Transaction',
+                      style: text.caption.copyWith(color: colors.muted, fontSize: 11)),
+                  const SizedBox(height: 6),
+                  Text(
+                    _txSignature!,
+                    textAlign: TextAlign.center,
+                    style: text.caption.copyWith(
+                      color: colors.cream,
+                      fontFamily: 'monospace',
+                      fontSize: 10,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      TextButton.icon(
+                        onPressed: () {
+                          Clipboard.setData(
+                              ClipboardData(text: _txSignature!));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Text('Transaction ID copied'),
+                              duration: const Duration(seconds: 2),
+                              backgroundColor: colors.mint,
+                            ),
+                          );
+                        },
+                        icon: Icon(Icons.copy, size: 14, color: colors.sky),
+                        label: Text('Copy Tx',
+                            style: text.caption.copyWith(color: colors.sky)),
+                      ),
+                      TextButton.icon(
+                        onPressed: () {
+                          launchUrl(
+                            Uri.parse('https://solscan.io/tx/$_txSignature'),
+                            mode: LaunchMode.externalApplication,
+                          );
+                        },
+                        icon: Icon(Icons.open_in_new,
+                            size: 14, color: colors.sky),
+                        label: Text('View on Explorer',
+                            style: text.caption.copyWith(color: colors.sky)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 20),
+
+          // ── Per generation breakdown ──
+          Text(
+            'PER GENERATION',
+            style: text.eyebrowSmall.copyWith(
+              color: colors.quiet,
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: 10),
+          ...['GEN1', 'GEN2', 'GEN3', 'GEN4'].map((gen) {
+            final amount = s.perGeneration[gen] ?? 0;
+            final maxAmount = s.perGeneration.values.fold<double>(
+              0,
+              (a, b) => a > b ? a : b,
+            );
+            final fraction =
+                maxAmount > 0 ? (amount / maxAmount).clamp(0.0, 1.0) : 0.0;
+            final label = gen.replaceFirst('GEN', 'Gen ');
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 46,
+                    child: Text(
+                      label,
+                      style:
+                          text.caption.copyWith(color: colors.muted, fontSize: 12),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(3),
+                      child: LinearProgressIndicator(
+                        value: fraction,
+                        minHeight: 14,
+                        backgroundColor: colors.camel.withValues(alpha: 0.1),
+                        valueColor:
+                            AlwaysStoppedAnimation<Color>(colors.gold),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  SizedBox(
+                    width: 70,
+                    child: Text(
+                      '\$${amount.toStringAsFixed(2)}',
+                      textAlign: TextAlign.right,
+                      style: text.caption.copyWith(
+                        color: colors.cream,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+
+          const SizedBox(height: 20),
+
+          // ── Recent rewards list ──
+          if (s.rewards.isNotEmpty) ...[
+            Text(
+              'RECENT REWARDS',
+              style: text.eyebrowSmall.copyWith(
+                color: colors.quiet,
+                letterSpacing: 0.8,
+              ),
+            ),
+            const SizedBox(height: 10),
+            ...s.rewards.take(20).map((r) => _RewardRow(reward: r)),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _SummaryCard extends StatelessWidget {
+  const _SummaryCard({
+    required this.totalClaimed,
+    required this.available,
+  });
+
+  final double totalClaimed;
+  final double available;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.kiduna;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colors.gold.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: colors.gold.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        children: [
+          _SummaryColumn(
+            label: 'Claimed',
+            value: '\$${totalClaimed.toStringAsFixed(2)}',
+            color: colors.mint,
+          ),
           Container(
-            width: 56,
-            height: 56,
+            width: 1,
+            height: 36,
+            margin: const EdgeInsets.symmetric(horizontal: 12),
+            color: colors.camel.withValues(alpha: 0.15),
+          ),
+          _SummaryColumn(
+            label: 'Available',
+            value: '\$${available.toStringAsFixed(2)}',
+            color: colors.gold,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SummaryColumn extends StatelessWidget {
+  const _SummaryColumn({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = context.kidunaText;
+    final colors = context.kiduna;
+
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: text.body.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+              fontSize: 18,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: text.caption.copyWith(color: colors.muted, fontSize: 11),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RewardRow extends StatelessWidget {
+  const _RewardRow({required this.reward});
+
+  final LineageReward reward;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.kiduna;
+    final text = context.kidunaText;
+
+    final dateStr = reward.createdAt != null
+        ? '${_months[reward.createdAt!.month - 1]} ${reward.createdAt!.day}'
+        : '';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: colors.camel.withValues(alpha: 0.1)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: colors.gold.withValues(alpha: 0.1),
-              border: Border.all(color: colors.gold.withValues(alpha: 0.3)),
             ),
-            child: Icon(
-              Icons.card_giftcard_outlined,
-              size: 26,
+            child: Center(
+              child: Text(
+                reward.tier.replaceFirst('GEN', ''),
+                style: text.caption.copyWith(
+                  color: colors.gold,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${reward.tierLabel} · ${reward.rateLabel}',
+                  style: text.caption.copyWith(
+                    color: colors.cream,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${reward.rewardPercentage.toStringAsFixed(0)}% commission · $dateStr',
+                  style: text.caption.copyWith(
+                    color: colors.muted,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            '\$${reward.rewardAmount.toStringAsFixed(2)}',
+            style: text.body.copyWith(
               color: colors.gold,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Coming Soon',
-            style: text.h4.copyWith(color: colors.gold),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Earn KIDUNA through participation in the ecosystem. '
-            'Rewards will appear here once available.',
-            textAlign: TextAlign.center,
-            style: text.caption.copyWith(
-              color: colors.muted,
-              fontSize: 12,
-              height: 1.5,
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
             ),
           ),
         ],
       ),
     );
   }
+
+  static const _months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
 }
 
 class _EmptyState extends StatelessWidget {
