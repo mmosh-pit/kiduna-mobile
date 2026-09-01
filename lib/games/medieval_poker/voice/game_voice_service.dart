@@ -43,7 +43,7 @@ class GameVoiceService {
   int _reconnectAttempts = 0;
   static const _maxReconnectAttempts = 3;
   static const _reconnectDelay = Duration(seconds: 5);
-  bool _disposed = false;;
+  bool _disposed = false;
 
   static const _iceServers = <Map<String, dynamic>>[
     {'urls': 'stun:stun.l.google.com:19302'},
