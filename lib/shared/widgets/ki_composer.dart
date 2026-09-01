@@ -60,11 +60,11 @@ class _KiComposerState extends State<KiComposer> {
       ),
       child: Row(
         children: [
-          // + button.
+          // + button — always tappable regardless of chat enabled state.
           _ComposerBtn(
             icon: Icons.add_rounded,
             onTap: widget.onPlus,
-            enabled: widget.enabled,
+            enabled: true,
           ),
           const SizedBox(width: 4),
 
