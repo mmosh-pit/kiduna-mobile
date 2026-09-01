@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../core/extensions/context_extensions.dart';
 
+/// Ki chat input bar with + button, mic, send.
+/// Teal glow on focus, dark purple background.
 class KiComposer extends StatefulWidget {
   const KiComposer({
     super.key,
@@ -16,12 +18,8 @@ class KiComposer extends StatefulWidget {
   final TextEditingController controller;
   final VoidCallback onSend;
   final VoidCallback? onMic;
-
-  /// Called when the + button is tapped (attachments, quick actions).
   final VoidCallback? onPlus;
   final bool enabled;
-
-  /// Override the default placeholder text.
   final String? hintText;
 
   @override
@@ -31,43 +29,45 @@ class KiComposer extends StatefulWidget {
 class _KiComposerState extends State<KiComposer> {
   bool _focused = false;
 
+  // Hardcoded colors matching David's PDF palette.
+  static const _deep = Color(0xFF15121D);
+  static const _teal = Color(0xFF03C7D5);
+  static const _cream = Color(0xFFE8E0D4);
+  static const _muted = Color(0xFF8A7E72);
+  static const _quiet = Color(0xFF4A4440);
+  static const _border = Color(0xFF2A2235);
+
   @override
   Widget build(BuildContext context) {
-    final colors = context.kiduna;
-
     final borderColor = _focused
-        ? colors.sky.withValues(alpha: 0.55)
-        : colors.cream.withValues(alpha: 0.08);
-
-    final glowColor = _focused
-        ? colors.sky.withValues(alpha: 0.1)
-        : Colors.transparent;
-
-    final hint = widget.hintText ?? 'Say or type what you want to help move...';
+        ? _teal.withValues(alpha: 0.55)
+        : _border;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
-      padding: const EdgeInsets.fromLTRB(4, 4, 6, 4),
+      padding: const EdgeInsets.fromLTRB(5, 5, 6, 5),
       decoration: BoxDecoration(
-        color: colors.deep,
-        border: Border.all(color: borderColor, width: 1.2),
-        borderRadius: BorderRadius.circular(12),
+        color: _deep,
+        border: Border.all(color: borderColor, width: 1.3),
+        borderRadius: BorderRadius.circular(14),
         boxShadow: [
           if (_focused)
             BoxShadow(
-              color: glowColor,
-              blurRadius: 12,
+              color: _teal.withValues(alpha: 0.12),
+              blurRadius: 14,
             ),
         ],
       ),
       child: Row(
         children: [
           // + button.
-          _PlusButton(
+          _ComposerBtn(
+            icon: Icons.add_rounded,
             onTap: widget.onPlus,
             enabled: widget.enabled,
           ),
           const SizedBox(width: 4),
+
           // Text input.
           Expanded(
             child: Focus(
@@ -76,15 +76,17 @@ class _KiComposerState extends State<KiComposer> {
                 controller: widget.controller,
                 enabled: widget.enabled,
                 onSubmitted: widget.enabled ? (_) => widget.onSend() : null,
-                style: context.kidunaText.body.copyWith(
-                  color: colors.cream,
+                style: const TextStyle(
+                  fontFamily: 'Avenir',
                   fontSize: 14,
+                  color: _cream,
                 ),
                 decoration: InputDecoration(
-                  hintText: hint,
-                  hintStyle: context.kidunaText.body.copyWith(
-                    color: colors.quiet.withValues(alpha: 0.6),
+                  hintText: widget.hintText ?? 'Say or type what you want to help move...',
+                  hintStyle: TextStyle(
+                    fontFamily: 'Avenir',
                     fontSize: 13,
+                    color: _muted.withValues(alpha: 0.5),
                   ),
                   border: InputBorder.none,
                   isDense: true,
@@ -97,14 +99,18 @@ class _KiComposerState extends State<KiComposer> {
             ),
           ),
           const SizedBox(width: 4),
-          // Mic button.
-          _MicButton(
+
+          // Mic.
+          _ComposerBtn(
+            icon: Icons.mic_rounded,
             onTap: widget.onMic,
-            enabled: widget.enabled,
+            enabled: widget.enabled && widget.onMic != null,
+            accent: true,
           ),
           const SizedBox(width: 4),
-          // Send button.
-          _SendButton(
+
+          // Send.
+          _SendBtn(
             controller: widget.controller,
             onSend: widget.onSend,
             enabled: widget.enabled,
@@ -115,28 +121,39 @@ class _KiComposerState extends State<KiComposer> {
   }
 }
 
-class _PlusButton extends StatefulWidget {
-  const _PlusButton({required this.onTap, required this.enabled});
+class _ComposerBtn extends StatefulWidget {
+  const _ComposerBtn({
+    required this.icon,
+    required this.onTap,
+    required this.enabled,
+    this.accent = false,
+  });
 
+  final IconData icon;
   final VoidCallback? onTap;
   final bool enabled;
+  final bool accent;
 
   @override
-  State<_PlusButton> createState() => _PlusButtonState();
+  State<_ComposerBtn> createState() => _ComposerBtnState();
 }
 
-class _PlusButtonState extends State<_PlusButton> {
-  bool _hovered = false;
+class _ComposerBtnState extends State<_ComposerBtn> {
+  bool _h = false;
+
+  static const _teal = Color(0xFF03C7D5);
+  static const _cream = Color(0xFFE8E0D4);
+  static const _quiet = Color(0xFF4A4440);
+  static const _border = Color(0xFF2A2235);
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.kiduna;
     final active = widget.enabled;
 
     return MouseRegion(
       cursor: active ? SystemMouseCursors.click : SystemMouseCursors.basic,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
+      onEnter: (_) => setState(() => _h = true),
+      onExit: (_) => setState(() => _h = false),
       child: GestureDetector(
         onTap: active ? widget.onTap : null,
         child: AnimatedContainer(
@@ -144,73 +161,27 @@ class _PlusButtonState extends State<_PlusButton> {
           width: 32,
           height: 32,
           decoration: BoxDecoration(
-            color: _hovered
-                ? colors.sky.withValues(alpha: 0.12)
-                : colors.cream.withValues(alpha: 0.04),
+            color: _h
+                ? _teal.withValues(alpha: 0.1)
+                : _cream.withValues(alpha: 0.03),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: _hovered
-                  ? colors.sky.withValues(alpha: 0.3)
-                  : colors.cream.withValues(alpha: 0.08),
+              color: _h
+                  ? _teal.withValues(alpha: 0.3)
+                  : _border.withValues(alpha: 0.6),
             ),
           ),
           alignment: Alignment.center,
           child: Icon(
-            Icons.add_rounded,
-            size: 18,
-            color: _hovered
-                ? colors.sky
-                : (active
-                    ? colors.cream.withValues(alpha: 0.5)
-                    : colors.quiet),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MicButton extends StatefulWidget {
-  const _MicButton({required this.onTap, required this.enabled});
-
-  final VoidCallback? onTap;
-  final bool enabled;
-
-  @override
-  State<_MicButton> createState() => _MicButtonState();
-}
-
-class _MicButtonState extends State<_MicButton> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.kiduna;
-    final active = widget.enabled && widget.onTap != null;
-
-    return MouseRegion(
-      cursor: active ? SystemMouseCursors.click : SystemMouseCursors.basic,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: active ? widget.onTap : null,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: _hovered
-                ? colors.sky.withValues(alpha: 0.12)
-                : colors.sky.withValues(alpha: 0.06),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          alignment: Alignment.center,
-          child: Icon(
-            Icons.mic_rounded,
+            widget.icon,
             size: 17,
-            color: _hovered
-                ? colors.sky
-                : (active ? colors.sky.withValues(alpha: 0.7) : colors.quiet),
+            color: _h
+                ? _teal
+                : (widget.accent
+                    ? _teal.withValues(alpha: 0.5)
+                    : (active
+                        ? _cream.withValues(alpha: 0.4)
+                        : _quiet)),
           ),
         ),
       ),
@@ -218,8 +189,8 @@ class _MicButtonState extends State<_MicButton> {
   }
 }
 
-class _SendButton extends StatefulWidget {
-  const _SendButton({
+class _SendBtn extends StatefulWidget {
+  const _SendBtn({
     required this.controller,
     required this.onSend,
     required this.enabled,
@@ -230,26 +201,28 @@ class _SendButton extends StatefulWidget {
   final bool enabled;
 
   @override
-  State<_SendButton> createState() => _SendButtonState();
+  State<_SendBtn> createState() => _SendBtnState();
 }
 
-class _SendButtonState extends State<_SendButton> {
-  bool _hovered = false;
+class _SendBtnState extends State<_SendBtn> {
+  bool _h = false;
+
+  static const _teal = Color(0xFF03C7D5);
+  static const _deep = Color(0xFF0C0914);
+  static const _quiet = Color(0xFF4A4440);
+  static const _border = Color(0xFF2A2235);
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.kiduna;
-
     return ValueListenableBuilder<TextEditingValue>(
       valueListenable: widget.controller,
       builder: (context, value, _) {
         final active = value.text.trim().isNotEmpty && widget.enabled;
 
         return MouseRegion(
-          cursor:
-              active ? SystemMouseCursors.click : SystemMouseCursors.basic,
-          onEnter: (_) => setState(() => _hovered = true),
-          onExit: (_) => setState(() => _hovered = false),
+          cursor: active ? SystemMouseCursors.click : SystemMouseCursors.basic,
+          onEnter: (_) => setState(() => _h = true),
+          onExit: (_) => setState(() => _h = false),
           child: GestureDetector(
             onTap: active ? widget.onSend : null,
             child: AnimatedContainer(
@@ -258,17 +231,16 @@ class _SendButtonState extends State<_SendButton> {
               height: 32,
               decoration: BoxDecoration(
                 color: active
-                    ? (_hovered
-                        ? colors.sky.withValues(alpha: 0.85)
-                        : colors.sky)
-                    : colors.sky.withValues(alpha: 0.06),
+                    ? (_h ? _teal.withValues(alpha: 0.85) : _teal)
+                    : _teal.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(8),
+                border: active ? null : Border.all(color: _border.withValues(alpha: 0.6)),
               ),
               alignment: Alignment.center,
               child: Icon(
                 Icons.arrow_upward_rounded,
                 size: 17,
-                color: active ? colors.deep : colors.quiet,
+                color: active ? _deep : _quiet,
               ),
             ),
           ),
