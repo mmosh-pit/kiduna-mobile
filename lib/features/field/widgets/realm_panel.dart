@@ -23,7 +23,7 @@ import 'field_inputs.dart';
 ///   Registration Domain, Standing Doc URL, Contact, Email, Address.
 /// **Other types** — Name, Type, Purpose (local UI-only).
 class RealmPanel extends ConsumerStatefulWidget {
-  const RealmPanel({super.key, this.initialType, this.initialParentId, this.onCreated});
+  const RealmPanel({super.key, this.initialType, this.initialParentId, this.onCreated, this.lockType = false});
 
   /// Pre-set the realm type dropdown (e.g. 'Alliance', 'Cell').
   final String? initialType;
@@ -33,6 +33,10 @@ class RealmPanel extends ConsumerStatefulWidget {
 
   /// Called after successful realm creation.
   final VoidCallback? onCreated;
+
+  /// When true, hides type/cellType/theme/focus dropdowns. Used for creating
+  /// cells inside an Alliance where type is always Cell + Temporary.
+  final bool lockType;
 
   @override
   ConsumerState<RealmPanel> createState() => _RealmPanelState();
@@ -498,10 +502,16 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
                   )
                 else
                   Expanded(
-                    child: FieldDropdown(
-                      label: l10n.typeLabel, value: _type,
-                      options: FieldFixtures.realmTypes,
-                      onChanged: (v) => setState(() { _type = v; _error = null; }),
+                    child: IgnorePointer(
+                      ignoring: widget.lockType,
+                      child: Opacity(
+                        opacity: widget.lockType ? 0.5 : 1.0,
+                        child: FieldDropdown(
+                          label: l10n.typeLabel, value: _type,
+                          options: FieldFixtures.realmTypes,
+                          onChanged: (v) => setState(() { _type = v; _error = null; }),
+                        ),
+                      ),
                     ),
                   ),
               ],
@@ -510,10 +520,16 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
             // ── Type dropdown below name row for Alliance/Institution ─
             if (_hasHandle) ...[
               const SizedBox(height: 8),
-              FieldDropdown(
-                label: l10n.typeLabel, value: _type,
-                options: FieldFixtures.realmTypes,
-                onChanged: (v) => setState(() { _type = v; _error = null; }),
+              IgnorePointer(
+                ignoring: widget.lockType,
+                child: Opacity(
+                  opacity: widget.lockType ? 0.5 : 1.0,
+                  child: FieldDropdown(
+                    label: l10n.typeLabel, value: _type,
+                    options: FieldFixtures.realmTypes,
+                    onChanged: (v) => setState(() { _type = v; _error = null; }),
+                  ),
+                ),
               ),
             ],
             const SizedBox(height: 12),
@@ -628,9 +644,15 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
             // ── Cell-specific fields ────────────────────────────────────
             // ═════════════════════════════════════════════════════════════
             if (_isCell) ...[
-              _CellTypeSelector(
-                value: _cellType,
-                onChanged: (v) => setState(() => _cellType = v),
+              IgnorePointer(
+                ignoring: widget.lockType,
+                child: Opacity(
+                  opacity: widget.lockType ? 0.5 : 1.0,
+                  child: _CellTypeSelector(
+                    value: _cellType,
+                    onChanged: (v) => setState(() => _cellType = v),
+                  ),
+                ),
               ),
               const SizedBox(height: 12),
               FieldTextInput(label: l10n.descriptionLabel, controller: _description,

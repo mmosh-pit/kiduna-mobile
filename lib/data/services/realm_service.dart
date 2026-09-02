@@ -198,6 +198,7 @@ class RealmService {
   }
 
   /// Fetch Realm tree (children) via `GET /realms/tree/:id`.
+  /// Fetch children of a realm via `GET /realms/:id/tree` (PostgreSQL).
   Future<List<RealmModel>> fetchRealmChildren(String realmId, {String? authToken}) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
@@ -233,7 +234,7 @@ class RealmService {
   // Added for Alliance feature
   // ═══════════════════════════════════════════════════════════════
 
-  /// Fetch a single Realm by ID via `GET /realms/:id`.
+  /// Fetch a single Realm by ID via `GET /realms/:id` (PostgreSQL).
   Future<RealmModel> fetchRealmById(String realmId, {String? authToken}) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(

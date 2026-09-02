@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/exceptions.dart';
 import '../../../core/utils/logger.dart';
 import '../../../data/models/realm_model.dart';
+import '../../../data/services/gravity_service.dart';
 import '../../../data/services/realm_service.dart';
 import '../../auth/controllers/auth_controller.dart';
 
@@ -60,6 +62,33 @@ class AllianceController extends Notifier<AllianceState> {
 
   Future<void> _loadAlliances() async {
     state = state.copyWith(isLoading: true, clearError: true);
+
+    // 1. Try gravity API first (graph-based).
+    final wallet = ref.read(authControllerProvider).user?.wallet;
+    if (wallet != null && wallet.isNotEmpty) {
+      try {
+        final gravity = await GravityService.instance.fetchGravity(wallet);
+        final alliances = gravity.realms
+            .where((r) => r.type.toLowerCase() == 'alliance')
+            .map((g) => RealmModel(
+                  id: g.id, name: g.name, handle: '', type: g.type,
+                  visibility: 'public', wallet: '', walletEnabled: false,
+                  threshold: 1, status: 'active', createdAt: DateTime.now(),
+                  gravityLevel: g.level, gravityScore: g.score,
+                ))
+            .toList();
+        if (!ref.mounted) return;
+        if (alliances.isNotEmpty) {
+          debugPrint('✅ [AllianceCtrl] Alliances loaded from GRAPH (gravity): ${alliances.length}');
+          state = state.copyWith(isLoading: false, alliances: alliances);
+          return;
+        }
+      } catch (e) {
+        debugPrint('⚠️ [AllianceCtrl] Gravity load failed, falling back to table: $e');
+      }
+    }
+
+    // 2. Fallback: table API (PostgreSQL).
     try {
       final alliances = await RealmService.instance.fetchRealms(
         type: 'alliance',
