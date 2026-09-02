@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flame/game.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -49,6 +50,15 @@ class _AllianceListScreenState extends ConsumerState<AllianceListScreen> {
   bool _joining = false;
   String? _joinMsg;
   bool _joinIsError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Refresh alliances every time this tab is shown.
+    Future.microtask(() {
+      if (mounted) ref.read(allianceControllerProvider.notifier).refresh();
+    });
+  }
 
   @override
   void didChangeDependencies() {
@@ -496,8 +506,8 @@ class _AllianceListScreenState extends ConsumerState<AllianceListScreen> {
           ],
 
           // Wallet info
-          _infoRow('Multisig', _shortenAddr(a.multisigPda ?? ''), colors, text),
-          _infoRow('Vault', _shortenAddr(a.vaultPda ?? ''), colors, text),
+          _copyableRow('Multisig', a.multisigPda ?? '', colors, text),
+          _copyableRow('Vault', a.vaultPda ?? '', colors, text),
           if (a.multisigPda == null) Text('Wallet pending setup\u2026', style: text.bodySm.copyWith(color: colors.quiet)),
           const SizedBox(height: 10),
           _pill('${a.threshold}-of-$signers signers required', colors.gold),
@@ -782,6 +792,23 @@ class _AllianceListScreenState extends ConsumerState<AllianceListScreen> {
       child: Row(children: [
         SizedBox(width: 70.0, child: Text(label, style: text.bodySm.copyWith(color: colors.muted))),
         Expanded(child: Text(value, style: text.bodySm.copyWith(color: colors.quiet))),
+      ]));
+  }
+
+  Widget _copyableRow(String label, String fullAddress, dynamic colors, dynamic text) {
+    if (fullAddress.isEmpty) return const SizedBox.shrink();
+    return Padding(padding: const EdgeInsets.only(bottom: 6),
+      child: Row(children: [
+        SizedBox(width: 70.0, child: Text(label, style: text.bodySm.copyWith(color: colors.muted))),
+        Expanded(child: Text(_shortenAddr(fullAddress), style: text.bodySm.copyWith(color: colors.quiet))),
+        GestureDetector(
+          onTap: () {
+            Clipboard.setData(ClipboardData(text: fullAddress));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('$label address copied!'), duration: const Duration(seconds: 2)));
+          },
+          child: Icon(Icons.copy, size: 14, color: colors.quiet),
+        ),
       ]));
   }
 

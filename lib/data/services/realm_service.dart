@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import '../../core/errors/exceptions.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/api_endpoints.dart';
@@ -16,11 +15,7 @@ class RealmService {
 
   static final RealmService instance = RealmService._();
 
-  /// kinship-backend (writes + fallback reads).
   Dio get _dio => ApiClient.instance.authDio;
-
-  /// agent-backend (graph reads).
-  Dio get _graphDio => ApiClient.instance.dio;
 
   /// Create any Realm type via `POST /realms`.
   ///
@@ -203,41 +198,8 @@ class RealmService {
   }
 
   /// Fetch Realm tree (children) via `GET /realms/tree/:id`.
-  /// Fetch children of a realm.
-  ///
-  /// Primary: graph query via agent-backend (CHILD_OF edges).
-  /// Fallback: `GET /realms/:id/tree` via kinship-backend (PostgreSQL).
+  /// Fetch children of a realm via `GET /realms/:id/tree` (PostgreSQL).
   Future<List<RealmModel>> fetchRealmChildren(String realmId, {String? authToken}) async {
-    // 1. Try graph query.
-    try {
-      final id = realmId.replaceAll("'", "");
-      final res = await _graphDio.post<Map<String, dynamic>>(
-        '/api/graph/query',
-        data: {
-          'query': "MATCH (child:Realm)-[:CHILD_OF]->(parent:Realm {id: '$id'}) RETURN child.id, child.name, child.handle, child.type, child.status, child.owner_wallet, child.visibility",
-          'columns': ['id', 'name', 'handle', 'type', 'status', 'owner_wallet', 'visibility'],
-        },
-      );
-      final rows = (res.data?['rows'] as List?) ?? [];
-      if (rows.isNotEmpty) {
-        debugPrint('✅ [RealmService] Children loaded from GRAPH: ${rows.length} for $realmId');
-        return rows.whereType<Map<String, dynamic>>().map((r) => RealmModel(
-          id: r['id'] as String? ?? '',
-          name: r['name'] as String? ?? '',
-          handle: r['handle'] as String? ?? '',
-          type: r['type'] as String? ?? '',
-          visibility: r['visibility'] as String? ?? 'public',
-          wallet: r['owner_wallet'] as String? ?? '',
-          walletEnabled: false, threshold: 1,
-          status: r['status'] as String? ?? 'active',
-          createdAt: DateTime.now(),
-        )).toList();
-      }
-    } catch (e) {
-      debugPrint('⚠️ [RealmService] Graph children fetch failed, falling back: $e');
-    }
-
-    // 2. Fallback: kinship-backend (PostgreSQL).
     try {
       final response = await _dio.get<Map<String, dynamic>>(
         ApiEndpoints.realmTree(realmId),
@@ -272,23 +234,8 @@ class RealmService {
   // Added for Alliance feature
   // ═══════════════════════════════════════════════════════════════
 
-  /// Fetch a single Realm by ID.
-  ///
-  /// Primary: graph query via agent-backend.
-  /// Fallback: `GET /realms/:id` via kinship-backend (PostgreSQL).
+  /// Fetch a single Realm by ID via `GET /realms/:id` (PostgreSQL).
   Future<RealmModel> fetchRealmById(String realmId, {String? authToken}) async {
-    // 1. Try graph query (agent-backend).
-    try {
-      final realm = await _fetchRealmFromGraph(realmId);
-      if (realm != null) {
-        debugPrint('✅ [RealmService] Realm loaded from GRAPH: $realmId');
-        return realm;
-      }
-    } catch (e) {
-      debugPrint('⚠️ [RealmService] Graph realm fetch failed, falling back: $e');
-    }
-
-    // 2. Fallback: kinship-backend (PostgreSQL).
     try {
       final response = await _dio.get<Map<String, dynamic>>(
         ApiEndpoints.realmById(realmId),
@@ -308,57 +255,6 @@ class RealmService {
       if (e.error is AppException) throw e.error!;
       throw const NetworkException('Unable to load Realm.');
     }
-  }
-
-  /// Query graph for a realm + its members via `/api/graph/query`.
-  Future<RealmModel?> _fetchRealmFromGraph(String realmId) async {
-    final id = realmId.replaceAll("'", "");
-
-    // Fetch realm node.
-    final realmRes = await _graphDio.post<Map<String, dynamic>>(
-      '/api/graph/query',
-      data: {
-        'query': "MATCH (r:Realm {id: '$id'}) RETURN r.id, r.name, r.handle, r.type, r.status, r.owner_wallet, r.parent_id, r.visibility, r.avatar",
-        'columns': ['id', 'name', 'handle', 'type', 'status', 'owner_wallet', 'parent_id', 'visibility', 'avatar'],
-      },
-    );
-    final realmRows = (realmRes.data?['rows'] as List?) ?? [];
-    if (realmRows.isEmpty) return null;
-    final rr = realmRows.first as Map<String, dynamic>;
-
-    // Fetch members via REALM_MEMBER edges.
-    final memberRes = await _graphDio.post<Map<String, dynamic>>(
-      '/api/graph/query',
-      data: {
-        'query': "MATCH (w:Wallet)-[e:REALM_MEMBER]->(r:Realm {id: '$id'}) RETURN w.address, e.role, e.is_signer",
-        'columns': ['wallet', 'role', 'is_signer'],
-      },
-    );
-    final memberRows = (memberRes.data?['rows'] as List?) ?? [];
-    final members = memberRows
-        .whereType<Map<String, dynamic>>()
-        .map((m) => RealmMemberModel(
-              wallet: m['wallet'] as String? ?? '',
-              role: m['role'] as String? ?? 'member',
-              isSigner: m['is_signer'] == true || m['is_signer'] == 'true',
-            ))
-        .toList();
-
-    return RealmModel(
-      id: rr['id'] as String? ?? realmId,
-      name: rr['name'] as String? ?? '',
-      handle: rr['handle'] as String? ?? '',
-      type: rr['type'] as String? ?? '',
-      visibility: rr['visibility'] as String? ?? 'public',
-      wallet: rr['owner_wallet'] as String? ?? '',
-      walletEnabled: false,
-      threshold: 1,
-      status: rr['status'] as String? ?? 'active',
-      members: members,
-      createdAt: DateTime.now(),
-      parentId: rr['parent_id'] as String?,
-      avatar: rr['avatar'] as String?,
-    );
   }
 
   /// Update a member's role via `PATCH /realms/:id/members/:memberId`.
