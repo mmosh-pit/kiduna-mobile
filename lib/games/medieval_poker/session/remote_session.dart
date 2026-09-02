@@ -31,6 +31,8 @@ class RemoteSession implements GameSession {
   @override
   final int viewerSeat;
 
+  final bool isViewer;
+
   // null for the debug transport. `resume` is true for auto-reconnect attempts
   // (vs the initial connect), so the service can tell "resume an in-progress
   // game" from "join a fresh room" and refuse to fabricate a lost room.
@@ -57,6 +59,7 @@ class RemoteSession implements GameSession {
 
   RemoteSession._({
     required this.viewerSeat,
+    this.isViewer = false,
     _Conn Function(bool resume)? opener,
     _Conn? initial,
     Duration heartbeat = const Duration(seconds: 15),
@@ -86,6 +89,7 @@ class RemoteSession implements GameSession {
     String? token,
     bool? timedLevels,
     String? name,
+    bool isViewer = false,
   }) {
     final uri = Uri.parse(wsUrl).replace(queryParameters: {
       'room': room,
@@ -94,6 +98,7 @@ class RemoteSession implements GameSession {
       if (token != null) 'token': token,
       if (timedLevels != null) 'timed': timedLevels ? '1' : '0',
       if (name != null && name.isNotEmpty) 'name': name,
+      if (isViewer) 'viewer': '1',
     });
     _Conn open(bool resume) {
       // A reconnect carries ?resume=1 so the service resumes the held seat if
@@ -111,7 +116,7 @@ class RemoteSession implements GameSession {
       );
     }
 
-    return RemoteSession._(viewerSeat: seat, opener: open);
+    return RemoteSession._(viewerSeat: seat, opener: open, isViewer: isViewer);
   }
 
   /// Build a session over an injected transport (in-memory channel / tests).
@@ -165,6 +170,7 @@ class RemoteSession implements GameSession {
 
   @override
   void answer(GameActionKind? kind, [Map<String, dynamic> payload = const {}]) {
+    if (isViewer) return;
     final active = _prompt.value;
     if (active == null) return;
     _prompt.value = null; // optimistic dismiss; the next prompt/state refreshes

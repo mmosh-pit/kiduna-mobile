@@ -621,5 +621,9 @@
   "inviteMembers": "Invite Members",
   "permanentCellBadge": "Permanent Cell",
   "openCell": "Open Cell",
-  "joinGame": "Join"
+  "joinGame": "Join",
+  "cellGames": "Games",
+  "noGamesYet": "No games yet",
+  "won": "won",
+  "rejoinGame": "Rejoin"
 }

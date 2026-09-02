@@ -276,6 +276,7 @@ class _FieldStackState extends ConsumerState<FieldStack> {
         parent: p.realm.parentId,
         purpose: p.realm.purpose,
         motif: p.realm.motif,
+        cellType: p.realm.cellType,
         gameStatus: p.realm.gameStatus,
         gameRoomCode: p.realm.gameRoomCode,
         gamePlayerCount: p.realm.gamePlayerCount,

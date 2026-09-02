@@ -210,6 +210,7 @@ FieldSnapshot gravityToSnapshot({
         fixture: false,
         reason: rg.reason,
         seed: seed,
+        cellType: rg.cellType,
         gameStatus: rg.gameStatus,
         gameRoomCode: rg.gameRoomCode,
         gamePlayerCount: rg.gamePlayerCount,
