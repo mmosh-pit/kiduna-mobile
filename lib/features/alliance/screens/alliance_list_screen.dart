@@ -273,6 +273,38 @@ class _AllianceListScreenState extends ConsumerState<AllianceListScreen> {
                           itemBuilder: (m) => _memberRow(m as RealmMemberModel, isCreator, colors, text),
                         ),
 
+                        // ── Cells ──
+                        const SizedBox(height: 14),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          decoration: BoxDecoration(
+                            color: colors.surface.withValues(alpha: 0.88),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: colors.camel.withValues(alpha: 0.12))),
+                          child: Row(children: [
+                            Icon(Icons.grid_view_rounded, size: 16, color: colors.gold),
+                            const SizedBox(width: 8),
+                            Text('Cells', style: text.h5.copyWith(color: colors.cream)),
+                            const Spacer(),
+                            GestureDetector(
+                              onTap: () => setState(() => _openPanel = 'newcell'),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: colors.gold.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: colors.gold.withValues(alpha: 0.25))),
+                                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                  Icon(Icons.add, size: 14, color: colors.gold),
+                                  const SizedBox(width: 4),
+                                  Text('New', style: text.caption.copyWith(
+                                    color: colors.gold, fontWeight: FontWeight.w600, fontSize: 11.0)),
+                                ]),
+                              ),
+                            ),
+                          ]),
+                        ),
+
                         // ── Wallet + Proposals (2-column grid) ──
                         if (a.walletEnabled) ...[
                           const SizedBox(height: 14),
@@ -321,6 +353,15 @@ class _AllianceListScreenState extends ConsumerState<AllianceListScreen> {
             FieldPanel(key: const ValueKey('proposal'), label: 'Create Proposal', bounds: bounds,
               width: 620, initialOffset: Offset((bounds.width * 0.5 - 310).clamp(8.0, double.infinity), bounds.height * 0.2),
               onClose: _closePanel, child: ProposalForm(realmId: a.id)),
+          if (_openPanel == 'newcell')
+            FieldPanel(key: const ValueKey('newcell'), label: 'New Cell', bounds: bounds,
+              width: 560, initialOffset: Offset((bounds.width * 0.5 - 280).clamp(8.0, double.infinity), bounds.height * 0.02),
+              onClose: _closePanel, child: RealmPanel(
+                initialType: 'Cell',
+                initialParentId: a.id,
+                lockType: true,
+                onCreated: () => _closePanel(),
+              )),
         ],
       );
     });
