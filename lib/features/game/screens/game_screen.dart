@@ -387,9 +387,94 @@ class _ModeSelector extends StatelessWidget {
               label: l10n.playOnlineLabel,
               subtitle: 'Create or join a room by code',
               onTap: onPlayOnline),
+          const SizedBox(height: 32),
+          // ── Chip info — user-friendly ──
+          Container(
+            constraints: const BoxConstraints(maxWidth: 400),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: colors.deep.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: colors.gold.withValues(alpha: 0.15)),
+            ),
+            child: Column(
+              children: [
+                // Title row.
+                Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Container(
+                    width: 24, height: 24,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: colors.gold.withValues(alpha: 0.15),
+                      border: Border.all(color: colors.gold.withValues(alpha: 0.3))),
+                    child: Icon(Icons.casino_outlined, size: 14, color: colors.gold),
+                  ),
+                  const SizedBox(width: 8),
+                  Text('Free Play Chips', style: text.body.copyWith(
+                    color: colors.gold, fontWeight: FontWeight.w700, fontSize: 15.0)),
+                ]),
+                const SizedBox(height: 10),
+                // Description.
+                Text(
+                  'Everyone starts with the same chips — just for fun!\n'
+                  'No real money. Not connected to KIDUNA tokens.',
+                  textAlign: TextAlign.center,
+                  style: text.caption.copyWith(
+                    color: colors.cream.withValues(alpha: 0.5), height: 1.5, fontSize: 11.0)),
+                const SizedBox(height: 14),
+                // Divider.
+                Container(height: 1, color: colors.camel.withValues(alpha: 0.1)),
+                const SizedBox(height: 14),
+                // Chip types — 2 columns.
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Column(crossAxisAlignment: CrossAxisAlignment.start, children: const [
+                      _ChipRow(label: 'Gold', value: 1000, asset: 'assets/images/chips/chip_gold.png'),
+                      SizedBox(height: 6),
+                      _ChipRow(label: 'Onyx', value: 100, asset: 'assets/images/chips/chip_onyx.png'),
+                      SizedBox(height: 6),
+                      _ChipRow(label: 'Ruby', value: 5, asset: 'assets/images/chips/chip_ruby.png'),
+                    ]),
+                    const SizedBox(width: 28),
+                    Column(crossAxisAlignment: CrossAxisAlignment.start, children: const [
+                      _ChipRow(label: 'Sapphire', value: 500, asset: 'assets/images/chips/chip_sapphire.png'),
+                      SizedBox(height: 6),
+                      _ChipRow(label: 'Emerald', value: 25, asset: 'assets/images/chips/chip_emerald.png'),
+                      SizedBox(height: 6),
+                      _ChipRow(label: 'Opal', value: 1, asset: 'assets/images/chips/chip_opal.png'),
+                    ]),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
+  }
+}
+
+class _ChipRow extends StatelessWidget {
+  const _ChipRow({required this.label, required this.value, required this.asset});
+  final String label;
+  final int value;
+  final String asset;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Image.asset(asset, width: 32, height: 32, filterQuality: FilterQuality.medium),
+      const SizedBox(width: 8),
+      SizedBox(
+        width: 70,
+        child: Text(label, style: TextStyle(
+          color: Colors.white.withValues(alpha: 0.7), fontSize: 12,
+          fontWeight: FontWeight.w600)),
+      ),
+      Text('\$$value', style: const TextStyle(
+        color: Color(0xFFEDC169), fontSize: 12, fontWeight: FontWeight.w700)),
+    ]);
   }
 }
 
