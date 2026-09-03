@@ -75,12 +75,13 @@ abstract class FieldFixtures {
   static const List<String> roles = [
     'Guest',
     'Member',
+    'Sponsor',
     'Organizer',
     'Creator',
     'Builder',
-    'Catalyst',
     'Luminary',
     'Mage',
+    'Catalyst',
   ];
 
   /// Expiration options for an invitation.
