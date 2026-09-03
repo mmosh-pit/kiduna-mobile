@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'package:medieval_poker_engine/protocol.dart';
+import '../chips/chip_display.dart';
 import 'card_zoom.dart';
 import 'game_session.dart';
 
@@ -1609,9 +1610,11 @@ class _GameOver extends StatelessWidget {
               for (final s in view.standings)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: Text('${s.label}  ·  ${s.stack}',
-                      style:
-                          const TextStyle(color: Colors.white54, fontSize: 12)),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Text('${s.label}  ·  ',
+                      style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                    ChipDisplay(total: s.stack, chipSize: 16, compact: true),
+                  ]),
                 ),
             ],
             const SizedBox(height: 20),
