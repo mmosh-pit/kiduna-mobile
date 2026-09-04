@@ -185,6 +185,7 @@
   "create": "Create",
   "invitationNotesHint": "Tell Ki about your relationship, the reason for the invitation, and any notes you have that will help Ki welcome your guest and make them feel at home. All notes you include will be marked \"Personal\" and only available to you.",
   "presentName": "Name",
+  "saving": "Saving…",
   "savePresentation": "Save presentation",
   "presentPurposeHint": "What should {name} make possible?",
   "@presentPurposeHint": {

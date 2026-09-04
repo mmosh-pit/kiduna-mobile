@@ -221,9 +221,9 @@ class LobbyClient {
 
   Future<LobbyTicket> createRoom({int? seats, bool? timedLevels, String? realmId}) async {
     final res = await _call(() => _dio.post('/games/rooms', data: {
-          if (seats != null) 'seats': seats,
-          if (timedLevels != null) 'timedLevels': timedLevels,
-          if (realmId != null) 'realmId': realmId,
+          'seats': ?seats,
+          'timedLevels': ?timedLevels,
+          'realmId': ?realmId,
         }));
     return _ticketOf(res);
   }
@@ -253,7 +253,7 @@ class LobbyClient {
   Future<LobbyTicket> watchRoom(String code, {int? seat}) async {
     final res = await _call(
       () => _dio.post('/games/rooms/$code/watch', data: {
-        if (seat != null) 'seat': seat,
+        'seat': ?seat,
       }),
     );
     return _ticketOf(res);
