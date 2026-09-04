@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/extensions/context_extensions.dart';
 
 /// CSS `.fieldTitle` — label text for form fields.
 class FieldLabel extends StatelessWidget {
-  const FieldLabel({super.key, required this.text});
+  const FieldLabel({super.key, required this.text, this.isRequired = false});
 
   final String text;
+  final bool isRequired;
 
   @override
   Widget build(BuildContext context) {
@@ -15,9 +17,22 @@ class FieldLabel extends StatelessWidget {
       constraints: const BoxConstraints(minHeight: 26),
       child: Align(
         alignment: Alignment.centerLeft,
-        child: Text(
-          text,
-          style: context.kidunaText.label.copyWith(color: colors.cream),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              text,
+              style: context.kidunaText.label.copyWith(color: colors.cream),
+            ),
+            if (isRequired)
+              Text(
+                ' *',
+                style: context.kidunaText.label.copyWith(
+                  color: const Color(0xFFEF4444),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -73,6 +88,8 @@ class FieldTextInput extends StatelessWidget {
     this.maxLines = 1,
     this.maxLength,
     this.minHeight,
+    this.isRequired = false,
+    this.inputFormatters,
   });
 
   final String label;
@@ -81,6 +98,8 @@ class FieldTextInput extends StatelessWidget {
   final int maxLines;
   final int? maxLength;
   final double? minHeight;
+  final bool isRequired;
+  final List<TextInputFormatter>? inputFormatters;
 
   @override
   Widget build(BuildContext context) {
@@ -88,7 +107,7 @@ class FieldTextInput extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        FieldLabel(text: label),
+        FieldLabel(text: label, isRequired: isRequired),
         const SizedBox(height: 6),
         if (maxLength != null)
           ListenableBuilder(
@@ -97,6 +116,7 @@ class FieldTextInput extends StatelessWidget {
               controller: controller,
               maxLines: maxLines,
               maxLength: maxLength,
+              inputFormatters: inputFormatters,
               buildCounter: (context,
                       {required currentLength,
                       required isFocused,
@@ -119,6 +139,7 @@ class FieldTextInput extends StatelessWidget {
           TextField(
             controller: controller,
             maxLines: maxLines,
+            inputFormatters: inputFormatters,
             style: context.kidunaText.caption.copyWith(
               color: context.kiduna.text,
               height: 1.4,
@@ -143,12 +164,14 @@ class FieldDropdown extends StatelessWidget {
     required this.value,
     required this.options,
     required this.onChanged,
+    this.isRequired = false,
   });
 
   final String label;
   final String value;
   final List<String> options;
   final ValueChanged<String> onChanged;
+  final bool isRequired;
 
   @override
   Widget build(BuildContext context) {
@@ -160,7 +183,7 @@ class FieldDropdown extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        FieldLabel(text: label),
+        FieldLabel(text: label, isRequired: isRequired),
         const SizedBox(height: 6),
         SizedBox(
           height: 37,
