@@ -3,6 +3,9 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import 'package:medieval_poker_engine/protocol.dart';
+
+import '../../../data/models/sentinel_rules_model.dart';
+import '../sentinel/sentinel_validator.dart';
 import 'game_session.dart';
 
 /// A [GameSession] decorator that makes an online table *readable*.
@@ -71,6 +74,10 @@ class PacedSession implements GameSession {
   ValueListenable<String> get peek => _inner.peek;
   @override
   ValueListenable<String?> get errorMessage => _inner.errorMessage;
+  @override
+  ValueListenable<SentinelViolation?> get sentinelViolation => _inner.sentinelViolation;
+  @override
+  SentinelRules get sentinelRules => _inner.sentinelRules;
   @override
   ValueListenable<TableSnapshot?> get table => _table;
   @override

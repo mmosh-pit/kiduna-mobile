@@ -2,6 +2,9 @@ import 'package:flutter/foundation.dart';
 
 import 'package:medieval_poker_engine/protocol.dart';
 
+import '../../../data/models/sentinel_rules_model.dart';
+import '../sentinel/sentinel_validator.dart';
+
 /// Connection lifecycle of a session (drives connecting / error overlays).
 enum SessionPhase { connecting, active, disconnected, error }
 
@@ -86,6 +89,12 @@ abstract class GameSession {
   /// when there's nothing specific to say. The HUD shows it in place of the
   /// generic connection message. Never set for a healthy session.
   ValueListenable<String?> get errorMessage;
+
+  /// The most recent sentinel-rule violation (null = no violation showing).
+  ValueListenable<SentinelViolation?> get sentinelViolation;
+
+  /// Sentinel rules active for this session (empty when none).
+  SentinelRules get sentinelRules;
 
   /// Answer the active [prompt]. [kind] may be null for prompts whose response
   /// is read purely from [payload] (e.g. item mode / pick). No-op if there is

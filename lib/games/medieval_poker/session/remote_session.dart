@@ -4,7 +4,11 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+import 'package:medieval_poker_engine/medieval_poker_engine.dart';
 import 'package:medieval_poker_engine/protocol.dart';
+
+import '../../../data/models/sentinel_rules_model.dart';
+import '../sentinel/sentinel_validator.dart';
 import 'game_session.dart';
 
 /// One transport attempt: an incoming frame stream, a send sink, and a closer.
@@ -56,6 +60,10 @@ class RemoteSession implements GameSession {
   final _gameOver = ValueNotifier<GameOverView?>(null);
   final _peek = ValueNotifier<String>('');
   final _errorMessage = ValueNotifier<String?>(null);
+  final _sentinelViolation = ValueNotifier<SentinelViolation?>(null);
+
+  @override
+  final SentinelRules sentinelRules;
 
   RemoteSession._({
     required this.viewerSeat,
@@ -64,6 +72,7 @@ class RemoteSession implements GameSession {
     _Conn? initial,
     Duration heartbeat = const Duration(seconds: 15),
     this._maxReconnects = 5,
+    this.sentinelRules = const SentinelRules(),
   })  : _opener = opener,
         _heartbeatInterval = heartbeat {
     _bind(initial ?? opener!(false)); // initial connect = a fresh join
@@ -89,6 +98,7 @@ class RemoteSession implements GameSession {
     bool? timedLevels,
     String? name,
     bool isViewer = false,
+    SentinelRules sentinelRules = const SentinelRules(),
   }) {
     final uri = Uri.parse(wsUrl).replace(queryParameters: {
       'room': room,
@@ -115,7 +125,7 @@ class RemoteSession implements GameSession {
       );
     }
 
-    return RemoteSession._(viewerSeat: seat, opener: open, isViewer: isViewer);
+    return RemoteSession._(viewerSeat: seat, opener: open, isViewer: isViewer, sentinelRules: sentinelRules);
   }
 
   /// Build a session over an injected transport (in-memory channel / tests).
@@ -168,10 +178,23 @@ class RemoteSession implements GameSession {
   ValueListenable<String?> get errorMessage => _errorMessage;
 
   @override
+  ValueListenable<SentinelViolation?> get sentinelViolation => _sentinelViolation;
+
+  @override
   void answer(GameActionKind? kind, [Map<String, dynamic> payload = const {}]) {
     if (isViewer) return;
     final active = _prompt.value;
     if (active == null) return;
+
+    if (sentinelRules.isNotEmpty && kind != null) {
+      final violation = _checkSentinel(kind, payload);
+      if (violation != null) {
+        _sentinelViolation.value = violation;
+        return;
+      }
+    }
+    _sentinelViolation.value = null;
+
     _prompt.value = null; // optimistic dismiss; the next prompt/state refreshes
     _sendMessage(ClientMessage(
       type: ClientMsgType.action,
@@ -179,6 +202,43 @@ class RemoteSession implements GameSession {
       actionKind: kind,
       payload: payload,
     ));
+  }
+
+  SentinelViolation? _checkSentinel(GameActionKind kind, Map<String, dynamic> payload) {
+    PokerAction? action;
+    switch (kind) {
+      case GameActionKind.fold:
+        action = const PokerAction.fold();
+      case GameActionKind.check:
+        action = const PokerAction.check();
+      case GameActionKind.call:
+        action = const PokerAction.call();
+      case GameActionKind.bet:
+        action = PokerAction.bet(payload['to'] as int? ?? 0);
+      case GameActionKind.raise:
+        action = PokerAction.raise(payload['to'] as int? ?? 0);
+      default:
+        break;
+    }
+
+    if (action != null) {
+      final snap = _table.value;
+      final stack = snap?.seats
+          .where((s) => s.seat == viewerSeat)
+          .firstOrNull
+          ?.stack ?? 0;
+      final player = PokerPlayer(seat: viewerSeat, name: '', stack: stack);
+      return SentinelValidator.validateAction(sentinelRules, action, player);
+    }
+
+    if (kind == GameActionKind.playPower) {
+      final cardId = payload['cardId'] as String?;
+      if (cardId != null) {
+        return SentinelValidator.validatePowerCard(sentinelRules, cardId);
+      }
+    }
+
+    return null;
   }
 
   @override
@@ -196,6 +256,7 @@ class RemoteSession implements GameSession {
     _gameOver.dispose();
     _peek.dispose();
     _errorMessage.dispose();
+    _sentinelViolation.dispose();
   }
 
   // ── Transport lifecycle ──────────────────────────────────────────────────

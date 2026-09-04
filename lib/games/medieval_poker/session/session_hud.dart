@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 
 import 'package:medieval_poker_engine/protocol.dart';
 import '../chips/chip_display.dart';
+import '../../../data/models/sentinel_rules_model.dart';
+import '../sentinel/sentinel_validator.dart';
 import 'card_zoom.dart';
 import 'game_session.dart';
 
@@ -86,6 +88,7 @@ class _SessionHudState extends State<SessionHud> {
         session.gameOver,
         session.peek,
         session.errorMessage,
+        session.sentinelViolation,
       ]),
       builder: (context, _) {
         final table = session.table.value;
@@ -114,6 +117,7 @@ class _SessionHudState extends State<SessionHud> {
               else
                 _Banner(text: _bannerText(table, prompt)),
               if (!isViewer) _PeekToast(text: session.peek.value),
+              if (!isViewer) _SentinelToast(violation: session.sentinelViolation.value),
               if (!isViewer && prompt != null) _promptPanel(context, prompt),
               _HandResultFlash(result: session.handResult.value),
             ],
@@ -126,6 +130,8 @@ class _SessionHudState extends State<SessionHud> {
                   onExit: onExit),
             if (!isViewer) ...[
               _DeckOverlay(session: session, hidden: over != null),
+              if (session.sentinelRules.isNotEmpty)
+                _SentinelRulesOverlay(rules: session.sentinelRules, hidden: over != null),
               _RulesOverlay(hidden: over != null),
             ],
             _CardZoomOverlay(controller: _zoom),
@@ -568,6 +574,89 @@ class _PeekToast extends StatelessWidget {
                       fontWeight: FontWeight.w700)),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SentinelToast extends StatefulWidget {
+  final SentinelViolation? violation;
+  const _SentinelToast({required this.violation});
+  @override
+  State<_SentinelToast> createState() => _SentinelToastState();
+}
+
+class _SentinelToastState extends State<_SentinelToast> {
+  Timer? _timer;
+  SentinelViolation? _showing;
+
+  @override
+  void didUpdateWidget(covariant _SentinelToast old) {
+    super.didUpdateWidget(old);
+    if (!identical(widget.violation, old.violation) && widget.violation != null) {
+      _showing = widget.violation;
+      _timer?.cancel();
+      _timer = Timer(const Duration(milliseconds: 3000), () {
+        if (mounted) setState(() => _showing = null);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final v = _showing;
+    if (v == null) return const SizedBox.shrink();
+    return IgnorePointer(
+      child: Align(
+        alignment: const Alignment(0, -0.25),
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0, end: 1),
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutBack,
+          builder: (context, t, child) => Transform.scale(
+            scale: 0.85 + 0.15 * t.clamp(0.0, 1.0),
+            child: Opacity(opacity: t.clamp(0.0, 1.0), child: child),
+          ),
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xF23A1A0C),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFB3261E), width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFB3261E).withValues(alpha: 0.35),
+                  blurRadius: 18,
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.shield_rounded, color: Color(0xFFF3A0A0), size: 20),
+                const SizedBox(width: 10),
+                Flexible(
+                  child: Text(
+                    v.message,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Color(0xFFF3A0A0),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -1845,6 +1934,334 @@ class _DeckViewRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _SentinelRulesOverlay extends StatefulWidget {
+  final SentinelRules rules;
+  final bool hidden;
+  const _SentinelRulesOverlay({required this.rules, required this.hidden});
+  @override
+  State<_SentinelRulesOverlay> createState() => _SentinelRulesOverlayState();
+}
+
+class _SentinelRulesOverlayState extends State<_SentinelRulesOverlay> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final top = MediaQuery.paddingOf(context).top;
+    final bottom = MediaQuery.paddingOf(context).bottom;
+    final r = widget.rules;
+
+    final constraints = <(String, String)>[
+      if (r.startingStack != null) ('Starting Stack', '${r.startingStack}'),
+      if (r.maxBetAmount != null) ('Max Bet', '${r.maxBetAmount}'),
+      if (r.minBetAmount != null) ('Min Bet', '${r.minBetAmount}'),
+      if (r.maxRaisesPerRound != null) ('Max Raises/Round', '${r.maxRaisesPerRound}'),
+      if (r.turnTimeoutSeconds != null) ('Turn Timeout', '${r.turnTimeoutSeconds}s'),
+      if (r.maxPlayersPerTable != null) ('Max Players', '${r.maxPlayersPerTable}'),
+      if (r.maxHoleCards != null) ('Max Hole Cards', '${r.maxHoleCards}'),
+      if (r.compChipsPerPlayer != null) ('Comp Chips', '${r.compChipsPerPlayer}'),
+      if (r.powerDeckSize != null) ('Deck Size', '${r.powerDeckSize}'),
+      if (r.levelDurationSeconds != null) ('Level Duration', '${r.levelDurationSeconds}s'),
+    ];
+
+    final guardrails = <(String, bool)>[
+      if (r.enablePowerCards != null) ('Power Cards', r.enablePowerCards!),
+      if (r.enableItems != null) ('Items', r.enableItems!),
+      if (r.enableJokers != null) ('Jokers', r.enableJokers!),
+      if (r.enableSuddenDeath != null) ('Sudden Death', r.enableSuddenDeath!),
+      if (r.enableHeatingUp != null) ('Heating Up', r.enableHeatingUp!),
+      if (r.enableTilt != null) ('Tilt', r.enableTilt!),
+      if (r.enableStealth != null) ('Stealth', r.enableStealth!),
+      if (r.timedLevels != null) ('Timed Levels', r.timedLevels!),
+      if (r.allowFoldOnly == true) ('Fold Only', true),
+    ];
+
+    return Stack(
+      children: [
+        if (!widget.hidden)
+          Positioned(
+            top: top + 94,
+            right: 8,
+            child: GestureDetector(
+              onTap: () => setState(() => _open = true),
+              behavior: HitTestBehavior.opaque,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _panel,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFB3261E)),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.shield_rounded, color: Color(0xFFF3A0A0), size: 13),
+                    SizedBox(width: 5),
+                    Text('Cell Rules',
+                        style: TextStyle(
+                            color: Color(0xFFF3A0A0),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        if (_open)
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: () => setState(() => _open = false),
+              child: Container(
+                color: Colors.black.withValues(alpha: 0.88),
+                padding: EdgeInsets.only(top: top + 8, bottom: bottom + 8),
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: _maxOverlayWidth),
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 4, 8, 8),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.shield_rounded, color: Color(0xFFF3A0A0), size: 22),
+                            const SizedBox(width: 10),
+                            const Text('Sentinel Rules',
+                                style: TextStyle(
+                                    fontFamily: 'GoudyHeavyface',
+                                    fontSize: 22,
+                                    color: _gold)),
+                            const Spacer(),
+                            IconButton(
+                              onPressed: () => setState(() => _open = false),
+                              icon: const Icon(Icons.close_rounded, color: Colors.white70),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: ListView(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          children: [
+                            if (r.description != null && r.description!.isNotEmpty) ...[
+                              Text(r.description!,
+                                  style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 13,
+                                      height: 1.4)),
+                              const SizedBox(height: 12),
+                            ],
+                            if (r.principles.isNotEmpty) ...[
+                              const Text('Principles',
+                                  style: TextStyle(
+                                      color: _gold,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 13)),
+                              const SizedBox(height: 6),
+                              for (final p in r.principles)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 4),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text('  •  ',
+                                          style: TextStyle(color: _gold, fontSize: 13)),
+                                      Expanded(
+                                        child: Text(p,
+                                            style: const TextStyle(
+                                                color: Colors.white70,
+                                                fontSize: 13,
+                                                height: 1.35)),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              const SizedBox(height: 12),
+                            ],
+                            if (constraints.isNotEmpty) ...[
+                              const Text('Constraints',
+                                  style: TextStyle(
+                                      color: _gold,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 13)),
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 6,
+                                children: [
+                                  for (final c in constraints)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 10, vertical: 5),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF2A1F0C),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: _panelBorder),
+                                      ),
+                                      child: Text('${c.$1}: ${c.$2}',
+                                          style: const TextStyle(
+                                              color: Colors.white70, fontSize: 12)),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                            ],
+                            if (guardrails.isNotEmpty) ...[
+                              const Text('Guardrails',
+                                  style: TextStyle(
+                                      color: _gold,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 13)),
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 6,
+                                children: [
+                                  for (final g in guardrails)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 10, vertical: 5),
+                                      decoration: BoxDecoration(
+                                        color: g.$2
+                                            ? const Color(0xFF1A2E1A)
+                                            : const Color(0xFF3A1A0C),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: g.$2
+                                              ? const Color(0xFF3FA96A)
+                                              : const Color(0xFFB3261E),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            g.$2
+                                                ? Icons.check_circle_outline_rounded
+                                                : Icons.block_rounded,
+                                            color: g.$2
+                                                ? const Color(0xFF7FE0A6)
+                                                : const Color(0xFFF3A0A0),
+                                            size: 14,
+                                          ),
+                                          const SizedBox(width: 5),
+                                          Text(g.$1,
+                                              style: TextStyle(
+                                                  color: g.$2
+                                                      ? const Color(0xFF7FE0A6)
+                                                      : const Color(0xFFF3A0A0),
+                                                  fontSize: 12)),
+                                        ],
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                            ],
+                            if (r.bannedPowerCards.isNotEmpty) ...[
+                              const Text('Banned Power Cards',
+                                  style: TextStyle(
+                                      color: Color(0xFFF3A0A0),
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 12)),
+                              const SizedBox(height: 4),
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 4,
+                                children: [
+                                  for (final card in r.bannedPowerCards)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF3A1A0C),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                            color: const Color(0xFFB3261E)),
+                                      ),
+                                      child: Text(card,
+                                          style: const TextStyle(
+                                              color: Color(0xFFF3A0A0),
+                                              fontSize: 11)),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                            ],
+                            if (r.bannedCourtMembers.isNotEmpty) ...[
+                              const Text('Banned Court Members',
+                                  style: TextStyle(
+                                      color: Color(0xFFF3A0A0),
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 12)),
+                              const SizedBox(height: 4),
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 4,
+                                children: [
+                                  for (final member in r.bannedCourtMembers)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF3A1A0C),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                            color: const Color(0xFFB3261E)),
+                                      ),
+                                      child: Text(member,
+                                          style: const TextStyle(
+                                              color: Color(0xFFF3A0A0),
+                                              fontSize: 11)),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                            ],
+                            if (r.allowedClasses != null) ...[
+                              const Text('Allowed Classes',
+                                  style: TextStyle(
+                                      color: Color(0xFF7FE0A6),
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 12)),
+                              const SizedBox(height: 4),
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 4,
+                                children: [
+                                  for (final cls in r.allowedClasses!)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF1A2E1A),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                            color: const Color(0xFF3FA96A)),
+                                      ),
+                                      child: Text(cls,
+                                          style: const TextStyle(
+                                              color: Color(0xFF7FE0A6),
+                                              fontSize: 11)),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                            ],
+                            const SizedBox(height: 8),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

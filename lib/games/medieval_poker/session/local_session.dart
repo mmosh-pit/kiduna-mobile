@@ -6,6 +6,9 @@ import 'package:flutter/foundation.dart';
 import 'package:medieval_poker_engine/medieval_poker_engine.dart';
 import 'package:medieval_poker_engine/protocol.dart';
 import 'package:medieval_poker_engine/service.dart';
+
+import '../../../data/models/sentinel_rules_model.dart';
+import '../sentinel/sentinel_validator.dart';
 import 'game_session.dart';
 
 /// An offline (single-player-vs-AI) game exposed through the **same**
@@ -19,6 +22,8 @@ class LocalSession implements GameSession {
   final int viewerSeat = 0;
 
   final PokerConfig config;
+  @override
+  final SentinelRules sentinelRules;
   final int opponentCount;
   final bool revealAll;
   final Random _rng;
@@ -36,6 +41,7 @@ class LocalSession implements GameSession {
   final _peek = ValueNotifier<String>('');
   // Offline play never errors; kept to satisfy the GameSession contract.
   final _errorMessage = ValueNotifier<String?>(null);
+  final _sentinelViolation = ValueNotifier<SentinelViolation?>(null);
 
   final List<String> _log = [];
   Set<int> get _aiSeats => {for (var i = 1; i <= opponentCount; i++) i};
@@ -48,6 +54,7 @@ class LocalSession implements GameSession {
 
   LocalSession({
     this.config = const PokerConfig(timedLevels: true),
+    this.sentinelRules = const SentinelRules(),
     this.opponentCount = 3,
     String humanName = 'You',
     this.revealAll = false,
@@ -116,9 +123,22 @@ class LocalSession implements GameSession {
   ValueListenable<String?> get errorMessage => _errorMessage;
 
   @override
+  ValueListenable<SentinelViolation?> get sentinelViolation => _sentinelViolation;
+
+  @override
   void answer(GameActionKind? kind, [Map<String, dynamic> payload = const {}]) {
     final active = _prompt.value;
     if (active == null) return;
+
+    if (sentinelRules.isNotEmpty && kind != null) {
+      final violation = _checkSentinel(kind, payload);
+      if (violation != null) {
+        _sentinelViolation.value = violation;
+        return;
+      }
+    }
+    _sentinelViolation.value = null;
+
     _prompt.value = null;
     _human.onResponse(ClientMessage(
       type: ClientMsgType.action,
@@ -126,6 +146,38 @@ class LocalSession implements GameSession {
       actionKind: kind,
       payload: payload,
     ));
+  }
+
+  SentinelViolation? _checkSentinel(GameActionKind kind, Map<String, dynamic> payload) {
+    final player = _game.players[viewerSeat];
+    PokerAction? action;
+    switch (kind) {
+      case GameActionKind.fold:
+        action = const PokerAction.fold();
+      case GameActionKind.check:
+        action = const PokerAction.check();
+      case GameActionKind.call:
+        action = const PokerAction.call();
+      case GameActionKind.bet:
+        action = PokerAction.bet(payload['to'] as int? ?? 0);
+      case GameActionKind.raise:
+        action = PokerAction.raise(payload['to'] as int? ?? 0);
+      default:
+        break;
+    }
+
+    if (action != null) {
+      return SentinelValidator.validateAction(sentinelRules, action, player);
+    }
+
+    if (kind == GameActionKind.playPower) {
+      final cardId = payload['cardId'] as String?;
+      if (cardId != null) {
+        return SentinelValidator.validatePowerCard(sentinelRules, cardId);
+      }
+    }
+
+    return null;
   }
 
   @override
@@ -145,6 +197,7 @@ class LocalSession implements GameSession {
     _gameOver.dispose();
     _peek.dispose();
     _errorMessage.dispose();
+    _sentinelViolation.dispose();
   }
 
   // ── Driver → session ───────────────────────────────────────────────────────

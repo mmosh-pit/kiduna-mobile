@@ -4,6 +4,7 @@ import '../../core/network/api_client.dart';
 import '../../core/network/api_endpoints.dart';
 import '../../core/utils/logger.dart';
 import '../models/realm_model.dart';
+import '../models/sentinel_rules_model.dart';
 
 /// Communicates with the kinship-backend Realms API.
 ///
@@ -145,6 +146,48 @@ class RealmService {
           : null;
       throw NetworkException(
         serverMsg ?? 'Unable to update Realm. Please try again.',
+      );
+    }
+  }
+
+  /// Update sentinel rules for a Cell realm via `PATCH /realms/:id`.
+  ///
+  /// Merges the provided [rules] into the realm's `config.sentinelRules` jsonb.
+  /// Only fields present in [rules.toJson()] are sent — unset fields are omitted.
+  Future<RealmModel> updateSentinelRules({
+    required String id,
+    required SentinelRules rules,
+  }) async {
+    try {
+      final response = await _dio.patch<Map<String, dynamic>>(
+        ApiEndpoints.realmById(id),
+        data: {
+          'config': {
+            'sentinelRules': rules.toJson(),
+          },
+        },
+      );
+      final realm = RealmModel.fromJson(
+        response.data!['realm'] as Map<String, dynamic>,
+      );
+      AppLogger.info(
+        'Sentinel rules updated for realm $id',
+        tag: 'RealmService',
+      );
+      return realm;
+    } on DioException catch (e) {
+      if (e.error is AppException) throw e.error!;
+      final serverMsg = e.response?.data is Map
+          ? (e.response!.data as Map)['error'] as String?
+          : null;
+      AppLogger.error(
+        'Failed to update sentinel rules for realm $id',
+        tag: 'RealmService',
+        error: e,
+        stackTrace: e.stackTrace,
+      );
+      throw NetworkException(
+        serverMsg ?? 'Unable to update sentinel rules. Please try again.',
       );
     }
   }

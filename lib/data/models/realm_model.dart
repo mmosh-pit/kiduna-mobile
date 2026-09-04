@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import 'sentinel_rules_model.dart';
+
 /// A single Realm returned by `/realms` or `/realms/:id`.
 ///
 /// Replaces the old [AllianceModel], [InstitutionModel], and [DunaModel]
@@ -40,6 +42,7 @@ class RealmModel {
     this.gameRoomCode,
     this.gamePlayerCount,
     this.gameSeatCount,
+    this.sentinelRules,
   });
 
   final String id;
@@ -114,6 +117,13 @@ class RealmModel {
   final int? gamePlayerCount;
   final int? gameSeatCount;
 
+  /// Sentinel rules parsed from `config['sentinelRules']`. Null when not set.
+  final SentinelRules? sentinelRules;
+
+  /// Effective sentinel rules — returns [SentinelRules.empty] when none are set.
+  SentinelRules get effectiveSentinelRules =>
+      sentinelRules ?? SentinelRules.empty;
+
   // ── Config convenience getters for Institution type ──
 
   String get entityType =>
@@ -164,6 +174,10 @@ class RealmModel {
     final membersJson = json['members'] as List<dynamic>? ?? [];
     final tagsJson = json['tags'] as List<dynamic>? ?? [];
     final configJson = json['config'] as Map<String, dynamic>? ?? {};
+    final sentinelJson = configJson['sentinelRules'];
+    final SentinelRules? parsedSentinel = sentinelJson is Map<String, dynamic>
+        ? SentinelRules.fromJson(sentinelJson)
+        : null;
 
     return RealmModel(
       id: json['id'] as String? ?? '',
@@ -191,6 +205,7 @@ class RealmModel {
           .map(RealmMemberModel.fromJson)
           .toList(),
       createdAt: _parseDate(json['createdAt'] ?? json['created_at']) ?? DateTime.now(),
+      sentinelRules: parsedSentinel,
     );
   }
 

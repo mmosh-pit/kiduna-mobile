@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../../core/errors/exceptions.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../data/models/realm_model.dart';
+import '../../../data/models/sentinel_rules_model.dart';
 import '../../../data/services/realm_service.dart';
 import '../../../games/medieval_poker/session/lobby_client.dart';
 import '../../auth/controllers/auth_controller.dart';
@@ -14,6 +15,8 @@ import '../../dashboard/screens/dashboard_screen.dart';
 import '../../field/controllers/field_controller.dart';
 import '../../field/widgets/field_panel.dart';
 import '../../field/widgets/invite_panel.dart';
+import '../widgets/sentinel_rules_editor.dart';
+import '../widgets/sentinel_rules_section.dart';
 
 const _gold = Color(0xFFC8A24B);
 const _darkBg = Color(0xFF1A1A16);
@@ -81,6 +84,18 @@ class _CellDetailScreenState extends ConsumerState<CellDetailScreen> {
     }
   }
 
+  Future<void> _openSentinelEditor(BuildContext context) async {
+    final current = _realm?.effectiveSentinelRules ?? SentinelRules.empty;
+    final updated = await showSentinelRulesEditor(
+      context: context,
+      realmId: widget.realmId,
+      current: current,
+    );
+    if (updated != null && mounted) {
+      _loadRealm();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = context.kiduna;
@@ -100,6 +115,9 @@ class _CellDetailScreenState extends ConsumerState<CellDetailScreen> {
     final isPlayer = currentMember != null &&
         currentMember.role != 'guest' &&
         currentMember.role != 'visitor';
+    final canEditRules = isCreator ||
+        (currentMember != null &&
+            const {'builder', 'organizer', 'creator'}.contains(currentMember.role));
 
     return LayoutBuilder(
       builder: (context, bounds) {
@@ -162,6 +180,12 @@ class _CellDetailScreenState extends ConsumerState<CellDetailScreen> {
                             isCreator: isCreator,
                             realmId: widget.realmId,
                             onMemberRemoved: _loadRealm,
+                          ),
+                          const SizedBox(height: 20),
+                          SentinelRulesSection(
+                            rules: _realm?.effectiveSentinelRules ?? SentinelRules.empty,
+                            canEdit: canEditRules,
+                            onEdit: () => _openSentinelEditor(context),
                           ),
                           const SizedBox(height: 20),
                           _GamesSection(
