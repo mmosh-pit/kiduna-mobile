@@ -29,11 +29,11 @@ enum Role {
 
   /// Whether this role can create sub-realms / content.
   bool get canCreate =>
-      this == catalyst || this == mage;
+      this == catalyst || this == mage || this == creator;
 
   /// Whether this role can shape / update realm settings.
   bool get canShape =>
-      this == catalyst || this == mage;
+      this == catalyst || this == mage || this == builder;
 
   /// Whether this role can present / edit realm presentation.
   bool get canPresent =>

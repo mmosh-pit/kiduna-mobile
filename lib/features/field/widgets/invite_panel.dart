@@ -33,7 +33,7 @@ class _InvitePanelState extends ConsumerState<InvitePanel> {
     text: '7',
   );
   final TextEditingController _kidunaPerPerson = TextEditingController();
-  String _role = 'Member';
+  String _role = '';
   String _expirationUnit = 'days';
   bool _prepared = false;
   String? _copyStatus;
@@ -59,6 +59,15 @@ class _InvitePanelState extends ConsumerState<InvitePanel> {
       if (role == Role.catalyst && viewerRole != Role.catalyst) return false;
       return true;
     }).toList();
+  }
+
+  /// Returns the current _role if it's in the allowed list,
+  /// otherwise resets to the first allowed role.
+  String _validRole() {
+    final allowed = _allowedRoles();
+    if (allowed.contains(_role)) return _role;
+    _role = allowed.isNotEmpty ? allowed.first : 'Guest';
+    return _role;
   }
 
   String get _expirationValue {
@@ -197,7 +206,7 @@ class _InvitePanelState extends ConsumerState<InvitePanel> {
             ),
             FieldDropdown(
               label: l10n.proposedRole,
-              value: _role,
+              value: _validRole(),
               options: _allowedRoles(),
               onChanged: (v) => setState(() => _role = v),
             ),
