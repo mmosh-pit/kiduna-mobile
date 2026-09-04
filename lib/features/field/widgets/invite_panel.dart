@@ -10,6 +10,7 @@ import '../../../data/models/ki_topic.dart';
 import '../../ki_chat/controllers/ki_chat_controller.dart';
 import '../controllers/field_controller.dart';
 import '../data/field_fixtures.dart';
+import '../data/field_models.dart';
 import 'field_inputs.dart';
 
 /// The Invite working panel: a form to prepare a realm invitation with
@@ -41,6 +42,24 @@ class _InvitePanelState extends ConsumerState<InvitePanel> {
   String? _maxUsesError;
   String? _expirationError;
   String? _kidunaError;
+
+  /// Roles the current viewer is allowed to assign in an invitation.
+  /// Only roles at or below the viewer's rank are shown.
+  /// Only catalyst can invite as catalyst.
+  List<String> _allowedRoles() {
+    final fieldState = ref.read(fieldControllerProvider);
+    final realmId = fieldState.enteredRealmId ?? fieldState.currentRealmId;
+    final viewerRole = realmId != null
+        ? fieldState.viewerRoleIn(realmId)
+        : Role.guest;
+
+    return FieldFixtures.roles.where((label) {
+      final role = Role.parse(label);
+      if (role.index > viewerRole.index) return false;
+      if (role == Role.catalyst && viewerRole != Role.catalyst) return false;
+      return true;
+    }).toList();
+  }
 
   String get _expirationValue {
     final amount = _expirationAmount.text.trim();
@@ -179,7 +198,7 @@ class _InvitePanelState extends ConsumerState<InvitePanel> {
             FieldDropdown(
               label: l10n.proposedRole,
               value: _role,
-              options: FieldFixtures.roles,
+              options: _allowedRoles(),
               onChanged: (v) => setState(() => _role = v),
             ),
 

@@ -13,6 +13,7 @@ import '../../../core/errors/exceptions.dart';
 import '../../../core/utils/logger.dart';
 import '../../../data/models/available_tool_model.dart';
 import '../../../data/models/field_realm.dart';
+import '../data/field_models.dart';
 import '../../../data/models/invitation_request.dart';
 import '../../../data/models/invitation_response.dart';
 import '../../../data/models/ki_topic.dart';
@@ -46,6 +47,7 @@ class FieldState {
     this.isLoading = false,
     this.error,
     this.currentRealmId = 'kinship-duna',
+    this.viewerRoles = const {},
     this.inspectOpen = false,
     this.actionsVisible = true,
     this.fieldFocus = 100,
@@ -90,6 +92,15 @@ class FieldState {
   final bool actionsVisible;
   final double fieldFocus;
   final String currentRealmId;
+
+  /// Per-realm role for the current user (realm_id → role string).
+  final Map<String, String> viewerRoles;
+
+  /// Get the user's role in a specific realm.
+  Role viewerRoleIn(String realmId) {
+    final raw = viewerRoles[realmId];
+    return raw != null ? Role.parse(raw) : Role.guest;
+  }
 
   /// Ki's share of the width on desktop (0.25-0.34).
   final double kiFraction;
@@ -171,6 +182,7 @@ class FieldState {
     String? error,
     bool clearError = false,
     String? currentRealmId,
+    Map<String, String>? viewerRoles,
     bool? inspectOpen,
     bool? actionsVisible,
     double? fieldFocus,
@@ -220,6 +232,7 @@ class FieldState {
       currentRealm: currentRealm ?? this.currentRealm,
       isLoading: isLoading ?? this.isLoading,
       currentRealmId: currentRealmId ?? this.currentRealmId,
+      viewerRoles: viewerRoles ?? this.viewerRoles,
       error: clearError ? null : (error ?? this.error),
       inspectOpen: inspectOpen ?? this.inspectOpen,
       actionsVisible: actionsVisible ?? this.actionsVisible,
@@ -346,6 +359,7 @@ class FieldController extends Notifier<FieldState> {
     final authWallet = ref.read(authControllerProvider).user?.wallet;
     if (authWallet != null && authWallet.isNotEmpty) {
       Future.microtask(() => _loadGravityFromApi(authWallet));
+      Future.microtask(() => _loadViewerRolesFromTable(authWallet));
     }
 
     return FieldState(
@@ -382,6 +396,14 @@ class FieldController extends Notifier<FieldState> {
       enteredRealmId: realmId,
       enteredRealmName: realmName,
     );
+
+    // Load viewer role for the entered realm if not already known.
+    if (!state.viewerRoles.containsKey(realmId)) {
+      final wallet = ref.read(authControllerProvider).user?.wallet;
+      if (wallet != null) {
+        Future.microtask(() => _loadViewerRolesFromTable(wallet));
+      }
+    }
   }
 
   void exitEnteredRealm() {
@@ -538,6 +560,35 @@ class FieldController extends Notifier<FieldState> {
   int gravityFor(String realmId) => state.realmGravity[realmId] ?? 3;
 
   /// Loads gravity scores from the backend API and populates [realmGravity].
+  /// Load viewer roles from table API (realm_members).
+  /// Fills in roles that gravity may not have.
+  Future<void> _loadViewerRolesFromTable(String wallet) async {
+    try {
+      final userRealms = await RealmService.instance.fetchRealms();
+      final roles = <String, String>{...state.viewerRoles};
+      for (final realm in userRealms) {
+        // Creator = catalyst
+        if (realm.wallet == wallet && !roles.containsKey(realm.id)) {
+          roles[realm.id] = 'catalyst';
+        }
+        // Check members for role
+        for (final m in realm.members) {
+          if (m.wallet == wallet) {
+            roles[realm.id] = m.role;
+            break;
+          }
+        }
+      }
+      if (!ref.mounted) return;
+      state = state.copyWith(viewerRoles: roles);
+    } catch (e) {
+      AppLogger.warning(
+        'Table API roles load failed: $e',
+        tag: 'FieldController',
+      );
+    }
+  }
+
   Future<void> _loadGravityFromApi(String wallet) async {
     try {
       final response = await GravityService.instance.fetchGravity(wallet);
@@ -551,15 +602,25 @@ class FieldController extends Notifier<FieldState> {
         'quiet': 1,
       };
       final map = <String, int>{};
+      final roles = <String, String>{};
       for (final realm in response.realms) {
         map[realm.id] = levelToInt[realm.level] ?? 3;
+        if (realm.role != null && realm.role!.isNotEmpty) {
+          roles[realm.id] = realm.role!;
+        }
       }
 
-      state = state.copyWith(realmGravity: {...state.realmGravity, ...map});
+      state = state.copyWith(
+        realmGravity: {...state.realmGravity, ...map},
+        viewerRoles: {...state.viewerRoles, ...roles},
+      );
       AppLogger.info(
         'Gravity loaded: ${response.realms.length} realms',
         tag: 'FieldController',
       );
+
+      // Also load roles from table API (fallback — gravity may return null roles)
+      _loadViewerRolesFromTable(wallet);
     } catch (e) {
       AppLogger.warning(
         'Gravity API load failed, using local defaults',
@@ -677,7 +738,19 @@ class FieldController extends Notifier<FieldState> {
         ? 'Team Wallet ${pda.substring(0, 4)}…${pda.substring(pda.length - 4)} ready.'
         : '';
 
+    // Read the caller's role from the backend response (members array).
+    final wallet = ref.read(authControllerProvider).user?.wallet;
+    final myMember = realm.members.cast<RealmMemberModel?>().firstWhere(
+      (m) => m?.wallet == wallet,
+      orElse: () => null,
+    );
+    final updatedRoles = <String, String>{...state.viewerRoles};
+    if (myMember != null) {
+      updatedRoles[realm.id] = myMember.role;
+    }
+
     state = state.copyWith(
+      viewerRoles: updatedRoles,
       openActions: state.openActions.where((item) => item != 'realm').toList(),
       refreshToken: state.refreshToken + 1,
     );

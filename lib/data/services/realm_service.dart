@@ -564,4 +564,23 @@ class RealmService {
       throw const NetworkException('Unable to fetch transactions.');
     }
   }
+
+  // ── Member management ──────────────────────────────────────────────────
+
+  /// Remove a member via `DELETE /realms/:id/members/:memberId`.
+  Future<void> removeMember({
+    required String realmId,
+    required String memberId,
+  }) async {
+    try {
+      await _dio.delete<Map<String, dynamic>>(
+        ApiEndpoints.realmMemberRemove(realmId, memberId),
+        data: {},
+      );
+    } on DioException catch (e) {
+      if (e.error is AppException) throw e.error!;
+      final msg = e.response?.data?['error'] as String?;
+      throw ServerException(msg ?? 'Unable to remove member.');
+    }
+  }
 }

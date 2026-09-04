@@ -204,10 +204,18 @@ class RealmModel {
 @immutable
 class RealmMemberModel {
   const RealmMemberModel({
+    required this.id,
     required this.wallet,
     required this.role,
     required this.isSigner,
+    this.name,
+    this.displayName,
+    this.username,
+    this.picture,
   });
+
+  /// Unique member row ID (used for PATCH/DELETE).
+  final String id;
 
   final String wallet;
 
@@ -218,11 +226,35 @@ class RealmMemberModel {
   /// Whether this member is a signer on the Squads multisig on-chain.
   final bool isSigner;
 
+  /// User's full name.
+  final String? name;
+
+  /// User's display name.
+  final String? displayName;
+
+  /// User's username / handle.
+  final String? username;
+
+  /// User's profile picture URL.
+  final String? picture;
+
+  /// Best available label for display.
+  String get label =>
+      displayName?.isNotEmpty == true ? displayName! :
+      name?.isNotEmpty == true ? name! :
+      username?.isNotEmpty == true ? '@$username' :
+      '${wallet.substring(0, 4)}…${wallet.substring(wallet.length - 4)}';
+
   factory RealmMemberModel.fromJson(Map<String, dynamic> json) {
     return RealmMemberModel(
+      id: json['id'] as String? ?? '',
       wallet: json['wallet'] as String? ?? '',
       role: json['role'] as String? ?? 'member',
       isSigner: json['isSigner'] as bool? ?? json['is_signer'] as bool? ?? false,
+      name: json['name'] as String?,
+      displayName: json['displayName'] as String?,
+      username: json['username'] as String?,
+      picture: json['picture'] as String?,
     );
   }
 }

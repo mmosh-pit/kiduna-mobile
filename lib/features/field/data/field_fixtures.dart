@@ -1,6 +1,7 @@
 import '../../../config/assets.dart';
 import '../../../data/models/field_realm.dart';
 import '../../../data/models/ki_topic.dart';
+import 'field_models.dart';
 
 /// A selectable fact in the Inspect panel.
 typedef FieldFact = ({String label, String value, KiTopic topic});
@@ -12,6 +13,7 @@ typedef FieldAction = ({
   String panelLabel,
   String icon,
   KiTopic topic,
+  bool Function(Role role) canAccess,
 });
 
 /// A suggested-prompt chip offered beneath the Ki thread.
@@ -127,12 +129,13 @@ abstract class FieldFixtures {
         'changes in the Field.',
   );
 
-  static const List<FieldAction> actions = [
+  static final List<FieldAction> actions = [
     (
       id: 'invite',
       label: 'Invite people to join you here',
       panelLabel: 'Prepare a Kiduna Invitation',
       icon: '⇄',
+      canAccess: (Role role) => role.canInvite,
       topic: KiTopic(
         title: 'Invite someone',
         body:
@@ -148,6 +151,7 @@ abstract class FieldFixtures {
       label: 'Form a New Realm',
       panelLabel: 'Form a New Realm',
       icon: '✦',
+      canAccess: (Role role) => role.canCreate,
       topic: KiTopic(
         title: 'Form a New Realm',
         body:
@@ -163,6 +167,7 @@ abstract class FieldFixtures {
       label: 'Shape Kinship Duna',
       panelLabel: 'Shape Kinship Duna',
       icon: '◈',
+      canAccess: (Role role) => role.canShape,
       topic: KiTopic(
         title: 'Shape Kinship Duna',
         body:
@@ -178,6 +183,7 @@ abstract class FieldFixtures {
       label: 'Present Kinship Duna',
       panelLabel: 'Present Kinship Duna',
       icon: '◎',
+      canAccess: (Role role) => role.canPresent,
       topic: KiTopic(
         title: 'Present Kinship Duna',
         body:
@@ -186,6 +192,22 @@ abstract class FieldFixtures {
         invitation:
             'Edit the Realm directly in the working panel or ask Ki to help '
             'clarify how it should present.',
+      ),
+    ),
+    (
+      id: 'members',
+      label: 'Manage Members',
+      panelLabel: 'Realm Members',
+      icon: '⊕',
+      canAccess: (Role role) => role.canManageMembers,
+      topic: KiTopic(
+        title: 'Manage Members',
+        body:
+            'View everyone in this Realm, change their roles, or remove '
+            'members who no longer belong.',
+        invitation:
+            'Use the working panel to see all members and adjust roles, '
+            'or ask Ki for help managing the team.',
       ),
     ),
   ];

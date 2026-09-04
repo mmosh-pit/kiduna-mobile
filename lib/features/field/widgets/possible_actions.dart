@@ -4,15 +4,43 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../controllers/field_controller.dart';
 import '../data/field_fixtures.dart';
+import '../data/field_models.dart';
 
-/// The Possible Actions panel body: a 2×2 grid of the Actions available now.
+/// The Possible Actions panel body: a grid of the Actions available to the
+/// user based on their role in the current Realm.
 /// Selecting one opens its working panel and asks Ki about it.
 class PossibleActions extends ConsumerWidget {
   const PossibleActions({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    const actions = FieldFixtures.actions;
+    final fieldState = ref.watch(fieldControllerProvider);
+    final currentRealmId = fieldState.currentRealmId;
+
+    // Determine the user's role in the current realm.
+    // If no realm selected or user is the ecosystem creator → catalyst.
+    final role = currentRealmId != null
+        ? fieldState.viewerRoleIn(currentRealmId)
+        : Role.catalyst;
+
+    // Filter actions based on role permissions.
+    final actions = FieldFixtures.actions
+        .where((a) => a.canAccess(role))
+        .toList();
+
+    if (actions.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(24),
+        child: Text(
+          'No actions available for your current role.',
+          style: context.kidunaText.body.copyWith(
+            color: context.kiduna.muted,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      );
+    }
+
     final controller = ref.read(fieldControllerProvider.notifier);
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -37,17 +65,22 @@ class PossibleActions extends ConsumerWidget {
         for (var row = 0; row < actions.length; row += 2)
           Row(
             children: [
-              for (var column = row; column < row + 2; column++)
+              for (var column = row;
+                  column < row + 2 && column < actions.length;
+                  column++)
                 Expanded(
                   child: _ActionButton(
                     action: actions[column],
                     onTap: () => controller.chooseAction(actions[column]),
                     // Only internal dividers: right border on the left column,
                     // bottom border on the top row.
-                    rightBorder: column.isEven,
-                    bottomBorder: column < 2,
+                    rightBorder: column.isEven && column + 1 < actions.length,
+                    bottomBorder: column < 2 && row + 2 < actions.length,
                   ),
                 ),
+              // Fill empty cell when odd count lands on last row.
+              if (row + 1 >= actions.length)
+                const Expanded(child: SizedBox.shrink()),
             ],
           ),
       ],
