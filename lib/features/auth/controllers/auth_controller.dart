@@ -8,6 +8,10 @@ import '../../../core/utils/logger.dart';
 import '../../../data/local/secure_storage.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/services/auth_service.dart';
+import '../../dashboard/controllers/ecosystem_controller.dart';
+import '../../field/controllers/field_controller.dart';
+import '../../ki_chat/controllers/ally_controller.dart';
+import '../../ki_chat/controllers/ki_chat_controller.dart';
 import '../enums/auth_status.dart';
 
 @immutable
@@ -170,8 +174,19 @@ class AuthController extends Notifier<AuthState> {
 
   Future<void> logout() async {
     await SecureStorage.instance.clearAll();
+
+    // Wipe all user-scoped data from memory so the next login starts clean.
+    // Without this, a quick account switch can leak the previous user's chat
+    // messages, ally identity, realm context, and ecosystem data into the
+    // new session.  (Bug #46 — cross-account chat leak)
+    ref.invalidate(kiChatControllerProvider);
+    ref.invalidate(allyControllerProvider);
+    ref.invalidate(fieldControllerProvider);
+    ref.invalidate(ecosystemControllerProvider);
+
     state = const AuthState(status: AuthStatus.unauthenticated);
-    AppLogger.info('Logged out', tag: 'Auth');
+    AppLogger.info('Logged out — all user-scoped providers invalidated',
+        tag: 'Auth');
   }
 }
 

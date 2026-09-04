@@ -361,38 +361,8 @@ class _KiHeader extends StatelessWidget {
               context.l10n.ki,
               style: text.display.copyWith(color: colors.cream),
             ),
-            const Spacer(),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: colors.sky.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: colors.sky.withValues(alpha: 0.4)),
-              ),
-              child: Text(
-                '${context.l10n.yourAllies}  2',
-                style: text.bodySmall.copyWith(color: colors.sky),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            Text(
-              '${context.l10n.fieldFocus.toUpperCase()}  100%',
-              style: text.eyebrowSmall.copyWith(color: colors.quiet),
-            ),
-            const SizedBox(width: 10),
-            Container(
-              width: 96,
-              height: 3,
-              decoration: BoxDecoration(
-                color: colors.sky,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
+            // "Your Allies 2" pill and "Focus 100%" bar removed — they were
+            // non-functional hardcoded placeholders causing ghost UI.  (Bug #98)
           ],
         ),
       ],
