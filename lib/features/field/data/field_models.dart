@@ -43,6 +43,10 @@ enum Role {
   bool get canManageMembers =>
       this == catalyst || this == mage;
 
+  /// Whether this role can view alliance / squad wallet.
+  bool get canViewAlliance =>
+      this == catalyst || this == mage || this == sponsor;
+
   static Role parse(String? raw) => values.firstWhere(
         (r) => r.label.toLowerCase() == raw?.toLowerCase(),
         orElse: () => Role.guest,

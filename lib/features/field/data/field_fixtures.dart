@@ -210,6 +210,22 @@ abstract class FieldFixtures {
             'or ask Ki for help managing the team.',
       ),
     ),
+    (
+      id: 'alliance',
+      label: 'View Alliance',
+      panelLabel: 'Alliance',
+      icon: '⬡',
+      canAccess: (Role role) => role.canViewAlliance,
+      topic: KiTopic(
+        title: 'View Alliance',
+        body:
+            'View the Squad wallet, balances, signers, and recent '
+            'transactions for this Realm.',
+        invitation:
+            'Open the Alliance tab to manage the shared wallet '
+            'and review activity.',
+      ),
+    ),
   ];
 
   static const List<FieldFact> facts = [

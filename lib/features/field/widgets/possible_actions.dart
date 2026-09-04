@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/extensions/context_extensions.dart';
+import '../../dashboard/screens/dashboard_screen.dart';
 import '../controllers/field_controller.dart';
 import '../data/field_fixtures.dart';
 import '../data/field_models.dart';
@@ -71,7 +72,17 @@ class PossibleActions extends ConsumerWidget {
                 Expanded(
                   child: _ActionButton(
                     action: actions[column],
-                    onTap: () => controller.chooseAction(actions[column]),
+                    onTap: () {
+                      if (actions[column].id == 'alliance') {
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(
+                            builder: (_) => const DashboardScreen(initialTab: 3),
+                          ),
+                        );
+                      } else {
+                        controller.chooseAction(actions[column]);
+                      }
+                    },
                     // Only internal dividers: right border on the left column,
                     // bottom border on the top row.
                     rightBorder: column.isEven && column + 1 < actions.length,
