@@ -61,11 +61,14 @@ class AllianceController extends Notifier<AllianceState> {
   Future<void> _loadAlliances() async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final alliances = await RealmService.instance.fetchRealms(
-        type: 'alliance',
+      final allRealms = await RealmService.instance.fetchRealms(
         authToken: _token,
       );
       if (!ref.mounted) return;
+      // Show all wallet-enabled realms + alliance type realms.
+      final alliances = allRealms
+          .where((r) => r.walletEnabled || r.type == 'alliance')
+          .toList();
       state = state.copyWith(isLoading: false, alliances: alliances);
     } on AppException catch (e) {
       if (!ref.mounted) return;

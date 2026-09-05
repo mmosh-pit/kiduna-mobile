@@ -11,16 +11,45 @@ Color? parseHex(String? hex) {
 enum Role {
   guest('Guest'),
   member('Member'),
+  sponsor('Sponsor'),
   organizer('Organizer'),
   creator('Creator'),
   builder('Builder'),
-  catalyst('Catalyst'),
   luminary('Luminary'),
-  mage('Mage');
+  mage('Mage'),
+  catalyst('Catalyst');
 
   const Role(this.label);
 
   final String label;
+
+  /// Whether this role can invite people.
+  bool get canInvite =>
+      this == catalyst || this == mage || this == organizer;
+
+  /// Whether this role can create sub-realms / content.
+  bool get canCreate =>
+      this == catalyst || this == mage || this == creator;
+
+  /// Whether this role can shape / update realm settings.
+  bool get canShape =>
+      this == catalyst || this == mage || this == builder;
+
+  /// Whether this role can present / edit realm presentation.
+  bool get canPresent =>
+      this == catalyst || this == mage;
+
+  /// Whether this role can manage members (change roles, kick).
+  bool get canManageMembers =>
+      this == catalyst || this == mage;
+
+  /// Whether this role can view alliance / squad wallet.
+  bool get canViewAlliance =>
+      this == catalyst || this == mage || this == sponsor;
+
+  /// Whether this role can pay compute for realm members.
+  bool get canPayCompute =>
+      this == catalyst || this == mage || this == sponsor;
 
   static Role parse(String? raw) => values.firstWhere(
         (r) => r.label.toLowerCase() == raw?.toLowerCase(),

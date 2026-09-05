@@ -514,25 +514,6 @@ class RealmService {
     }
   }
 
-  /// Remove a member from a realm (soft delete).
-  Future<void> removeMember({
-    required String realmId,
-    required String memberId,
-  }) async {
-    try {
-      await _dio.delete<Map<String, dynamic>>(
-        '${ApiEndpoints.realmById(realmId)}/members/$memberId',
-        data: <String, dynamic>{},
-      );
-    } on DioException catch (e) {
-      if (e.error is AppException) throw e.error!;
-      final msg = e.response?.data is Map
-          ? (e.response!.data as Map)['error'] as String?
-          : null;
-      throw NetworkException(msg ?? 'Unable to remove member.');
-    }
-  }
-
   /// Propose removing a signer from the Squads multisig.
   Future<Map<String, dynamic>> removeMemberProposal({
     required String realmId,
@@ -620,6 +601,25 @@ class RealmService {
     } on DioException catch (e) {
       if (e.error is AppException) throw e.error!;
       throw const NetworkException('Unable to fetch transactions.');
+    }
+  }
+
+  // ── Member management ──────────────────────────────────────────────────
+
+  /// Remove a member via `DELETE /realms/:id/members/:memberId`.
+  Future<void> removeMember({
+    required String realmId,
+    required String memberId,
+  }) async {
+    try {
+      await _dio.delete<Map<String, dynamic>>(
+        ApiEndpoints.realmMemberRemove(realmId, memberId),
+        data: {},
+      );
+    } on DioException catch (e) {
+      if (e.error is AppException) throw e.error!;
+      final msg = e.response?.data?['error'] as String?;
+      throw ServerException(msg ?? 'Unable to remove member.');
     }
   }
 }
