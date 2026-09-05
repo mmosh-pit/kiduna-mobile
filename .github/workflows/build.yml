@@ -255,6 +255,7 @@ jobs:
           cp artifacts/web/web-bundle.zip release-assets/web-bundle.zip
           cp artifacts/windows/kiduna-windows-setup.exe release-assets/kiduna-windows-setup.exe
           cp artifacts/ios-build/ios-bundle.zip release-assets/ios-bundle.zip
+          cp artifacts/macos/macos-bundle.zip release-assets/macos-bundle.zip
           ls -la release-assets
 
       - name: Create GitHub Release
