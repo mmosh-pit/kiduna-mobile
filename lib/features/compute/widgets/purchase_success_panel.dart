@@ -31,13 +31,19 @@ class _PurchaseSuccessPanelState extends State<PurchaseSuccessPanel> {
   bool _closeBlocked = false;
 
   void _handlePrimaryAction() {
-    if (!kIsWeb) {
-      widget.onDone?.call();
+    // If a callback was provided (e.g. Navigator.pop from in-app push),
+    // use it regardless of platform. This lets screens like PayCompute
+    // push BuyKiduna in-app and pop back on success.
+    if (widget.onDone != null) {
+      widget.onDone!.call();
       return;
     }
-    final closed = closeWebWindow();
-    if (!closed && mounted) {
-      setState(() => _closeBlocked = true);
+    // No callback — try closing the browser tab (desktop → browser flow).
+    if (kIsWeb) {
+      final closed = closeWebWindow();
+      if (!closed && mounted) {
+        setState(() => _closeBlocked = true);
+      }
     }
   }
 

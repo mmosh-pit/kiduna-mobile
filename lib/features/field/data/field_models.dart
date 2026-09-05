@@ -47,6 +47,10 @@ enum Role {
   bool get canViewAlliance =>
       this == catalyst || this == mage || this == sponsor;
 
+  /// Whether this role can pay compute for realm members.
+  bool get canPayCompute =>
+      this == catalyst || this == mage || this == sponsor;
+
   static Role parse(String? raw) => values.firstWhere(
         (r) => r.label.toLowerCase() == raw?.toLowerCase(),
         orElse: () => Role.guest,

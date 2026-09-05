@@ -226,6 +226,22 @@ abstract class FieldFixtures {
             'and review activity.',
       ),
     ),
+    (
+      id: 'pay_compute',
+      label: 'Pay Compute',
+      panelLabel: 'Pay Compute',
+      icon: '◈',
+      canAccess: (Role role) => role.canPayCompute,
+      topic: KiTopic(
+        title: 'Pay Compute',
+        body:
+            'Purchase KIDUNA tokens and gift compute to members '
+            'of this Realm.',
+        invitation:
+            'Buy KIDUNA and transfer compute to realm members '
+            'so they can use AI services.',
+      ),
+    ),
   ];
 
   static const List<FieldFact> facts = [

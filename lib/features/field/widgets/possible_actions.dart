@@ -1,11 +1,39 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../../config/env.dart';
 import '../../../core/extensions/context_extensions.dart';
+import '../../compute/screens/pay_compute_screen.dart';
 import '../../dashboard/screens/dashboard_screen.dart';
 import '../controllers/field_controller.dart';
 import '../data/field_fixtures.dart';
 import '../data/field_models.dart';
+
+/// Opens the Pay Compute flow.
+/// On web: pushes PayComputeScreen in-app.
+/// On desktop: opens the web app in browser.
+Future<void> _openPayCompute(BuildContext context, String? realmId) async {
+  if (kIsWeb) {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PayComputeScreen(realmId: realmId),
+      ),
+    );
+    return;
+  }
+
+  final base =
+      Env.webAppUrl.isNotEmpty ? Env.webAppUrl : 'https://mobile.kiduna.dev';
+  final path = realmId != null
+      ? '$base/pay-compute?realmId=$realmId'
+      : '$base/pay-compute';
+  final uri = Uri.parse(path);
+  if (await canLaunchUrl(uri)) {
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+}
 
 /// The Possible Actions panel body: a grid of the Actions available to the
 /// user based on their role in the current Realm.
@@ -18,16 +46,27 @@ class PossibleActions extends ConsumerWidget {
     final fieldState = ref.watch(fieldControllerProvider);
     final currentRealmId = fieldState.currentRealmId;
 
-    // Determine the user's role in the current realm.
-    // If no realm selected or user is the ecosystem creator → catalyst.
-    final role = currentRealmId != null
-        ? fieldState.viewerRoleIn(currentRealmId)
-        : Role.catalyst;
+    // Actions hidden at root realm (ecosystem) — they need a specific realm.
+    const _rootHiddenActions = {'pay_compute', 'alliance', 'members'};
 
-    // Filter actions based on role permissions.
-    final actions = FieldFixtures.actions
-        .where((a) => a.canAccess(role))
-        .toList();
+    // At root realm (no entered realm), show all actions for all users
+    // except realm-specific ones. Inside a sub-realm, filter by role.
+    final isRootRealm = fieldState.enteredRealmId == null;
+
+    final List<FieldAction> actions;
+
+    if (isRootRealm) {
+      actions = FieldFixtures.actions
+          .where((a) => !_rootHiddenActions.contains(a.id))
+          .toList();
+    } else {
+      final role = currentRealmId != null
+          ? fieldState.viewerRoleIn(currentRealmId)
+          : Role.guest;
+      actions = FieldFixtures.actions
+          .where((a) => a.canAccess(role))
+          .toList();
+    }
 
     if (actions.isEmpty) {
       return Padding(
@@ -79,6 +118,11 @@ class PossibleActions extends ConsumerWidget {
                             builder: (_) => const DashboardScreen(initialTab: 3),
                           ),
                         );
+                      } else if (actions[column].id == 'pay_compute') {
+                        final fieldState = ref.read(fieldControllerProvider);
+                        final realmId = fieldState.enteredRealmId ??
+                            fieldState.currentRealmId;
+                        _openPayCompute(context, realmId);
                       } else {
                         controller.chooseAction(actions[column]);
                       }
