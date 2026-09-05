@@ -1,40 +1,109 @@
 import 'package:flutter/foundation.dart';
 
-/// Response from `POST /api/v1/codes` — the three values the review panel
-/// displays.
+/// Response from `POST /realm-invites/:realmId` — the values the review
+/// panel displays.
 @immutable
 class InvitationResponse {
   const InvitationResponse({
     required this.id,
     required this.code,
-    required this.recipientName,
     required this.invitationLink,
-    required this.invitationMessage,
+    required this.realmName,
+    required this.role,
+    required this.maxUses,
+    this.qrCodeUrl = '',
+    this.recipientName,
+    this.inviterHandle,
+    this.kidunaPerPerson = 0,
+    this.expiresAt,
+    this.label,
   });
 
-  /// Database ID of the created code.
+  /// Database ID of the created invite.
   final String id;
 
-  /// The generated code string (e.g. `KIN-ABC123-XYZ`).
+  /// The generated code string (e.g. `RLM-ABC123`).
   final String code;
 
-  /// Recipient name echoed back from the server.
-  final String recipientName;
-
-  /// Full deep-link URL (e.g. `https://join.kiduna.org/k/KIN-ABC123-XYZ`).
+  /// Full deep-link URL (e.g. `https://kiduna.ai/ravi/code/RLM-ABC123`).
   final String invitationLink;
 
-  /// The formatted personal invitation message.
-  final String invitationMessage;
+  /// QR code image URL (e.g. `https://backend/realm-invites/qr/RLM-ABC123`).
+  final String qrCodeUrl;
+
+  /// Realm name.
+  final String realmName;
+
+  /// Role granted on join.
+  final String role;
+
+  /// Max people who can use this code.
+  final int maxUses;
+
+  /// Optional recipient name.
+  final String? recipientName;
+
+  /// Inviter's handle (username).
+  final String? inviterHandle;
+
+  /// KIDUNA sponsored per person (0 = no sponsorship).
+  final double kidunaPerPerson;
+
+  /// When the invite expires.
+  final String? expiresAt;
+
+  /// Purpose label.
+  final String? label;
 
   factory InvitationResponse.fromJson(Map<String, dynamic> json) {
+    final data = json['data'] as Map<String, dynamic>? ?? json;
     return InvitationResponse(
-      id: json['id'] as String,
-      code: json['code'] as String,
-      recipientName: json['recipientName'] as String,
-      invitationLink: json['invitationLink'] as String,
-      invitationMessage: json['invitationMessage'] as String,
+      id: data['id'] as String,
+      code: data['code'] as String,
+      invitationLink: (data['url'] as String?) ?? '',
+      qrCodeUrl: (data['qrCodeUrl'] as String?) ?? '',
+      realmName: (data['realmName'] as String?) ?? '',
+      role: (data['role'] as String?) ?? 'member',
+      maxUses: int.tryParse(data['maxUses']?.toString() ?? '') ?? 1,
+      recipientName: data['invitedName'] as String?,
+      inviterHandle: data['inviterHandle'] as String?,
+      kidunaPerPerson:
+          double.tryParse(data['kidunaPerPerson']?.toString() ?? '') ??
+          double.tryParse(data['kiduna_per_person']?.toString() ?? '') ??
+          0,
+      expiresAt: data['expiresAt']?.toString(),
+      label: data['label'] as String?,
     );
+  }
+
+  /// Pre-formatted shareable invite text.
+  String get shareText {
+    final parts = <String>['Join $realmName on Kiduna!'];
+    if (kidunaPerPerson > 0) {
+      parts.add(
+        '${formatKiduna(kidunaPerPerson)} KIDUNA sponsored for you.',
+      );
+    }
+    parts.add(invitationLink);
+    return parts.join('\n');
+  }
+
+  /// Summary line for the review panel.
+  String get summary {
+    final parts = <String>[];
+    parts.add('$maxUses ${maxUses == 1 ? 'person' : 'people'}');
+    if (kidunaPerPerson > 0) {
+      parts.add('${formatKiduna(kidunaPerPerson)} KIDUNA each');
+    }
+    parts.add('Role: $role');
+    return parts.join(' · ');
+  }
+
+  static String formatKiduna(double amount) {
+    if (amount >= 1000) {
+      return '${(amount / 1000).toStringAsFixed(amount % 1000 == 0 ? 0 : 1)}K';
+    }
+    return amount.toStringAsFixed(0);
   }
 
   @override

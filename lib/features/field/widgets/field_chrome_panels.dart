@@ -15,12 +15,14 @@ class FieldChromePanels extends StatelessWidget {
     required this.controller,
     required this.bounds,
     required this.opacity,
+    this.realmNames = const {},
   });
 
   final FieldState state;
   final FieldController controller;
   final Size bounds;
   final double opacity;
+  final Map<String, String> realmNames;
 
   double _clampLeft(double left) =>
       left.clamp(8.0, (bounds.width - 40).clamp(8.0, double.infinity));
@@ -41,11 +43,12 @@ class FieldChromePanels extends StatelessWidget {
           width: navWidth,
           opacity: opacity,
           initialOffset: Offset(
-            _clampLeft((bounds.width - navWidth) / 2),
-            (bounds.height * 0.3).clamp(8.0, double.infinity),
+            _clampLeft(bounds.width - navWidth - 22),
+            22,
           ),
           child: NavigationPanel(
             realmPath: state.realmPath,
+            realmNames: realmNames,
             onBreadcrumbTap: controller.navigateToBreadcrumb,
           ),
         ),
@@ -57,10 +60,7 @@ class FieldChromePanels extends StatelessWidget {
           opacity: opacity,
           accent: true,
           initialMode: FieldPanelMode.collapsed,
-          initialOffset: Offset(
-            _clampLeft((bounds.width - 540) / 2),
-            (bounds.height * 0.3).clamp(8.0, double.infinity),
-          ),
+          initialOffset: const Offset(22, 110),
           minimizedOffset: const Offset(22, 110),
           child: const PossibleActions(),
         ),

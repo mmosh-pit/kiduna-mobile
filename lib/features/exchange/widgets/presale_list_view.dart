@@ -175,7 +175,7 @@ class PresaleListView extends StatelessWidget {
       child: ListView.separated(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
         itemCount: presales.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 14),
+        separatorBuilder: (_, _) => const SizedBox(height: 14),
         itemBuilder: (context, index) {
           final presale = presales[index];
           return PresaleCard(

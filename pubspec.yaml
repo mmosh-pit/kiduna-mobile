@@ -25,6 +25,7 @@ dependencies:
   flame: ^1.34.0
   flame_camera_tools: ^5.0.2
   web_socket_channel: 3.0.3
+  flutter_webrtc: ^1.6.0
   audioplayers: ^6.8.1
   uuid: 4.5.1
   file_picker: ^12.0.0
@@ -51,6 +52,7 @@ flutter:
     - assets/medieval_poker/power/
     - assets/medieval_poker/items/
     - assets/medieval_poker/reference/
+    - assets/images/chips/
 
   fonts:
     - family: Avenir

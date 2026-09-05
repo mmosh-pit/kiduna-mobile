@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/extensions/context_extensions.dart';
+import '../../../core/utils/logger.dart';
 import '../../../shared/widgets/app_header.dart';
+import '../../../data/services/auth_service.dart';
 import '../../dashboard/screens/dashboard_screen.dart';
 import '../../download/screens/download_app_screen.dart';
 import '../controllers/auth_controller.dart';
@@ -12,6 +14,7 @@ import '../widgets/login_form.dart';
 import '../widgets/signup_left_panel.dart';
 import 'forgot_password_screen.dart';
 import 'signup_screen.dart';
+import '../../../main.dart' show pendingInviteCode;
 
 const _loginLeftPanel = SignupLeftPanel(
   tagline: 'The Genesis Ecosystem welcomes you back.',
@@ -62,6 +65,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     final authState = ref.read(authControllerProvider);
     if (authState.isAuthenticated) {
+      // Auto-join realm if user came from an invite URL
+      if (pendingInviteCode != null && pendingInviteCode!.isNotEmpty) {
+        try {
+          final result = await AuthService.instance.joinRealmViaInvite(
+            code: pendingInviteCode!,
+          );
+          final realmName = result['realmName'] as String? ?? 'the realm';
+          final kiduna = result['kidunaReceived'] as num? ?? 0;
+          AppLogger.info(
+            'Auto-joined $realmName after login'
+            '${kiduna > 0 ? ' (+$kiduna KIDUNA)' : ''}',
+            tag: 'Auth',
+          );
+        } catch (e) {
+          AppLogger.warning('Auto-join after login failed: $e', tag: 'Auth');
+        }
+        pendingInviteCode = null;
+      }
+
       final destination = kIsWeb
           ? const DownloadAppScreen()
           : const DashboardScreen();
@@ -112,7 +134,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       backgroundColor: colors.deep,
       body: Column(
         children: [
-          const AppHeader(),
+          const AppHeader(showUserMenu: false),
           Expanded(
             child: isMobile
                 ? _buildMobileLayout(isLoading, apiError)
@@ -150,25 +172,37 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       color: colors.deep,
       child: LayoutBuilder(
         builder: (context, constraints) {
+          final form = Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: LoginForm(
+                onLogin: _login,
+                onCreateAccount: _navigateToSignup,
+                onForgotPassword: _navigateToForgotPassword,
+                isLoading: isLoading,
+                apiError: apiError,
+              ),
+            ),
+          );
+
+          // Mobile: this panel sits inside an outer scroll view, so its height
+          // is unbounded. Just pad the form — nesting another scroll view or
+          // deriving a minHeight from an infinite maxHeight throws during
+          // layout (the LayoutBuilder assertion seen on the iOS simulator).
+          if (!constraints.maxHeight.isFinite) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 40),
+              child: form,
+            );
+          }
+
+          // Desktop: fill the bounded panel and centre the form vertically,
+          // scrolling only if it doesn't fit.
           return SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 40),
             child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minHeight: constraints.maxHeight - 80,
-                maxWidth: double.infinity,
-              ),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 400),
-                  child: LoginForm(
-                    onLogin: _login,
-                    onCreateAccount: _navigateToSignup,
-                    onForgotPassword: _navigateToForgotPassword,
-                    isLoading: isLoading,
-                    apiError: apiError,
-                  ),
-                ),
-              ),
+              constraints: BoxConstraints(minHeight: constraints.maxHeight - 80),
+              child: form,
             ),
           );
         },

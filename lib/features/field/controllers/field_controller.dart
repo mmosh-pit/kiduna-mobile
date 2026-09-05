@@ -13,6 +13,7 @@ import '../../../core/errors/exceptions.dart';
 import '../../../core/utils/logger.dart';
 import '../../../data/models/available_tool_model.dart';
 import '../../../data/models/field_realm.dart';
+import '../data/field_models.dart';
 import '../../../data/models/invitation_request.dart';
 import '../../../data/models/invitation_response.dart';
 import '../../../data/models/ki_topic.dart';
@@ -46,6 +47,7 @@ class FieldState {
     this.isLoading = false,
     this.error,
     this.currentRealmId = 'kinship-duna',
+    this.viewerRoles = const {},
     this.inspectOpen = false,
     this.actionsVisible = true,
     this.fieldFocus = 100,
@@ -79,6 +81,7 @@ class FieldState {
     this.toolVerifying = false,
     this.enteredRealmId,
     this.enteredRealmName,
+    this.refreshToken = 0,
   });
 
   final KiTopic kiTopic;
@@ -89,6 +92,15 @@ class FieldState {
   final bool actionsVisible;
   final double fieldFocus;
   final String currentRealmId;
+
+  /// Per-realm role for the current user (realm_id → role string).
+  final Map<String, String> viewerRoles;
+
+  /// Get the user's role in a specific realm.
+  Role viewerRoleIn(String realmId) {
+    final raw = viewerRoles[realmId];
+    return raw != null ? Role.parse(raw) : Role.guest;
+  }
 
   /// Ki's share of the width on desktop (0.25-0.34).
   final double kiFraction;
@@ -159,6 +171,8 @@ class FieldState {
   final String? enteredRealmId;
   final String? enteredRealmName;
 
+  final int refreshToken;
+
   String? get selectedRealmId => selectedPlacement?.realm.id;
 
   FieldState copyWith({
@@ -168,6 +182,7 @@ class FieldState {
     String? error,
     bool clearError = false,
     String? currentRealmId,
+    Map<String, String>? viewerRoles,
     bool? inspectOpen,
     bool? actionsVisible,
     double? fieldFocus,
@@ -210,12 +225,14 @@ class FieldState {
     String? enteredRealmId,
     bool clearEnteredRealm = false,
     String? enteredRealmName,
+    int? refreshToken,
   }) {
     return FieldState(
       kiTopic: kiTopic ?? this.kiTopic,
       currentRealm: currentRealm ?? this.currentRealm,
       isLoading: isLoading ?? this.isLoading,
       currentRealmId: currentRealmId ?? this.currentRealmId,
+      viewerRoles: viewerRoles ?? this.viewerRoles,
       error: clearError ? null : (error ?? this.error),
       inspectOpen: inspectOpen ?? this.inspectOpen,
       actionsVisible: actionsVisible ?? this.actionsVisible,
@@ -246,16 +263,14 @@ class FieldState {
       toolsLoaded: toolsLoaded ?? this.toolsLoaded,
       skillFormOpen: skillFormOpen ?? this.skillFormOpen,
       approvalsOpen: approvalsOpen ?? this.approvalsOpen,
-      pendingApprovalCount:
-          pendingApprovalCount ?? this.pendingApprovalCount,
+      pendingApprovalCount: pendingApprovalCount ?? this.pendingApprovalCount,
       uploadedSkillData: clearUploadedSkill
           ? null
           : (uploadedSkillData ?? this.uploadedSkillData),
       uploadedToolRegistry: clearUploadedSkill
           ? null
           : (uploadedToolRegistry ?? this.uploadedToolRegistry),
-      skillUploadLoading:
-          skillUploadLoading ?? this.skillUploadLoading,
+      skillUploadLoading: skillUploadLoading ?? this.skillUploadLoading,
       editingSkill: clearEditingSkill
           ? null
           : (editingSkill ?? this.editingSkill),
@@ -274,6 +289,7 @@ class FieldState {
       enteredRealmName: clearEnteredRealm
           ? null
           : (enteredRealmName ?? this.enteredRealmName),
+      refreshToken: refreshToken ?? this.refreshToken,
     );
   }
 }
@@ -328,7 +344,9 @@ class FieldController extends Notifier<FieldState> {
     // Fetch pending approval count and gravity when auth state changes.
     ref.listen(authControllerProvider, (prev, next) {
       final wallet = next.user?.wallet;
-      if (next.user != null && wallet != null && (prev?.user == null || prev?.user?.wallet != wallet)) {
+      if (next.user != null &&
+          wallet != null &&
+          (prev?.user == null || prev?.user?.wallet != wallet)) {
         fetchPendingApprovalCount();
         _loadGravityFromApi(wallet);
       }
@@ -341,6 +359,7 @@ class FieldController extends Notifier<FieldState> {
     final authWallet = ref.read(authControllerProvider).user?.wallet;
     if (authWallet != null && authWallet.isNotEmpty) {
       Future.microtask(() => _loadGravityFromApi(authWallet));
+      Future.microtask(() => _loadViewerRolesFromTable(authWallet));
     }
 
     return FieldState(
@@ -377,6 +396,14 @@ class FieldController extends Notifier<FieldState> {
       enteredRealmId: realmId,
       enteredRealmName: realmName,
     );
+
+    // Load viewer role for the entered realm if not already known.
+    if (!state.viewerRoles.containsKey(realmId)) {
+      final wallet = ref.read(authControllerProvider).user?.wallet;
+      if (wallet != null) {
+        Future.microtask(() => _loadViewerRolesFromTable(wallet));
+      }
+    }
   }
 
   void exitEnteredRealm() {
@@ -452,31 +479,48 @@ class FieldController extends Notifier<FieldState> {
       return;
     }
     final targetId = state.realmPath[index];
-    final realm = realmAtlas[targetId];
-    if (realm == null) {
-      return;
+    final atlasRealm = realmAtlas[targetId];
+
+    final String name;
+    final String typeLabel;
+    final String emblem;
+    final String purpose;
+
+    if (atlasRealm != null) {
+      name = atlasRealm.name;
+      typeLabel = atlasRealm.type.label;
+      emblem =
+          atlasRealm.type == AtlasRealmType.institution ||
+              atlasRealm.type == AtlasRealmType.ecosystem
+          ? 'conceptual'
+          : atlasRealm.type.emblemKey;
+      purpose = atlasRealm.purpose;
+    } else {
+      final ecoState = ref.read(ecosystemControllerProvider);
+      final known = ecoState.knownNames[targetId];
+      name = known ?? targetId;
+      typeLabel = 'Realm';
+      emblem = 'conceptual';
+      purpose = '';
     }
-    final emblem =
-        realm.type == AtlasRealmType.institution ||
-            realm.type == AtlasRealmType.ecosystem
-        ? 'conceptual'
-        : realm.type.emblemKey;
+
+    final isRoot = targetId == 'kinship-duna';
     state = state.copyWith(
       currentRealm: FieldRealm(
-        name: realm.name,
-        type: realm.type.label,
+        name: name,
+        type: typeLabel,
         emblemAsset: AppAssets.realmEmblem(emblem),
       ),
       currentRealmId: targetId,
+      enteredRealmId: isRoot ? null : targetId,
+      clearEnteredRealm: isRoot,
       clearSelection: true,
       actionsVisible: true,
       inspectOpen: false,
       realmPath: state.realmPath.sublist(0, index + 1),
       kiTopic: KiTopic(
-        title: 'Inside ${realm.name}',
-        body:
-            'Alice is now inside ${realm.name}, a ${realm.type.label}. '
-            '${realm.purpose}',
+        title: 'Inside $name',
+        body: 'Alice is now inside $name, a $typeLabel. $purpose',
         invitation:
             'Possible Actions shows what can be done here. Inspect any '
             'nested Realm or use the breadcrumb to go back.',
@@ -494,38 +538,89 @@ class FieldController extends Notifier<FieldState> {
 
     final wallet = ref.read(authControllerProvider).user?.wallet;
     if (wallet != null && wallet.isNotEmpty) {
-      const levelNames = {1: 'quiet', 2: 'available', 3: 'relevant', 4: 'central', 5: 'vital'};
+      const levelNames = {
+        1: 'quiet',
+        2: 'available',
+        3: 'relevant',
+        4: 'central',
+        5: 'vital',
+      };
       final levelName = levelNames[clamped] ?? 'relevant';
       GravityService.instance
           .setLevelOverride(wallet: wallet, realmId: realmId, level: levelName)
           .catchError((Object e) {
-        AppLogger.warning(
-          'Failed to persist gravity override',
-          tag: 'FieldController',
-        );
-      });
+            AppLogger.warning(
+              'Failed to persist gravity override',
+              tag: 'FieldController',
+            );
+          });
     }
   }
 
   int gravityFor(String realmId) => state.realmGravity[realmId] ?? 3;
 
   /// Loads gravity scores from the backend API and populates [realmGravity].
+  /// Load viewer roles from table API (realm_members).
+  /// Fills in roles that gravity may not have.
+  Future<void> _loadViewerRolesFromTable(String wallet) async {
+    try {
+      final userRealms = await RealmService.instance.fetchRealms();
+      final roles = <String, String>{...state.viewerRoles};
+      for (final realm in userRealms) {
+        // Creator = catalyst
+        if (realm.wallet == wallet && !roles.containsKey(realm.id)) {
+          roles[realm.id] = 'catalyst';
+        }
+        // Check members for role
+        for (final m in realm.members) {
+          if (m.wallet == wallet) {
+            roles[realm.id] = m.role;
+            break;
+          }
+        }
+      }
+      if (!ref.mounted) return;
+      state = state.copyWith(viewerRoles: roles);
+    } catch (e) {
+      AppLogger.warning(
+        'Table API roles load failed: $e',
+        tag: 'FieldController',
+      );
+    }
+  }
+
   Future<void> _loadGravityFromApi(String wallet) async {
     try {
       final response = await GravityService.instance.fetchGravity(wallet);
       if (!ref.mounted) return;
 
-      const levelToInt = {'vital': 5, 'central': 4, 'relevant': 3, 'available': 2, 'quiet': 1};
+      const levelToInt = {
+        'vital': 5,
+        'central': 4,
+        'relevant': 3,
+        'available': 2,
+        'quiet': 1,
+      };
       final map = <String, int>{};
+      final roles = <String, String>{};
       for (final realm in response.realms) {
         map[realm.id] = levelToInt[realm.level] ?? 3;
+        if (realm.role != null && realm.role!.isNotEmpty) {
+          roles[realm.id] = realm.role!;
+        }
       }
 
-      state = state.copyWith(realmGravity: {...state.realmGravity, ...map});
+      state = state.copyWith(
+        realmGravity: {...state.realmGravity, ...map},
+        viewerRoles: {...state.viewerRoles, ...roles},
+      );
       AppLogger.info(
         'Gravity loaded: ${response.realms.length} realms',
         tag: 'FieldController',
       );
+
+      // Also load roles from table API (fallback — gravity may return null roles)
+      _loadViewerRolesFromTable(wallet);
     } catch (e) {
       AppLogger.warning(
         'Gravity API load failed, using local defaults',
@@ -558,6 +653,7 @@ class FieldController extends Notifier<FieldState> {
         emblemAsset: AppAssets.realmEmblem(emblem),
       ),
       currentRealmId: realm.id,
+      enteredRealmId: realm.id,
       clearSelection: true,
       actionsVisible: true,
       inspectOpen: false,
@@ -592,9 +688,7 @@ class FieldController extends Notifier<FieldState> {
         type: type,
         emblemAsset: AppAssets.realmEmblem(type),
       ),
-      openActions: state.openActions
-          .where((item) => item != 'realm')
-          .toList(),
+      openActions: state.openActions.where((item) => item != 'realm').toList(),
     );
     askAbout(
       KiTopic(
@@ -620,9 +714,7 @@ class FieldController extends Notifier<FieldState> {
         type: 'Organization',
         emblemAsset: AppAssets.realmEmblem('Organization'),
       ),
-      openActions: state.openActions
-          .where((item) => item != 'realm')
-          .toList(),
+      openActions: state.openActions.where((item) => item != 'realm').toList(),
     );
     askAbout(
       KiTopic(
@@ -646,16 +738,30 @@ class FieldController extends Notifier<FieldState> {
         ? 'Team Wallet ${pda.substring(0, 4)}…${pda.substring(pda.length - 4)} ready.'
         : '';
 
-    state = state.copyWith(
-      currentRealm: FieldRealm(
-        name: realm.name,
-        type: realm.typeLabel,
-        emblemAsset: AppAssets.realmEmblem(realm.typeLabel),
-      ),
-      currentRealmId: realm.id,
-      openActions:
-          state.openActions.where((item) => item != 'realm').toList(),
+    // Read the caller's role from the backend response (members array).
+    final wallet = ref.read(authControllerProvider).user?.wallet;
+    final myMember = realm.members.cast<RealmMemberModel?>().firstWhere(
+      (m) => m?.wallet == wallet,
+      orElse: () => null,
     );
+    final updatedRoles = <String, String>{...state.viewerRoles};
+    if (myMember != null) {
+      updatedRoles[realm.id] = myMember.role;
+    }
+
+    state = state.copyWith(
+      viewerRoles: updatedRoles,
+      openActions: state.openActions.where((item) => item != 'realm').toList(),
+      refreshToken: state.refreshToken + 1,
+    );
+
+    final parentId = realm.parentId ?? state.enteredRealmId;
+    final eco = ref.read(ecosystemControllerProvider.notifier);
+    if (parentId != null && parentId != 'kinship-duna') {
+      unawaited(eco.loadChildren(parentId));
+    } else {
+      unawaited(eco.load());
+    }
 
     final statusNote = realm.type == 'institution'
         ? ' Status: ${realm.status}.'
@@ -679,7 +785,20 @@ class FieldController extends Notifier<FieldState> {
     return RealmService.instance.checkHandleAvailability(handle);
   }
 
-  void savePresentation({required String name, required String type}) {
+  Future<void> savePresentation({
+    required String name,
+    required String type,
+    String? purpose,
+  }) async {
+    try {
+      await RealmService.instance.updateRealm(
+        id: state.currentRealmId,
+        name: name,
+        purpose: purpose,
+      );
+    } on NetworkException {
+      return;
+    }
     state = state.copyWith(
       currentRealm: FieldRealm(
         name: name,
@@ -793,10 +912,7 @@ class FieldController extends Notifier<FieldState> {
         skillUploadLoading: false,
       );
     } catch (e) {
-      AppLogger.warning(
-        'Skill upload failed: $e',
-        tag: 'FieldController',
-      );
+      AppLogger.warning('Skill upload failed: $e', tag: 'FieldController');
       if (ref.mounted) {
         state = state.copyWith(skillUploadLoading: false);
       }
@@ -888,7 +1004,9 @@ class FieldController extends Notifier<FieldState> {
       thenText: thenText,
       tools: tools,
       requiresApproval: requiresApproval,
-      realmId: state.currentRealmId != 'kinship-duna' ? state.currentRealmId : null,
+      realmId: state.currentRealmId != 'kinship-duna'
+          ? state.currentRealmId
+          : null,
       skillFilePath: '$slug.md',
     );
 
@@ -937,14 +1055,16 @@ class FieldController extends Notifier<FieldState> {
       // Generate AI SKILL.md content in the background.
       // Use original skill data (has correct when/then text) with
       // the backend-assigned ID from created.
-      _generateSkillContent(SkillModel(
-        id: created.id,
-        name: skill.name,
-        triggerType: skill.triggerType,
-        whenText: skill.whenText,
-        thenText: skill.thenText,
-        tools: skill.tools,
-      ));
+      _generateSkillContent(
+        SkillModel(
+          id: created.id,
+          name: skill.name,
+          triggerType: skill.triggerType,
+          whenText: skill.whenText,
+          thenText: skill.thenText,
+          tools: skill.tools,
+        ),
+      );
     } on AppException catch (e) {
       AppLogger.warning(
         'Skill sync failed: ${e.message}',
@@ -1238,6 +1358,8 @@ class FieldController extends Notifier<FieldState> {
   /// backend handles the entire flow via `/api/oauth/google/init`.
   ///
   /// After the popup completes, [fetchSavedTools] refreshes the list.
+  /// On web, WidgetsBindingObserver detects tab focus return.
+  /// On desktop, we poll every 5s for up to 120s to detect the new connection.
   Future<void> connectGoogleOAuth() async {
     final wallet = ref.read(authControllerProvider).user?.wallet;
     if (wallet == null || wallet.isEmpty) {
@@ -1247,6 +1369,11 @@ class FieldController extends Notifier<FieldState> {
       );
       return;
     }
+
+    // Count connected Google tools before OAuth
+    final beforeCount = state.savedTools
+        .where((t) => t.toolName == 'google' && t.isActive)
+        .length;
 
     final baseUrl = Env.apiBaseUrl;
     final oauthUrl = Uri.parse(
@@ -1265,14 +1392,52 @@ class FieldController extends Notifier<FieldState> {
 
       AppLogger.info('Google OAuth popup opened', tag: 'FieldController');
 
-      // No delay — ConnectionsPanel detects tab focus return via
-      // WidgetsBindingObserver and calls fetchSavedTools automatically.
+      // Poll for connection changes — works on all platforms (web + desktop).
+      // Stops after detecting a new connection or after 120s timeout.
+      _startOAuthPoll(beforeCount);
     } catch (e) {
       AppLogger.warning(
         'Google OAuth launch failed: $e',
         tag: 'FieldController',
       );
     }
+  }
+
+  Timer? _oauthPollTimer;
+
+  void _startOAuthPoll(int beforeCount) {
+    _oauthPollTimer?.cancel();
+    var attempts = 0;
+    const maxAttempts = 24; // 24 × 5s = 120s
+
+    _oauthPollTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
+      attempts++;
+      if (attempts > maxAttempts) {
+        timer.cancel();
+        _oauthPollTimer = null;
+        AppLogger.info(
+          'OAuth poll timed out after ${maxAttempts * 5}s',
+          tag: 'FieldController',
+        );
+        return;
+      }
+
+      try {
+        await fetchSavedTools();
+        final afterCount = state.savedTools
+            .where((t) => t.toolName == 'google' && t.isActive)
+            .length;
+
+        if (afterCount > beforeCount) {
+          timer.cancel();
+          _oauthPollTimer = null;
+          AppLogger.info(
+            'Google OAuth connection detected after ${attempts * 5}s',
+            tag: 'FieldController',
+          );
+        }
+      } catch (_) {}
+    });
   }
 
   /// Open the credential form for a specific tool.
@@ -1356,7 +1521,9 @@ class FieldController extends Notifier<FieldState> {
         wallet: wallet,
         toolName: toolName,
         credentials: enrichedCredentials,
-        realmId: state.currentRealmId != 'kinship-duna' ? state.currentRealmId : null,
+        realmId: state.currentRealmId != 'kinship-duna'
+            ? state.currentRealmId
+            : null,
       );
 
       if (!ref.mounted) {
@@ -1452,19 +1619,17 @@ class FieldController extends Notifier<FieldState> {
   /// the form fields to `POST /api/v1/codes`, and stores the response so the
   /// review panel can display the real code, link, and message.
   Future<void> prepareInvitation({
-    required String recipientName,
     required String role,
     required String expiration,
-    String? handshake,
-    String? notes,
+    required int maxUses,
+    String? recipientName,
+    String? label,
+    double kidunaPerPerson = 0,
   }) async {
-    // Read wallet from auth state.
-    final auth = ref.read(authControllerProvider);
-    final wallet = auth.user?.wallet;
-    if (wallet == null || wallet.isEmpty) {
-      state = state.copyWith(
-        invitationError: 'You must be logged in to send invitations.',
-      );
+    final realmId = state.enteredRealmId ?? state.currentRealmId;
+    print('[prepareInvitation] realmId=$realmId');
+    if (realmId.isEmpty) {
+      state = state.copyWith(invitationError: 'No realm selected.');
       return;
     }
 
@@ -1472,12 +1637,13 @@ class FieldController extends Notifier<FieldState> {
 
     try {
       final request = InvitationRequest(
-        wallet: wallet,
-        recipientName: recipientName,
+        realmId: realmId,
         role: role,
         expiration: expiration,
-        handshake: handshake,
-        notes: notes,
+        maxUses: maxUses,
+        recipientName: recipientName,
+        label: label,
+        kidunaPerPerson: kidunaPerPerson,
       );
 
       final response = await InvitationService.instance.generate(request);
@@ -1485,14 +1651,13 @@ class FieldController extends Notifier<FieldState> {
       state = state.copyWith(
         invitationResponse: response,
         invitationLoading: false,
-        kiTopic: const KiTopic(
+        kiTopic: KiTopic(
           title: 'Invitation prepared',
           body:
-              'Ki has prepared a personal invitation, a unique Kinship Link, '
-              'and its equivalent Kinship Code for review.',
+              'Your invitation is ready! ${response.summary}.',
           invitation:
-              'The optional private handshake remains separate and is never '
-              'included in the invitation, link, or code.',
+              'Copy the invite link or code and share it. '
+              'Recipients will see your profile and can join directly.',
         ),
       );
 

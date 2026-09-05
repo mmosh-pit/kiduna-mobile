@@ -7,7 +7,7 @@ import '../../core/utils/logger.dart';
 import '../models/invitation_request.dart';
 import '../models/invitation_response.dart';
 
-/// Creates invitation codes via the kinship-agent API.
+/// Creates realm invitations via the kinship-backend API.
 ///
 /// Returns parsed data or throws typed exceptions — no business logic.
 class InvitationService {
@@ -15,12 +15,12 @@ class InvitationService {
 
   static final InvitationService instance = InvitationService._();
 
-  Dio get _dio => ApiClient.instance.dio;
+  Dio get _dio => ApiClient.instance.authDio;
 
-  /// Generate an invitation code.
+  /// Generate a realm invitation.
   ///
-  /// Sends `POST /api/v1/codes` with the form fields plus the creator's
-  /// wallet. The auth interceptor adds the Bearer token automatically.
+  /// Sends `POST /realm-invites/:realmId` with the form fields.
+  /// The auth interceptor adds the Bearer token automatically.
   ///
   /// Returns the [InvitationResponse] containing the generated code,
   /// deep-link URL, and personal message.
@@ -30,13 +30,13 @@ class InvitationService {
   Future<InvitationResponse> generate(InvitationRequest request) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
-        ApiEndpoints.codes,
+        ApiEndpoints.realmInviteCreate(request.realmId),
         data: request.toJson(),
       );
 
       final body = response.data;
       if (body == null) {
-        throw const ServerException('Empty response from code generation');
+        throw const ServerException('Empty response from invitation creation');
       }
 
       final result = InvitationResponse.fromJson(body);

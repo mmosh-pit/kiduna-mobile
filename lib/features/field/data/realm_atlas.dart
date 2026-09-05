@@ -1,3 +1,4 @@
+import '../../../data/models/realm_model.dart';
 import 'design_persona.dart';
 
 /// The type of a Realm — a Dart port of `realm-atlas.ts` `AtlasRealmType`.
@@ -83,6 +84,14 @@ class AtlasRealm {
     this.children = const [],
     this.visibleTo,
     this.fixture = false,
+    this.primaryTheme,
+    this.gravityLevel,
+    this.gravityScore,
+    this.gameStatus,
+    this.gameRoomCode,
+    this.gamePlayerCount,
+    this.gameSeatCount,
+    this.cellType,
   });
 
   final String id;
@@ -101,6 +110,26 @@ class AtlasRealm {
 
   /// `true` for proposed legal Institutions (held back until verified).
   final bool fixture;
+
+  /// Canonical theme from the API (e.g. 'culture-play', 'people-care').
+  final String? primaryTheme;
+
+  /// Gravity level from graph API (vital/central/relevant/available/quiet).
+  final String? gravityLevel;
+
+  /// Gravity score from graph API (0.0–1.0).
+  final double? gravityScore;
+
+  final String? gameStatus;
+  final String? gameRoomCode;
+  final int? gamePlayerCount;
+  final int? gameSeatCount;
+
+  /// Cell sub-type: 'permanent' or 'temporary'. Null for non-cell realms.
+  final String? cellType;
+
+  bool get isPermanentCell => type == AtlasRealmType.cell && cellType == 'permanent';
+  bool get isTemporaryCell => type == AtlasRealmType.cell && cellType != 'permanent';
 }
 
 // Compact constructor mirroring the TS `realm(...)` factory.
@@ -1199,3 +1228,31 @@ const Map<DesignPersona, String> personaRealmRelationship = {
   DesignPersona.carol: 'Creator · Granted creation scope',
   DesignPersona.danny: 'Builder · Granted build and sandbox scope',
 };
+
+AtlasRealmType _parseAtlasType(String type) {
+  for (final t in AtlasRealmType.values) {
+    if (t.name == type) return t;
+  }
+  return AtlasRealmType.organization;
+}
+
+/// Convert an API [RealmModel] to an [AtlasRealm] for constellation display.
+AtlasRealm atlasRealmFromModel(RealmModel model) {
+  final type = _parseAtlasType(model.type);
+  return AtlasRealm(
+    id: model.id,
+    name: model.name,
+    type: type,
+    parent: model.parentId,
+    purpose: model.purpose ?? '',
+    motif: '',
+    primaryTheme: model.primaryTheme,
+    gravityLevel: model.gravityLevel,
+    gravityScore: model.gravityScore,
+    gameStatus: model.gameStatus,
+    gameRoomCode: model.gameRoomCode,
+    gamePlayerCount: model.gamePlayerCount,
+    gameSeatCount: model.gameSeatCount,
+    cellType: model.type == 'cell' ? model.cellType : null,
+  );
+}

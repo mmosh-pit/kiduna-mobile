@@ -1,6 +1,14 @@
 import 'dart:math' show max;
 
+import 'package:flame/game.dart';
+import 'package:flutter/gestures.dart'
+    show
+        PointerPanZoomStartEvent,
+        PointerPanZoomUpdateEvent,
+        PointerScrollEvent,
+        PointerSignalEvent;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show HardwareKeyboard;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/extensions/context_extensions.dart';
@@ -10,16 +18,24 @@ import '../../../shared/models/section_item.dart';
 import '../../../shared/widgets/app_header.dart';
 import '../../../shared/widgets/section_bar.dart';
 import '../../../shared/widgets/section_placeholder.dart';
+import '../../auth/controllers/auth_controller.dart';
 import '../../exchange/screens/exchange_screen.dart';
+import '../controllers/ecosystem_controller.dart';
 import '../controllers/field_controller.dart';
-import '../widgets/advanced_actions_panel.dart';
-import '../widgets/field_background.dart';
+import '../data/field_composition.dart';
+import '../data/gravity_field_source.dart';
+import '../data/placement.dart' show Placement;
+import '../data/realm_atlas.dart';
+import '../game/enamel_tokens.dart' show DistanceBand, Gravity;
+import '../game/field_game.dart';
+import '../widgets/compute_card.dart';
 import '../widgets/field_chrome_panels.dart';
 import '../widgets/field_panel.dart';
 import '../widgets/field_working_panels.dart';
 import '../widgets/ki_region.dart';
-import '../widgets/realm_constellation.dart';
+import '../widgets/nav_mode.dart';
 import '../widgets/realm_context_pill.dart';
+import '../widgets/realm_detail_popup.dart';
 
 /// The main app screen. The header and section bar sit at the top; the active
 /// section's content fills the remaining space with Ki alongside.
@@ -28,8 +44,9 @@ import '../widgets/realm_context_pill.dart';
 /// * Studio  (index 3) — the original NCEV field with panels and Ki.
 /// * Others  — "Coming Soon" placeholder with Ki.
 ///
-/// Existing widgets (_FieldKiWide, _FieldKiNarrow, _FieldStack, _FieldCanvas,
-/// _RealmIdentity, _Boundary) are completely untouched below.
+/// Existing widgets (_FieldKiWide, _FieldKiNarrow, _RealmIdentity, _Boundary)
+/// are untouched below. FieldStack uses FieldGame (Flame) with gravity-based
+/// placement via GravityFieldSource.
 class FieldScreen extends StatefulWidget {
   const FieldScreen({super.key});
 
@@ -70,8 +87,8 @@ class _FieldScreenState extends State<FieldScreen> {
       case SectionIndex.exchange:
         // Presale exchange UI with Ki chat.
         return ResponsiveLayout(
-          desktop: (_) => const _ContentKiWide(content: ExchangeScreen()),
-          mobile: (_) => const _ContentKiNarrow(content: ExchangeScreen()),
+          desktop: (_) => const ContentKiWide(content: ExchangeScreen()),
+          mobile: (_) => const ContentKiNarrow(content: ExchangeScreen()),
         );
       default:
         // Other sections: placeholder with Ki chat.
@@ -79,8 +96,8 @@ class _FieldScreenState extends State<FieldScreen> {
           sectionName: kSections[_activeSection].label,
         );
         return ResponsiveLayout(
-          desktop: (_) => _ContentKiWide(content: placeholder),
-          mobile: (_) => _ContentKiNarrow(content: placeholder),
+          desktop: (_) => ContentKiWide(content: placeholder),
+          mobile: (_) => ContentKiNarrow(content: placeholder),
         );
     }
   }
@@ -88,8 +105,8 @@ class _FieldScreenState extends State<FieldScreen> {
 
 /// Desktop layout for non-Studio sections: content + boundary + Ki side by side.
 /// Mirrors _FieldKiWide but accepts any content widget instead of _FieldStack.
-class _ContentKiWide extends ConsumerWidget {
-  const _ContentKiWide({required this.content});
+class ContentKiWide extends ConsumerWidget {
+  const ContentKiWide({super.key, required this.content});
 
   final Widget content;
 
@@ -121,8 +138,8 @@ class _ContentKiWide extends ConsumerWidget {
 
 /// Mobile layout for non-Studio sections: content on top, Ki below.
 /// Mirrors _FieldKiNarrow but accepts any content widget.
-class _ContentKiNarrow extends StatelessWidget {
-  const _ContentKiNarrow({required this.content});
+class ContentKiNarrow extends StatelessWidget {
+  const ContentKiNarrow({super.key, required this.content});
 
   final Widget content;
 
@@ -182,101 +199,284 @@ class _FieldKiNarrow extends StatelessWidget {
   }
 }
 
-/// The pannable Field canvas with the movable panels overlaid.
-class FieldStack extends ConsumerWidget {
+/// The Field canvas rendered via Flame with gravity-based realm placement.
+class FieldStack extends ConsumerStatefulWidget {
   const FieldStack({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<FieldStack> createState() => _FieldStackState();
+}
+
+class _FieldStackState extends ConsumerState<FieldStack> {
+  FieldGame? _game;
+  Key _gameKey = UniqueKey();
+  bool _showEmptyState = false;
+  bool _gameReady = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _game ??= _createGame();
+  }
+
+  FieldGame _createGame() {
+    final auth = ref.read(authControllerProvider);
+    final wallet = auth.user?.wallet ?? '';
+    final name = auth.user?.name ?? 'You';
+    final currentRealmId = ref.read(fieldControllerProvider).currentRealmId;
+    return FieldGame(
+      palette: context.kiduna,
+      reduceMotion: MediaQuery.maybeOf(context)?.disableAnimations ?? false,
+      source: GravityFieldSource(
+        walletAddress: wallet,
+        viewerName: name,
+        currentRealmId: currentRealmId == 'kinship-duna'
+            ? null
+            : currentRealmId,
+      ),
+      nav: NavMode.traverse,
+      hideStars: true,
+      mousePanEnabled: false,
+      scrollPanEnabled: false,
+      onInspect: _onRealmSelected,
+      onDeselect: () {
+        ref.read(fieldControllerProvider.notifier).clearSelection();
+      },
+      onReady: () {
+        final isEmpty = _game?.snapshot?.realms.isEmpty ?? true;
+        if (isEmpty != _showEmptyState || !_gameReady) {
+          setState(() {
+            _showEmptyState = isEmpty;
+            _gameReady = true;
+          });
+        }
+      },
+    );
+  }
+
+  void _rebuildGame() {
+    setState(() {
+      _game = _createGame();
+      _gameKey = UniqueKey();
+      _showEmptyState = false;
+      _gameReady = false;
+    });
+  }
+
+  void _onRealmSelected(Placement p) {
+    final atlasType = AtlasRealmType.values.firstWhere(
+      (t) => t.name == p.realm.typeName,
+      orElse: () => AtlasRealmType.organization,
+    );
+    final fieldPlacement = FieldPlacement(
+      realm: AtlasRealm(
+        id: p.realm.id,
+        name: p.realm.name,
+        type: atlasType,
+        parent: p.realm.parentId,
+        purpose: p.realm.purpose,
+        motif: p.realm.motif,
+        cellType: p.realm.cellType,
+        gameStatus: p.realm.gameStatus,
+        gameRoomCode: p.realm.gameRoomCode,
+        gamePlayerCount: p.realm.gamePlayerCount,
+        gameSeatCount: p.realm.gameSeatCount,
+      ),
+      left: p.position.left,
+      top: p.position.top,
+      band: p.band == DistanceBand.near
+          ? FieldBand.near
+          : p.band == DistanceBand.middle
+          ? FieldBand.middle
+          : FieldBand.far,
+      cluster: FieldClusterId.workWealth,
+      mass: p.realm.mass,
+      reason: p.realm.reason ?? '',
+      rolePull: p.band == DistanceBand.near,
+    );
+    ref.read(fieldControllerProvider.notifier).selectAtlasRealm(fieldPlacement);
+  }
+
+  // ── Trackpad two-finger pan/zoom state ──
+  double _trackpadBaseZoom = 1.0;
+
+  bool get _panelsOpen {
+    final state = ref.read(fieldControllerProvider);
+    return state.openActions.isNotEmpty || state.selectedPlacement != null;
+  }
+
+  void _onPointerPanZoomStart(PointerPanZoomStartEvent event) {
+    final game = _game;
+    if (game == null || !game.isLoaded || _panelsOpen) return;
+    _trackpadBaseZoom = game.camera.viewfinder.zoom;
+  }
+
+  void _onPointerPanZoomUpdate(PointerPanZoomUpdateEvent event) {
+    final game = _game;
+    if (game == null || !game.isLoaded || _panelsOpen) return;
+
+    // Two-finger pan — event.panDelta gives the translation delta.
+    final pan = event.panDelta;
+    if (pan.dx != 0 || pan.dy != 0) {
+      game.panBy(Vector2(pan.dx, pan.dy));
+    }
+
+    // Pinch zoom — event.scale is 1.0 at rest, grows/shrinks with pinch.
+    if (event.scale != 1.0) {
+      final target = _trackpadBaseZoom * event.scale;
+      final pointer = Vector2(event.localPosition.dx, event.localPosition.dy);
+      game.zoomAt(
+        pointer,
+        target > game.camera.viewfinder.zoom ? 1 : -1,
+        times: ((target - game.camera.viewfinder.zoom).abs() / 0.05).clamp(
+          0.2,
+          2.0,
+        ),
+      );
+    }
+  }
+
+  void _onPointerSignal(PointerSignalEvent event) {
+    final game = _game;
+    if (game == null || !game.isLoaded || event is! PointerScrollEvent) {
+      return;
+    }
+    if (_panelsOpen) return;
+    final d = event.scrollDelta;
+    final k = HardwareKeyboard.instance;
+    if (!k.isShiftPressed) {
+      if (d.dy == 0) return;
+      game.zoomAt(
+        Vector2(event.localPosition.dx, event.localPosition.dy),
+        d.dy < 0 ? 1 : -1,
+        times: (d.dy.abs() / 40).clamp(0.4, 3),
+      );
+      return;
+    }
+    game.panBy(Vector2(-d.dx, -d.dy));
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(fieldControllerProvider);
     final controller = ref.read(fieldControllerProvider.notifier);
+    final ecoState = ref.watch(ecosystemControllerProvider);
+    final realmNames = ecoState.knownNames;
+
+    ref.listen<String>(
+      fieldControllerProvider.select((s) => s.currentRealmId),
+      (previous, next) {
+        if (previous != null && previous != next) {
+          final eco = ref.read(ecosystemControllerProvider.notifier);
+          if (next == 'kinship-duna') {
+            eco.load();
+          } else {
+            eco.loadChildren(next);
+          }
+          _rebuildGame();
+        }
+      },
+    );
+
+    ref.listen<int>(
+      fieldControllerProvider.select((s) => s.refreshToken),
+      (previous, next) {
+        if (previous != null && next != previous) {
+          _rebuildGame();
+        }
+      },
+    );
+
     final realm = state.currentRealm;
     final opacity = (state.fieldFocus / 100).clamp(0.0, 1.0);
 
     return ClipRect(
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final bounds = Size(constraints.maxWidth, constraints.maxHeight);
+      child: Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerPanZoomStart: _onPointerPanZoomStart,
+        onPointerPanZoomUpdate: _onPointerPanZoomUpdate,
+        onPointerSignal: _onPointerSignal,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final bounds = Size(constraints.maxWidth, constraints.maxHeight);
 
-          return Stack(
-            children: [
-              const _FieldCanvas(),
-              Positioned.fill(
-                child: InteractiveViewer(
-                  scaleEnabled: false,
-                  boundaryMargin: const EdgeInsets.all(200),
-                  child: Padding(
-                    padding: const EdgeInsets.only(
-                      top: 96,
-                      left: 26,
-                      right: 26,
-                      bottom: 28,
-                    ),
-                    child: RealmConstellation(
-                      currentRealmId: state.currentRealmId,
-                      selectedRealmId: state.selectedRealmId,
-                      onSelect: controller.selectAtlasRealm,
-                      showHoverDetails: true,
+            return Stack(
+              children: [
+                if (_game != null)
+                  Positioned.fill(
+                    child: RepaintBoundary(
+                      child: GameWidget(key: _gameKey, game: _game!),
                     ),
                   ),
-                ),
-              ),
-              _RealmIdentity(
-                realm: realm,
-                inspectOpen: state.inspectOpen,
-                onInspect: controller.toggleInspect,
-                bounds: bounds,
-                opacity: opacity,
-              ),
-              FieldChromePanels(
-                state: state,
-                controller: controller,
-                bounds: bounds,
-                opacity: opacity,
-              ),
-              FieldWorkingPanels(
-                state: state,
-                controller: controller,
-                bounds: bounds,
-                opacity: opacity,
-              ),
-              if (state.selectedPlacement != null)
-                FieldPanel(
-                  key: ValueKey('panel-advanced-${state.selectedRealmId}'),
-                  label: state.selectedPlacement!.realm.name,
+                if (!_gameReady || ecoState.isLoading)
+                  Center(
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: context.kiduna.sky,
+                    ),
+                  ),
+                if (_showEmptyState)
+                  const Center(child: _EmptyRealmState()),
+                _RealmIdentity(
+                  realm: realm,
+                  inspectOpen: state.inspectOpen,
+                  onInspect: controller.toggleInspect,
                   bounds: bounds,
-                  width: 520,
+                  opacity: opacity,
+                ),
+                FieldChromePanels(
+                  state: state,
+                  controller: controller,
+                  bounds: bounds,
+                  opacity: opacity,
+                  realmNames: realmNames,
+                ),
+                FieldWorkingPanels(
+                  state: state,
+                  controller: controller,
+                  bounds: bounds,
+                  opacity: opacity,
+                ),
+                FieldPanel(
+                  label: context.l10n.compute,
+                  bounds: bounds,
+                  width: 256,
                   opacity: opacity,
                   initialOffset: Offset(
-                    ((bounds.width - 520) / 2).clamp(8.0, double.infinity),
-                    (bounds.height * 0.3).clamp(8.0, double.infinity),
+                    (bounds.width - 256 - 22).clamp(8.0, double.infinity),
+                    22,
                   ),
-                  onClose: controller.clearSelection,
-                  child: AdvancedActionsPanel(
-                    placement: state.selectedPlacement!,
-                    onEnter: (enterRealm) {
-                      controller.clearSelection();
-                      controller.enterAtlasRealm(enterRealm);
-                    },
-                  ),
+                  child: const ComputeCard(),
                 ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _FieldCanvas extends StatelessWidget {
-  const _FieldCanvas();
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned.fill(
-      child: ColoredBox(
-        color: context.kiduna.field,
-        child: const FieldBackground(),
+                if (state.selectedPlacement != null)
+                  Positioned(
+                    key: ValueKey('popup-${state.selectedRealmId}'),
+                    right: 8,
+                    bottom: 8,
+                    child: Opacity(
+                      opacity: opacity,
+                      child: RealmDetailPopup(
+                        placement: state.selectedPlacement!,
+                        onClose: () {
+                          _game?.clearSelection();
+                        },
+                        onEnter: (enterRealm) {
+                          _game?.clearSelection();
+                          controller.enterAtlasRealm(enterRealm);
+                        },
+                        onGravityChanged: (level) {
+                          _game?.setGravity(
+                            state.selectedRealmId!,
+                            Gravity.of(level),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -374,6 +574,43 @@ class _BoundaryState extends ConsumerState<_Boundary> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _EmptyRealmState extends StatelessWidget {
+  const _EmptyRealmState();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.kiduna;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+      decoration: BoxDecoration(
+        color: colors.deep.withValues(alpha: 0.88),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colors.sky.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.bubble_chart_outlined, size: 40, color: colors.quiet),
+          const SizedBox(height: 12),
+          Text(
+            context.l10n.noRealmsYet,
+            style: context.kidunaText.heading.copyWith(
+              color: colors.cream,
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            context.l10n.noRealmsYetDetail,
+            textAlign: TextAlign.center,
+            style: context.kidunaText.bodySmall.copyWith(color: colors.muted),
+          ),
+        ],
       ),
     );
   }

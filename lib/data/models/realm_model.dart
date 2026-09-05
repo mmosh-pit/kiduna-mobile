@@ -34,6 +34,12 @@ class RealmModel {
     required this.status,
     this.members = const [],
     required this.createdAt,
+    this.gravityLevel,
+    this.gravityScore,
+    this.gameStatus,
+    this.gameRoomCode,
+    this.gamePlayerCount,
+    this.gameSeatCount,
   });
 
   final String id;
@@ -95,6 +101,19 @@ class RealmModel {
 
   final DateTime createdAt;
 
+  /// Gravity level from the graph API (vital/central/relevant/available/quiet).
+  /// Null when loaded from the table API.
+  final String? gravityLevel;
+
+  /// Gravity score from the graph API (0.0–1.0).
+  /// Null when loaded from the table API.
+  final double? gravityScore;
+
+  final String? gameStatus;
+  final String? gameRoomCode;
+  final int? gamePlayerCount;
+  final int? gameSeatCount;
+
   // ── Config convenience getters for Institution type ──
 
   String get entityType =>
@@ -127,6 +146,12 @@ class RealmModel {
       config['registration'] as String?;
   String? get capacities =>
       config['capacities'] as String?;
+
+  // ── Config convenience getters for Cell type ──
+
+  String get cellType => config['cellType'] as String? ?? 'temporary';
+  bool get isPermanentCell => type == 'cell' && cellType == 'permanent';
+  bool get isTemporaryCell => type == 'cell' && cellType != 'permanent';
 
   /// Whether this is a genesis Ecosystem (root, no parent).
   bool get isGenesis => type == 'ecosystem' && parentId == null;
@@ -179,10 +204,18 @@ class RealmModel {
 @immutable
 class RealmMemberModel {
   const RealmMemberModel({
+    required this.id,
     required this.wallet,
     required this.role,
     required this.isSigner,
+    this.name,
+    this.displayName,
+    this.username,
+    this.picture,
   });
+
+  /// Unique member row ID (used for PATCH/DELETE).
+  final String id;
 
   final String wallet;
 
@@ -193,11 +226,35 @@ class RealmMemberModel {
   /// Whether this member is a signer on the Squads multisig on-chain.
   final bool isSigner;
 
+  /// User's full name.
+  final String? name;
+
+  /// User's display name.
+  final String? displayName;
+
+  /// User's username / handle.
+  final String? username;
+
+  /// User's profile picture URL.
+  final String? picture;
+
+  /// Best available label for display.
+  String get label =>
+      displayName?.isNotEmpty == true ? displayName! :
+      name?.isNotEmpty == true ? name! :
+      username?.isNotEmpty == true ? '@$username' :
+      '${wallet.substring(0, 4)}…${wallet.substring(wallet.length - 4)}';
+
   factory RealmMemberModel.fromJson(Map<String, dynamic> json) {
     return RealmMemberModel(
+      id: json['id'] as String? ?? '',
       wallet: json['wallet'] as String? ?? '',
       role: json['role'] as String? ?? 'member',
       isSigner: json['isSigner'] as bool? ?? json['is_signer'] as bool? ?? false,
+      name: json['name'] as String?,
+      displayName: json['displayName'] as String?,
+      username: json['username'] as String?,
+      picture: json['picture'] as String?,
     );
   }
 }

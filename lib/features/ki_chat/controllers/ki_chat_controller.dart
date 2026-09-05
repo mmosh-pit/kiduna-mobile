@@ -10,6 +10,7 @@ import '../../../data/models/sse_event.dart';
 import '../../../data/services/chat_service.dart';
 import '../../../features/auth/controllers/auth_controller.dart';
 import '../../../features/dashboard/controllers/ecosystem_controller.dart';
+import '../../../features/field/controllers/field_controller.dart';
 import 'ally_controller.dart';
 
 @immutable
@@ -21,6 +22,7 @@ class KiChatState {
     this.streamingBuffer = '',
     this.error,
     this.historyLoaded = false,
+    this.outOfBalance = false,
   });
 
   final List<ChatMessageModel> messages;
@@ -30,6 +32,9 @@ class KiChatState {
   final String? error;
   final bool historyLoaded;
 
+  /// True when the backend rejected the last send for lack of KIDUNA.
+  final bool outOfBalance;
+
   KiChatState copyWith({
     List<ChatMessageModel>? messages,
     bool? isLoading,
@@ -37,6 +42,7 @@ class KiChatState {
     String? streamingBuffer,
     String? error,
     bool? historyLoaded,
+    bool? outOfBalance,
     bool clearError = false,
     bool clearStreamingBuffer = false,
   }) {
@@ -49,12 +55,26 @@ class KiChatState {
           : (streamingBuffer ?? this.streamingBuffer),
       error: clearError ? null : (error ?? this.error),
       historyLoaded: historyLoaded ?? this.historyLoaded,
+      outOfBalance: outOfBalance ?? this.outOfBalance,
     );
   }
 }
 
 class KiChatController extends Notifier<KiChatState> {
   StreamSubscription<SseEvent>? _subscription;
+
+  /// Current game context (cards, board, pot). Set by game_screen when
+  /// a game is active. Cleared when the game ends or player leaves.
+  String _gameContext = '';
+
+  /// Set the current game context (called by game_screen).
+  void setGameContext(String context) => _gameContext = context;
+
+  /// Clear the game context (called when game ends or player leaves).
+  void clearGameContext() => _gameContext = '';
+
+  /// Whether a game is currently active (has card context).
+  bool get hasGameContext => _gameContext.isNotEmpty;
 
   @override
   KiChatState build() {
@@ -68,7 +88,22 @@ class KiChatController extends Notifier<KiChatState> {
   String? get _presenceId => ref.read(allyControllerProvider).ally?.id;
   String? get _userWallet => ref.read(authControllerProvider).user?.wallet;
   String? get _userId => ref.read(authControllerProvider).user?.id;
-  String? get _realmId => ref.read(ecosystemControllerProvider).ecosystem?.id;
+  String? get _realmId {
+    // Prefer the specific realm the user has navigated into (Field).
+    // Fall back to ecosystem ID when the user hasn't entered a sub-realm.
+    final fieldRealmId = ref.read(fieldControllerProvider).currentRealmId;
+    final ecosystemId = ref.read(ecosystemControllerProvider).ecosystem?.id;
+
+    // fieldRealmId defaults to 'kinship-duna' (placeholder) when not navigated.
+    // Use it only when it's an actual realm ID (UUID format).
+    final useField = fieldRealmId.isNotEmpty &&
+        fieldRealmId != 'kinship-duna' &&
+        fieldRealmId != ecosystemId;
+
+    final id = useField ? fieldRealmId : ecosystemId;
+    print('[DashboardKiChat] _realmId = $id (field=$fieldRealmId, eco=$ecosystemId)');
+    return id;
+  }
 
   Future<void> loadHistory() async {
     final presenceId = _presenceId;
@@ -104,7 +139,7 @@ class KiChatController extends Notifier<KiChatState> {
       if (!ref.mounted) return;
       state = state.copyWith(
         isLoading: false,
-        error: 'Unable to load conversation history.',
+        messages: const [],
         historyLoaded: true,
       );
     } on AppException catch (e) {
@@ -112,7 +147,7 @@ class KiChatController extends Notifier<KiChatState> {
       AppLogger.error('History load failed', tag: 'KiChat', error: e);
       state = state.copyWith(
         isLoading: false,
-        error: 'Unable to load conversation history.',
+        messages: const [],
         historyLoaded: true,
       );
     }
@@ -144,6 +179,11 @@ class KiChatController extends Notifier<KiChatState> {
     await _subscription?.cancel();
     _subscription = null;
 
+    // Prepend game context if a game is active (so Ki knows the cards).
+    final messageForApi = _gameContext.isNotEmpty
+        ? '[Game context: $_gameContext] $trimmed'
+        : trimmed;
+
     final userMessage = ChatMessageModel(
       id: 'local_${DateTime.now().millisecondsSinceEpoch}',
       role: ChatRole.user,
@@ -160,7 +200,7 @@ class KiChatController extends Notifier<KiChatState> {
     try {
       final stream = ChatService.instance.streamChat(
         presenceId: presenceId,
-        message: trimmed,
+        message: messageForApi,
         userWallet: userWallet,
         userId: _userId,
         realmId: _realmId,
@@ -206,6 +246,10 @@ class KiChatController extends Notifier<KiChatState> {
             error: e,
             stackTrace: st,
           );
+          if (e is InsufficientBalanceException) {
+            _handleOutOfBalance(e, userMessage);
+            return;
+          }
           state = state.copyWith(
             isStreaming: false,
             error: 'Stream error: [${e.runtimeType}] $e',
@@ -233,6 +277,9 @@ class KiChatController extends Notifier<KiChatState> {
         },
         cancelOnError: true,
       );
+    } on InsufficientBalanceException catch (e) {
+      if (!ref.mounted) return;
+      _handleOutOfBalance(e, userMessage);
     } catch (e, st) {
       if (!ref.mounted) return;
       AppLogger.error(
@@ -246,6 +293,29 @@ class KiChatController extends Notifier<KiChatState> {
         error: 'Send error: [${e.runtimeType}] $e',
       );
     }
+  }
+
+  /// The backend refused the send because the wallet is out of KIDUNA.
+  /// Drops the optimistic user bubble — Ki never saw the message — and flags
+  /// the state so the composer can offer a top-up.
+  void _handleOutOfBalance(
+    InsufficientBalanceException e,
+    ChatMessageModel userMessage,
+  ) {
+    AppLogger.info('Chat blocked: out of KIDUNA', tag: 'KiChat');
+    _subscription = null;
+    state = state.copyWith(
+      messages: state.messages.where((m) => m.id != userMessage.id).toList(),
+      isStreaming: false,
+      outOfBalance: true,
+      error: e.message ?? 'You have no KIDUNA left.',
+      clearStreamingBuffer: true,
+    );
+  }
+
+  /// Called after a successful top-up so the composer unlocks.
+  void clearOutOfBalance() {
+    state = state.copyWith(outOfBalance: false, clearError: true);
   }
 
   void cancelStream() {
@@ -267,6 +337,25 @@ class KiChatController extends Notifier<KiChatState> {
         state = state.copyWith(isStreaming: false);
       }
     }
+  }
+
+  /// Add a local game tip to the chat — no API call, instant display.
+  void addLocalTip(String tip) {
+    if (tip.trim().isEmpty) return;
+    final tipMessage = ChatMessageModel(
+      id: 'tip_${DateTime.now().millisecondsSinceEpoch}',
+      role: ChatRole.assistant,
+      content: tip,
+    );
+    state = state.copyWith(
+      messages: [...state.messages, tipMessage],
+    );
+  }
+
+  /// Remove all local game tips from chat. Keeps typed messages (API).
+  void clearLocalTips() {
+    final kept = state.messages.where((m) => !m.id.startsWith('tip_')).toList();
+    state = state.copyWith(messages: kept);
   }
 }
 

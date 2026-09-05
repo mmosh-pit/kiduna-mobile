@@ -2,6 +2,8 @@ import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
 import 'package:medieval_poker_engine/protocol.dart';
+import '../../chips/chip_atlas.dart';
+import '../../chips/chip_model.dart';
 import '../../session/card_zoom.dart';
 import '../poker_assets.dart';
 import 'card_component.dart';
@@ -15,6 +17,7 @@ class SnapshotSeatComponent extends PositionComponent {
   final int baseHoleCount;
   final Vector2 cardSize;
   final PokerCardAtlas? atlas;
+  final ChipAtlas? chipAtlas;
 
   /// Tapping a face-up hole card enlarges it via this shared controller.
   final CardZoomController? cardZoom;
@@ -23,23 +26,23 @@ class SnapshotSeatComponent extends PositionComponent {
 
   final List<CardComponent> _cards = [];
 
-  static const _plateHeight = 34.0;
+  static const _plateHeight = 52.0;
   static const _cardGap = 4.0;
 
   SnapshotSeatComponent({
-    required SeatSnapshot seat,
+    required this._seat,
     required this.baseHoleCount,
     this.atlas,
+    this.chipAtlas,
     this.cardZoom,
     Vector2? cardSize,
     super.position,
-  })  : _seat = seat,
-        cardSize = cardSize ?? Vector2(42, 58),
+  })  : cardSize = cardSize ?? Vector2(42, 58),
         super(anchor: Anchor.center) {
     final rowWidth =
         baseHoleCount * this.cardSize.x + (baseHoleCount - 1) * _cardGap;
     size = Vector2(
-      rowWidth < 130 ? 130 : rowWidth,
+      rowWidth < 180 ? 180 : rowWidth,
       this.cardSize.y + _plateHeight + 6,
     );
   }
@@ -140,14 +143,56 @@ class SnapshotSeatComponent extends PositionComponent {
       ),
     ).render(canvas, s.name, Vector2(8, plateTop + 5));
 
-    TextPaint(
-      style: TextStyle(
-        color: s.folded ? Colors.white24 : const Color(0xFFEDC169),
-        fontSize: 12,
-        fontWeight: FontWeight.w600,
-      ),
-    ).render(canvas, '${s.stack}', Vector2(width - 8, plateTop + 5),
-        anchor: Anchor.topRight);
+    final stackStyle = TextStyle(
+      color: s.folded ? Colors.white24 : const Color(0xFFEDC169),
+      fontSize: 12,
+      fontWeight: FontWeight.w600,
+    );
+    TextPaint(style: stackStyle).render(canvas, '${s.stack}',
+      Vector2(width - 8, plateTop + 5), anchor: Anchor.topRight);
+
+    if (!s.folded && s.stack > 0) {
+      final chips = breakdownChips(s.stack);
+      final visible = chips.take(3).toList();
+      const chipSize = 24.0;
+      const chipSpacing = 6.0;
+      final chipY = plateTop + 32.0;
+
+      final countStyle = TextStyle(
+        color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w700);
+      var totalW = 0.0;
+      final countWidths = <double>[];
+      for (final chip in visible) {
+        final cw = TextPaint(style: countStyle.copyWith(color: chip.type.color))
+            .getLineMetrics('×${chip.count}').width;
+        countWidths.add(cw);
+        totalW += chipSize + 2 + cw;
+      }
+      totalW += (visible.length - 1) * chipSpacing;
+      var dotX = (width - totalW) / 2;
+
+      for (var i = 0; i < visible.length; i++) {
+        final chip = visible[i];
+        final sprite = chipAtlas?.spriteFor(chip.type);
+        if (sprite != null) {
+          sprite.render(canvas,
+            position: Vector2(dotX, chipY - chipSize / 2),
+            size: Vector2(chipSize, chipSize));
+        } else {
+          canvas.drawCircle(Offset(dotX + chipSize / 2, chipY), chipSize / 2,
+            Paint()..color = chip.type.color);
+          canvas.drawCircle(Offset(dotX + chipSize / 2, chipY), chipSize / 2,
+            Paint()..color = chip.type.edgeColor..style = PaintingStyle.stroke..strokeWidth = 1.2);
+        }
+        TextPaint(style: TextStyle(
+          color: chip.type.color,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+        )).render(canvas, '×${chip.count}',
+          Vector2(dotX + chipSize + 2, chipY), anchor: Anchor.centerLeft);
+        dotX += chipSize + 2 + countWidths[i] + chipSpacing;
+      }
+    }
 
     if (s.isDealer) {
       final c = Offset(width - 10, plateTop - 2);

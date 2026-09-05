@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-import '../../../config/kiduna_colors.dart';
 import '../../../config/kiduna_motion.dart';
-import '../../../config/kiduna_text.dart';
 import '../../../core/extensions/context_extensions.dart';
+import '../../../data/models/invitation_response.dart';
 import '../../../data/models/ki_topic.dart';
+import '../../ki_chat/controllers/ki_chat_controller.dart';
 import '../controllers/field_controller.dart';
 import '../data/field_fixtures.dart';
+import '../data/field_models.dart';
 import 'field_inputs.dart';
 
-/// The Invite working panel: a form to prepare a one-person invitation, which
-/// calls the backend API and then swaps to a review of the personal message,
-/// unique link, and Kinship Code.
+/// The Invite working panel: a form to prepare a realm invitation with
+/// optional KIDUNA sponsorship. After creation, swaps to a review showing
+/// the invite link, code, and a summary.
 class InvitePanel extends ConsumerStatefulWidget {
   const InvitePanel({super.key, this.askAbout});
 
@@ -25,81 +27,145 @@ class InvitePanel extends ConsumerStatefulWidget {
 
 class _InvitePanelState extends ConsumerState<InvitePanel> {
   final TextEditingController _name = TextEditingController();
-  final TextEditingController _handshake = TextEditingController();
-  final TextEditingController _notes = TextEditingController();
-  TextEditingController? _message;
-  List<String> _roles = const ['Member'];
-  late String _expiration;
+  final TextEditingController _label = TextEditingController();
+  final TextEditingController _maxUses = TextEditingController(text: '1');
+  final TextEditingController _expirationAmount = TextEditingController(
+    text: '7',
+  );
+  final TextEditingController _kidunaPerPerson = TextEditingController();
+  String _role = '';
+  String _expirationUnit = 'days';
   bool _prepared = false;
-  bool _initialized = false;
-  bool _editing = false;
   String? _copyStatus;
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_initialized) {
-      _expiration = context.l10n.sevenDays;
-      _initialized = true;
-    }
+  // Validation errors
+  String? _maxUsesError;
+  String? _expirationError;
+  String? _kidunaError;
+
+  /// Roles the current viewer is allowed to assign in an invitation.
+  /// Only roles at or below the viewer's rank are shown.
+  /// Only catalyst can invite as catalyst.
+  List<String> _allowedRoles() {
+    final fieldState = ref.read(fieldControllerProvider);
+    final realmId = fieldState.enteredRealmId ?? fieldState.currentRealmId;
+    final viewerRole = realmId != null
+        ? fieldState.viewerRoleIn(realmId)
+        : Role.guest;
+
+    return FieldFixtures.roles.where((label) {
+      final role = Role.parse(label);
+      if (role.index > viewerRole.index) return false;
+      if (role == Role.catalyst && viewerRole != Role.catalyst) return false;
+      return true;
+    }).toList();
   }
+
+  /// Returns the current _role if it's in the allowed list,
+  /// otherwise resets to the first allowed role.
+  String _validRole() {
+    final allowed = _allowedRoles();
+    if (allowed.contains(_role)) return _role;
+    _role = allowed.isNotEmpty ? allowed.first : 'Guest';
+    return _role;
+  }
+
+  String get _expirationValue {
+    final amount = _expirationAmount.text.trim();
+    if (amount.isEmpty) return '7 days';
+    return '$amount $_expirationUnit';
+  }
+
+  double get _kidunaAmount {
+    return double.tryParse(_kidunaPerPerson.text.trim()) ?? 0;
+  }
+
+  int get _maxUsesValue {
+    return int.tryParse(_maxUses.text.trim()) ?? 1;
+  }
+
+  double get _totalKidunaLock => _kidunaAmount * _maxUsesValue;
 
   @override
   void dispose() {
     _name.dispose();
-    _handshake.dispose();
-    _notes.dispose();
-    _message?.dispose();
+    _label.dispose();
+    _maxUses.dispose();
+    _expirationAmount.dispose();
+    _kidunaPerPerson.dispose();
     super.dispose();
   }
 
-  void _askField(String label, String question) {
-    widget.askAbout?.call(
-      KiTopic(
-        title: label,
-        body: question,
-        invitation:
-            'Ki can explain this field or help Alice decide what belongs here.',
-      ),
-    );
+  bool _validate() {
+    String? maxErr;
+    String? expErr;
+    String? kidErr;
+
+    final uses = int.tryParse(_maxUses.text.trim());
+    if (uses == null || uses <= 0) {
+      maxErr = 'Enter a number greater than 0';
+    }
+
+    final expAmt = int.tryParse(_expirationAmount.text.trim());
+    if (expAmt == null || expAmt <= 0) {
+      expErr = 'Enter a valid number';
+    }
+
+    final kiduna = _kidunaAmount;
+    if (_kidunaPerPerson.text.trim().isNotEmpty && kiduna < 0) {
+      kidErr = 'Must be 0 or more';
+    }
+
+    // If sponsoring, require max_uses
+    if (kiduna > 0 && (uses == null || uses <= 0)) {
+      maxErr = 'Required for sponsored invites';
+    }
+
+    setState(() {
+      _maxUsesError = maxErr;
+      _expirationError = expErr;
+      _kidunaError = kidErr;
+    });
+
+    return maxErr == null && expErr == null && kidErr == null;
   }
 
   Future<void> _prepare() async {
-    final name = _name.text.trim();
-    if (name.isEmpty) {
-      setState(() {});
-      return;
-    }
+    if (!_validate()) return;
 
     final controller = ref.read(fieldControllerProvider.notifier);
     await controller.prepareInvitation(
-      recipientName: name,
-      role: _roles.join(', '),
-      expiration: _expiration,
-      handshake: _handshake.text.trim().isEmpty ? null : _handshake.text.trim(),
-      notes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
+      role: _role,
+      expiration: _expirationValue,
+      maxUses: _maxUsesValue,
+      recipientName:
+          _name.text.trim().isEmpty ? null : _name.text.trim(),
+      label: _label.text.trim().isEmpty ? null : _label.text.trim(),
+      kidunaPerPerson: _kidunaAmount,
     );
 
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
 
-    // Check if API succeeded — read fresh state.
     final state = ref.read(fieldControllerProvider);
     if (state.invitationResponse != null) {
-      _message = TextEditingController(
-        text: state.invitationResponse!.invitationMessage,
-      );
       setState(() => _prepared = true);
     }
   }
 
   Future<void> _copy(String label, String value) async {
     await Clipboard.setData(ClipboardData(text: value));
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
     setState(() => _copyStatus = label);
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _copyStatus = null);
+    });
+  }
+
+  Future<void> _downloadQr(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri != null && await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
   }
 
   @override
@@ -132,84 +198,81 @@ class _InvitePanelState extends ConsumerState<InvitePanel> {
       children: [
         _FormGrid(
           children: [
+            // Row 1: Name (optional) | Role
             FieldTextInput(
-              label: '${l10n.nameYouUseForThem} *',
+              label: l10n.nameYouUseForThem,
               controller: _name,
-              hint: l10n.whatYouMostCommonlyCallThem,
-              onAskKi: () => _askField(
-                '${l10n.nameYouUseForThem} *',
-                'Use the name Alice naturally uses for this person so the '
-                    'invitation feels unmistakably personal.',
-              ),
+              hint: 'Optional — for named invites',
             ),
             FieldDropdown(
-              label: l10n.expiration,
-              value: _expiration,
-              options: FieldFixtures.expirations,
-              onChanged: (value) => setState(() => _expiration = value),
-              onAskKi: () => _askField(
-                l10n.expiration,
-                'Expiration limits how long this one-person invitation can '
-                'be used.',
-              ),
+              label: l10n.proposedRole,
+              value: _validRole(),
+              options: _allowedRoles(),
+              onChanged: (v) => setState(() => _role = v),
             ),
-            _RoleMultiSelect(
-              roles: _roles,
-              onChanged: (next) => setState(() => _roles = next),
-              onAskKi: () => _askField(
-                l10n.proposedRole,
-                'A proposed role describes the access and responsibility '
-                'Alice intends to offer. It is not active until the '
-                'invitation is accepted.',
-              ),
-              onAskRole: (role) => widget.askAbout?.call(
-                KiTopic(
-                  title: '$role in this Realm',
-                  body:
-                      'Ki can explain what the $role role may see and do in the '
-                      'current Realm before Alice includes it.',
-                  invitation:
-                      'Ask Ki to compare $role with another role or explain its '
-                      'authority in this context.',
-                ),
-              ),
+
+            // Row 2: Number of People | Expiration
+            _ValidatedInput(
+              label: 'Number of People *',
+              controller: _maxUses,
+              error: _maxUsesError,
+              hint: '1',
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            ),
+            _ExpirationInput(
+              amount: _expirationAmount,
+              unit: _expirationUnit,
+              error: _expirationError,
+              onUnitChanged: (v) => setState(() => _expirationUnit = v),
+            ),
+
+            // Row 3: KIDUNA per Person | Label
+            _ValidatedInput(
+              label: 'KIDUNA per Person',
+              controller: _kidunaPerPerson,
+              error: _kidunaError,
+              hint: '0 — no sponsorship',
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
+              ],
+              onChanged: (_) => setState(() {}),
             ),
             FieldTextInput(
-              label: l10n.privateHandshakeOptional,
-              controller: _handshake,
-              hint: l10n.shareASecretWordOrPhrase,
-              onAskKi: () => _askField(
-                l10n.privateHandshakeOptional,
-                'A handshake is a secret Alice and the invited person already '
-                'share, helping them recognize each other at the threshold.',
-              ),
+              label: 'Label',
+              controller: _label,
+              hint: 'e.g. ETH Denver 2026',
             ),
-            _FullWidth(
-              child: FieldTextInput(
-                label: l10n.notes,
-                controller: _notes,
-                hint: l10n.invitationNotesHint,
-                maxLines: 5,
-                minHeight: 104,
-                onAskKi: () => _askField(
-                  l10n.notes,
-                  'Notes help Ki welcome this person appropriately. They '
-                  'remain Personal to Alice unless she deliberately '
-                  'shares them.',
+
+            // Total KIDUNA lock — directly below sponsor row
+            if (_kidunaAmount > 0 && _maxUsesValue > 0)
+              _FullWidth(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: colors.gold.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: colors.gold.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Text(
+                    'Total KIDUNA to lock: ${_formatNumber(_totalKidunaLock)}'
+                    ' (${_formatNumber(_kidunaAmount)} × $_maxUsesValue people)',
+                    style: context.kidunaText.caption.copyWith(
+                      color: colors.gold,
+                      height: 1.4,
+                    ),
+                  ),
                 ),
               ),
-            ),
           ],
         ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(0, 2, 0, 9),
-          child: Text(
-            l10n.requiredField,
-            style: context.kidunaText.label.copyWith(
-              color: context.kiduna.cream,
-            ),
-          ),
-        ),
+
+        const SizedBox(height: 10),
         if (error != null) ...[
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
@@ -252,59 +315,196 @@ class _InvitePanelState extends ConsumerState<InvitePanel> {
   }
 
   Widget _review(BuildContext context) {
-    final l10n = context.l10n;
     final colors = context.kiduna;
     final text = context.kidunaText;
     final invitation = ref.read(fieldControllerProvider).invitationResponse;
-    final name =
-        invitation?.recipientName ??
-        (_name.text.trim().isEmpty ? l10n.friend : _name.text.trim());
-    final link = invitation?.invitationLink ?? '';
-    final code = invitation?.code ?? '';
+    if (invitation == null) return const SizedBox.shrink();
+
+    final link = invitation.invitationLink;
+    final code = invitation.code;
+
     return Column(
       key: const ValueKey('review'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          l10n.invitationIntendedOnlyFor(name),
-          style: text.caption.copyWith(color: colors.cream, height: 1.5),
+        // Summary line
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+          decoration: BoxDecoration(
+            color: colors.gold.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: colors.gold.withValues(alpha: 0.2),
+            ),
+          ),
+          child: Text(
+            invitation.summary,
+            style: text.caption.copyWith(
+              color: colors.gold,
+              fontWeight: FontWeight.w600,
+              height: 1.4,
+            ),
+          ),
         ),
         const SizedBox(height: 14),
-        _InvitationEditor(
-          message: _message!,
-          editing: _editing,
-          onToggleEdit: () => setState(() => _editing = !_editing),
-          onCopy: () => _copy(l10n.invitationCopied, _message!.text),
-        ),
-        const SizedBox(height: 14),
+
+        // Invite URL
         _InvitationPartRow(
-          label: l10n.uniqueLink,
+          label: 'Invite URL',
           value: link,
-          action: l10n.copyLink,
-          onCopy: () => _copy(l10n.linkCopied, link),
+          action: 'Copy Link',
+          onCopy: () => _copy('Link copied', link),
         ),
         const SizedBox(height: 8),
+
+        // Code
         _InvitationPartRow(
-          label: l10n.kinshipCode,
+          label: 'Code',
           value: code,
-          action: l10n.copyCode,
-          onCopy: () => _copy(l10n.codeCopied, code),
+          action: 'Copy Code',
+          onCopy: () => _copy('Code copied', code),
         ),
         const SizedBox(height: 14),
+
+        // QR Code
+        if (invitation.qrCodeUrl.isNotEmpty) ...[
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color.fromRGBO(6, 3, 4, 0.4),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: colors.camel.withValues(alpha: 0.14),
+              ),
+            ),
+            child: Column(
+              children: [
+                // QR image
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Image.network(
+                    invitation.qrCodeUrl,
+                    width: 140,
+                    height: 140,
+                    fit: BoxFit.contain,
+                    loadingBuilder: (context, child, progress) {
+                      if (progress == null) return child;
+                      return SizedBox(
+                        width: 140,
+                        height: 140,
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: colors.sky,
+                          ),
+                        ),
+                      );
+                    },
+                    errorBuilder: (context, error, stack) {
+                      return SizedBox(
+                        width: 140,
+                        height: 140,
+                        child: Center(
+                          child: Text(
+                            'QR unavailable',
+                            style: text.caption.copyWith(color: colors.muted),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                // Download + Copy QR link row
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () => _copy(
+                        'QR link copied',
+                        invitation.qrCodeUrl,
+                      ),
+                      icon: Icon(Icons.link, size: 16, color: colors.sky),
+                      label: Text('Copy QR Link',
+                          style: text.caption.copyWith(color: colors.sky)),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(0, 32),
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        side: BorderSide(
+                            color: colors.sky.withValues(alpha: 0.24)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(5)),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    OutlinedButton.icon(
+                      onPressed: () => _downloadQr(invitation.qrCodeUrl),
+                      icon: Icon(Icons.download, size: 16, color: colors.sky),
+                      label: Text('Download',
+                          style: text.caption.copyWith(color: colors.sky)),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(0, 32),
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        side: BorderSide(
+                            color: colors.sky.withValues(alpha: 0.24)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(5)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+        ],
+
+        // Copy invite text button
         Align(
           alignment: Alignment.centerLeft,
           child: FieldPrimaryButton(
-            label: l10n.sendThroughKi,
-            onPressed: () {},
+            label: 'Copy Invite Text',
+            onPressed: () => _copy('Invite text copied', invitation.shareText),
           ),
         ),
+        const SizedBox(height: 14),
+
+        // ── Send via Email ──
+        _EmailSendSection(
+          invitation: invitation,
+          onCopyStatus: (msg) {
+            setState(() => _copyStatus = msg);
+            Future.delayed(const Duration(seconds: 3), () {
+              if (mounted) setState(() => _copyStatus = null);
+            });
+          },
+        ),
+
         if (_copyStatus != null) ...[
           const SizedBox(height: 8),
-          Text(_copyStatus!, style: text.label.copyWith(color: colors.mint)),
+          Text(
+            _copyStatus!,
+            style: text.caption.copyWith(color: colors.mint),
+          ),
         ],
       ],
     );
+  }
+
+  String _formatNumber(double n) {
+    if (n >= 1000000) {
+      return '${(n / 1000000).toStringAsFixed(n % 1000000 == 0 ? 0 : 1)}M';
+    }
+    if (n >= 1000) {
+      return '${(n / 1000).toStringAsFixed(n % 1000 == 0 ? 0 : 1)}K';
+    }
+    return n.toStringAsFixed(n == n.roundToDouble() ? 0 : 2);
   }
 }
 
@@ -362,63 +562,25 @@ class _FullWidth extends StatelessWidget {
   Widget build(BuildContext context) => child;
 }
 
-/// CSS `.roleField` — multi-select role dropdown with checkboxes.
-class _RoleMultiSelect extends StatefulWidget {
-  const _RoleMultiSelect({
-    required this.roles,
-    required this.onChanged,
-    this.onAskKi,
-    this.onAskRole,
+/// A text input with an optional validation error below it.
+class _ValidatedInput extends StatelessWidget {
+  const _ValidatedInput({
+    required this.label,
+    required this.controller,
+    this.error,
+    this.hint,
+    this.keyboardType,
+    this.inputFormatters,
+    this.onChanged,
   });
 
-  final List<String> roles;
-  final ValueChanged<List<String>> onChanged;
-  final VoidCallback? onAskKi;
-  final ValueChanged<String>? onAskRole;
-
-  @override
-  State<_RoleMultiSelect> createState() => _RoleMultiSelectState();
-}
-
-class _RoleMultiSelectState extends State<_RoleMultiSelect> {
-  final LayerLink _link = LayerLink();
-  OverlayEntry? _overlay;
-
-  void _toggle() {
-    if (_overlay != null) {
-      _close();
-    } else {
-      _open();
-    }
-  }
-
-  void _open() {
-    final overlay = Overlay.of(context);
-    final box = context.findRenderObject()! as RenderBox;
-    final width = box.size.width;
-    _overlay = OverlayEntry(
-      builder: (_) => _RoleDropdownOverlay(
-        link: _link,
-        width: width,
-        roles: widget.roles,
-        onChanged: widget.onChanged,
-        onAskRole: widget.onAskRole,
-        onClose: _close,
-      ),
-    );
-    overlay.insert(_overlay!);
-  }
-
-  void _close() {
-    _overlay?.remove();
-    _overlay = null;
-  }
-
-  @override
-  void dispose() {
-    _close();
-    super.dispose();
-  }
+  final String label;
+  final TextEditingController controller;
+  final String? error;
+  final String? hint;
+  final TextInputType? keyboardType;
+  final List<TextInputFormatter>? inputFormatters;
+  final ValueChanged<String>? onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -427,306 +589,151 @@ class _RoleMultiSelectState extends State<_RoleMultiSelect> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        FieldLabel(text: context.l10n.proposedRole, onAskKi: widget.onAskKi),
+        FieldLabel(text: label),
         const SizedBox(height: 6),
-        CompositedTransformTarget(
-          link: _link,
-          child: GestureDetector(
-            onTap: _toggle,
-            child: Container(
-              height: 37,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              alignment: Alignment.centerLeft,
-              decoration: BoxDecoration(
-                color: const Color.fromRGBO(6, 3, 4, 0.66),
-                border: Border.all(color: colors.camel.withValues(alpha: 0.24)),
+        SizedBox(
+          height: 37,
+          child: TextField(
+            controller: controller,
+            keyboardType: keyboardType,
+            inputFormatters: inputFormatters,
+            onChanged: onChanged,
+            style: text.caption.copyWith(color: colors.text, height: 1.4),
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: text.caption.copyWith(
+                color: colors.muted.withValues(alpha: 0.5),
+                height: 1.4,
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 8,
+              ),
+              border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(6),
+                borderSide: BorderSide(
+                  color: colors.camel.withValues(alpha: 0.24),
+                ),
               ),
-              child: Text(
-                widget.roles.isEmpty
-                    ? context.l10n.chooseRoles
-                    : widget.roles.join(', '),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: text.caption.copyWith(color: colors.text, height: 1.4),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: BorderSide(
+                  color: colors.camel.withValues(alpha: 0.24),
+                ),
               ),
+              filled: true,
+              fillColor: const Color.fromRGBO(6, 3, 4, 0.66),
             ),
           ),
         ),
+        if (error != null) ...[
+          const SizedBox(height: 4),
+          Text(error!, style: TextStyle(color: colors.orange, fontSize: 11)),
+        ],
       ],
     );
   }
 }
 
-class _RoleDropdownOverlay extends StatefulWidget {
-  const _RoleDropdownOverlay({
-    required this.link,
-    required this.width,
-    required this.roles,
-    required this.onChanged,
-    required this.onClose,
-    this.onAskRole,
+/// Expiration input: number + unit dropdown (always visible, no checkbox).
+class _ExpirationInput extends StatelessWidget {
+  const _ExpirationInput({
+    required this.amount,
+    required this.unit,
+    required this.onUnitChanged,
+    this.error,
   });
 
-  final LayerLink link;
-  final double width;
-  final List<String> roles;
-  final ValueChanged<List<String>> onChanged;
-  final ValueChanged<String>? onAskRole;
-  final VoidCallback onClose;
+  final TextEditingController amount;
+  final String unit;
+  final ValueChanged<String> onUnitChanged;
+  final String? error;
 
-  @override
-  State<_RoleDropdownOverlay> createState() => _RoleDropdownOverlayState();
-}
-
-class _RoleDropdownOverlayState extends State<_RoleDropdownOverlay> {
-  late List<String> _selected;
-
-  @override
-  void initState() {
-    super.initState();
-    _selected = List.of(widget.roles);
-  }
-
-  void _toggleRole(String role) {
-    setState(() {
-      if (_selected.contains(role)) {
-        _selected.remove(role);
-      } else {
-        _selected.add(role);
-      }
-    });
-    widget.onChanged(_selected);
-  }
+  static const _units = ['minutes', 'hours', 'days'];
 
   @override
   Widget build(BuildContext context) {
     final colors = context.kiduna;
     final text = context.kidunaText;
-    return Stack(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Positioned.fill(
-          child: GestureDetector(
-            onTap: widget.onClose,
-            behavior: HitTestBehavior.opaque,
-          ),
-        ),
-        CompositedTransformFollower(
-          link: widget.link,
-          offset: const Offset(0, 42),
-          child: Material(
-            color: Colors.transparent,
-            child: Container(
-              width: widget.width,
-              padding: const EdgeInsets.all(5),
-              decoration: BoxDecoration(
-                color: const Color.fromRGBO(30, 20, 12, 0.99),
-                border: Border.all(color: colors.camel.withValues(alpha: 0.36)),
-                borderRadius: BorderRadius.circular(7),
-                boxShadow: const [
-                  BoxShadow(
-                    offset: Offset(0, 18),
-                    blurRadius: 40,
-                    color: Color.fromRGBO(0, 0, 0, 0.58),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  for (final role in FieldFixtures.roles)
-                    _RoleRow(
-                      role: role,
-                      checked: _selected.contains(role),
-                      onToggle: () => _toggleRole(role),
-                      onAsk: widget.onAskRole != null
-                          ? () => widget.onAskRole!(role)
-                          : null,
-                      text: text,
-                      colors: colors,
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _RoleRow extends StatelessWidget {
-  const _RoleRow({
-    required this.role,
-    required this.checked,
-    required this.onToggle,
-    required this.onAsk,
-    required this.text,
-    required this.colors,
-  });
-
-  final String role;
-  final bool checked;
-  final VoidCallback onToggle;
-  final VoidCallback? onAsk;
-  final KidunaText text;
-  final KidunaColors colors;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onToggle,
-      borderRadius: BorderRadius.circular(4),
-      hoverColor: colors.sky.withValues(alpha: 0.055),
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 36),
-        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-        child: Row(
+        FieldLabel(text: 'Expiration *'),
+        const SizedBox(height: 6),
+        Row(
           children: [
             SizedBox(
-              width: 18,
-              height: 16,
-              child: Checkbox(
-                value: checked,
-                onChanged: (_) => onToggle(),
-                activeColor: colors.sky,
-                side: BorderSide(color: colors.camel.withValues(alpha: 0.4)),
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                visualDensity: VisualDensity.compact,
+              width: 56,
+              height: 37,
+              child: TextField(
+                controller: amount,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                textAlign: TextAlign.center,
+                style: text.caption.copyWith(color: colors.text, height: 1.4),
+                decoration: InputDecoration(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 8,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    borderSide: BorderSide(
+                      color: colors.camel.withValues(alpha: 0.24),
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    borderSide: BorderSide(
+                      color: colors.camel.withValues(alpha: 0.24),
+                    ),
+                  ),
+                  filled: true,
+                  fillColor: const Color.fromRGBO(6, 3, 4, 0.66),
+                ),
               ),
             ),
             const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                role,
-                style: text.caption.copyWith(color: colors.text, height: 1.4),
+            Container(
+              height: 37,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              decoration: BoxDecoration(
+                color: const Color.fromRGBO(6, 3, 4, 0.66),
+                border: Border.all(
+                  color: colors.camel.withValues(alpha: 0.24),
+                ),
+                borderRadius: BorderRadius.circular(6),
               ),
-            ),
-            if (onAsk != null)
-              GestureDetector(
-                onTap: onAsk,
-                child: Container(
-                  width: 26,
-                  height: 26,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: colors.sky.withValues(alpha: 0.06),
-                    border: Border.all(
-                      color: colors.sky.withValues(alpha: 0.28),
-                    ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: unit,
+                  dropdownColor: const Color.fromRGBO(30, 20, 12, 0.99),
+                  style: text.caption.copyWith(
+                    color: colors.text,
+                    height: 1.4,
                   ),
-                  child: Text(
-                    '→',
-                    style: text.micro.copyWith(color: colors.sky, height: 1),
+                  icon: Icon(
+                    Icons.arrow_drop_down,
+                    color: colors.muted,
+                    size: 18,
                   ),
+                  items: [
+                    for (final u in _units)
+                      DropdownMenuItem(value: u, child: Text(u)),
+                  ],
+                  onChanged: (v) {
+                    if (v != null) onUnitChanged(v);
+                  },
                 ),
               ),
+            ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _InvitationEditor extends StatelessWidget {
-  const _InvitationEditor({
-    required this.message,
-    required this.editing,
-    required this.onToggleEdit,
-    required this.onCopy,
-  });
-
-  final TextEditingController message;
-  final bool editing;
-  final VoidCallback onToggleEdit;
-  final VoidCallback onCopy;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.kiduna;
-    final text = context.kidunaText;
-    return Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: const Color.fromRGBO(6, 3, 4, 0.55),
-        border: Border.all(color: colors.camel.withValues(alpha: 0.22)),
-        borderRadius: BorderRadius.circular(7),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Container(
-            padding: const EdgeInsets.fromLTRB(11, 7, 8, 7),
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(color: colors.camel.withValues(alpha: 0.14)),
-              ),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    context.l10n.personalInvitation.toUpperCase(),
-                    style: text.label.copyWith(
-                      color: colors.gold,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                ),
-                _EditorIconButton(
-                  icon: Icons.edit_outlined,
-                  onPressed: onToggleEdit,
-                ),
-                const SizedBox(width: 5),
-                _EditorIconButton(icon: Icons.copy_outlined, onPressed: onCopy),
-              ],
-            ),
-          ),
-          TextField(
-            controller: message,
-            readOnly: !editing,
-            maxLines: null,
-            minLines: 7,
-            style: text.caption.copyWith(
-              color: editing ? colors.text : colors.muted,
-              height: 1.6,
-            ),
-            decoration: const InputDecoration(
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.all(13),
-            ),
-          ),
+        if (error != null) ...[
+          const SizedBox(height: 4),
+          Text(error!, style: TextStyle(color: colors.orange, fontSize: 11)),
         ],
-      ),
-    );
-  }
-}
-
-class _EditorIconButton extends StatelessWidget {
-  const _EditorIconButton({required this.icon, required this.onPressed});
-
-  final IconData icon;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.kiduna;
-    return SizedBox(
-      width: 30,
-      height: 30,
-      child: IconButton(
-        onPressed: onPressed,
-        padding: EdgeInsets.zero,
-        iconSize: 14,
-        style: IconButton.styleFrom(
-          backgroundColor: colors.sky.withValues(alpha: 0.05),
-          side: BorderSide(color: colors.sky.withValues(alpha: 0.24)),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
-        ),
-        icon: Icon(icon, color: colors.sky),
-      ),
+      ],
     );
   }
 }
@@ -758,8 +765,14 @@ class _InvitationPartRow extends StatelessWidget {
       child: Row(
         children: [
           SizedBox(
-            width: 84,
-            child: Text(label, style: text.label.copyWith(color: colors.muted)),
+            width: 72,
+            child: Text(
+              label,
+              style: text.caption.copyWith(
+                color: colors.muted,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -767,9 +780,10 @@ class _InvitationPartRow extends StatelessWidget {
               value,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: text.label.copyWith(
+              style: text.caption.copyWith(
                 color: colors.cream,
                 fontFamily: 'monospace',
+                fontSize: 13,
               ),
             ),
           ),
@@ -785,10 +799,240 @@ class _InvitationPartRow extends StatelessWidget {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(5),
               ),
-              textStyle: text.label,
+              textStyle: text.caption,
             ),
             child: Text(action),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+
+/// Send invite via email using connected Google account.
+/// If Google is not connected, shows a "Connect Google" prompt.
+class _EmailSendSection extends ConsumerStatefulWidget {
+  const _EmailSendSection({
+    required this.invitation,
+    required this.onCopyStatus,
+  });
+
+  final InvitationResponse invitation;
+  final ValueChanged<String> onCopyStatus;
+
+  @override
+  ConsumerState<_EmailSendSection> createState() => _EmailSendSectionState();
+}
+
+class _EmailSendSectionState extends ConsumerState<_EmailSendSection> {
+  final TextEditingController _emailController = TextEditingController();
+  bool _sending = false;
+  String? _sendResult;
+  bool _sendSuccess = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  bool get _isGoogleConnected {
+    final tools = ref.read(fieldControllerProvider).savedTools;
+    return tools.any((t) => t.toolName == 'google' && t.isActive);
+  }
+
+  Future<void> _sendEmail() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty || !email.contains('@')) {
+      setState(() {
+        _sendResult = 'Please enter a valid email address.';
+        _sendSuccess = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _sending = true;
+      _sendResult = null;
+    });
+
+    try {
+      final invitation = widget.invitation;
+      final kiChat = ref.read(kiChatControllerProvider.notifier);
+
+      // Compose a message for Ki to send the invite email
+      final message =
+          'Send an invitation email to $email. '
+          'Subject: You\'re invited to join ${invitation.realmName} on Kiduna. '
+          'Body: You have been invited to join ${invitation.realmName} on Kiduna! '
+          'Your role: ${invitation.role}. '
+          '${invitation.kidunaPerPerson > 0 ? '${InvitationResponse.formatKiduna(invitation.kidunaPerPerson)} KIDUNA has been sponsored for you. ' : ''}'
+          'Use this link to join: ${invitation.invitationLink} '
+          'Or use invitation code: ${invitation.code}';
+
+      kiChat.sendMessage(message);
+
+      if (!mounted) return;
+      setState(() {
+        _sending = false;
+        _sendResult = 'Email request sent to Ki. Check the chat for confirmation.';
+        _sendSuccess = true;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _sending = false;
+        _sendResult = 'Failed to send. Please try again.';
+        _sendSuccess = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.kiduna;
+    final text = context.kidunaText;
+
+    // Watch tools to react to connection changes
+    ref.watch(fieldControllerProvider.select((s) => s.savedTools));
+
+    final connected = _isGoogleConnected;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color.fromRGBO(6, 3, 4, 0.4),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: colors.camel.withValues(alpha: 0.14)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.email_outlined, size: 16, color: colors.gold),
+              const SizedBox(width: 8),
+              Text(
+                'Send via Email',
+                style: text.caption.copyWith(
+                  color: colors.gold,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          if (!connected) ...[
+            // Google not connected — show connect prompt
+            Text(
+              'Connect your Google account to send invitations via email.',
+              style: text.caption.copyWith(color: colors.muted, height: 1.4),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: () {
+                ref.read(fieldControllerProvider.notifier).connectGoogleOAuth();
+              },
+              icon: Icon(Icons.link, size: 16, color: colors.sky),
+              label: Text('Connect Google',
+                  style: text.caption.copyWith(color: colors.sky)),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(0, 34),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                side: BorderSide(color: colors.sky.withValues(alpha: 0.3)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6)),
+              ),
+            ),
+          ] else ...[
+            // Google connected — show email input + send
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 37,
+                    child: TextField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      style: text.caption.copyWith(
+                          color: colors.text, height: 1.4),
+                      decoration: InputDecoration(
+                        hintText: 'Recipient email address',
+                        hintStyle: text.caption.copyWith(
+                          color: colors.muted.withValues(alpha: 0.5),
+                          height: 1.4,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 8,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(6),
+                          borderSide: BorderSide(
+                            color: colors.camel.withValues(alpha: 0.24),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(6),
+                          borderSide: BorderSide(
+                            color: colors.camel.withValues(alpha: 0.24),
+                          ),
+                        ),
+                        filled: true,
+                        fillColor: const Color.fromRGBO(6, 3, 4, 0.66),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _sending
+                    ? SizedBox(
+                        width: 34,
+                        height: 34,
+                        child: Center(
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: colors.sky,
+                            ),
+                          ),
+                        ),
+                      )
+                    : OutlinedButton(
+                        onPressed: _sendEmail,
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(0, 37),
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 14),
+                          foregroundColor: colors.skyButtonInk,
+                          backgroundColor: colors.sky,
+                          side: BorderSide.none,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(6)),
+                          textStyle: text.caption
+                              .copyWith(fontWeight: FontWeight.w700),
+                        ),
+                        child: const Text('Send'),
+                      ),
+              ],
+            ),
+
+            if (_sendResult != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _sendResult!,
+                style: text.caption.copyWith(
+                  color: _sendSuccess ? colors.mint : colors.orange,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ],
         ],
       ),
     );

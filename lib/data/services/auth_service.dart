@@ -265,6 +265,261 @@ class AuthService {
     }
   }
 
+  // ─── KIDUNA Token ──────────────────────────────────────────────────
+
+  /// Get current KIDUNA token price.
+  Future<Map<String, dynamic>> getKidunaRate() async {
+    try {
+      final response = await _authDio.get('/kiduna/rate');
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e, st) {
+      _handleDioError(e, st, 'getKidunaRate');
+      return {'tokenPrice': 0.00001, 'currency': 'KIDUNA', 'priceCurrency': 'USDC'};
+    }
+  }
+
+  /// Initiate KIDUNA purchase via Stripe onramp.
+  Future<Map<String, dynamic>> purchaseKiduna({
+    required double usdcAmount,
+  }) async {
+    try {
+      final token = await SecureStorage.instance.getToken();
+      final response = await _authDio.post(
+        '/kiduna/purchase',
+        data: {'usdcAmount': usdcAmount},
+        options: token != null && token.isNotEmpty
+            ? Options(headers: {'Authorization': 'Bearer $token'})
+            : null,
+      );
+      final body = response.data as Map<String, dynamic>;
+      if (body.containsKey('error')) {
+        throw ValidationException(
+          body['error'] as String? ?? 'Purchase failed.',
+        );
+      }
+      return body['data'] as Map<String, dynamic>? ?? {};
+    } on DioException catch (e, st) {
+      _handleDioError(e, st, 'purchaseKiduna');
+      return {};
+    }
+  }
+
+  /// Get user's current KIDUNA balance.
+  Future<Map<String, dynamic>> getKidunaBalance() async {
+    try {
+      final token = await SecureStorage.instance.getToken();
+      final response = await _authDio.get(
+        '/kiduna/balance',
+        options: token != null && token.isNotEmpty
+            ? Options(headers: {'Authorization': 'Bearer $token'})
+            : null,
+      );
+      final body = response.data as Map<String, dynamic>;
+      return body['data'] as Map<String, dynamic>? ?? {};
+    } on DioException catch (e, st) {
+      _handleDioError(e, st, 'getKidunaBalance');
+      return {'balance': 0, 'totalPurchased': 0, 'totalSpent': 0};
+    }
+  }
+
+  /// Fetch paginated compute usage history (what KIDUNA was spent on).
+  Future<Map<String, dynamic>> getComputeUsageHistory({
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    try {
+      final token = await SecureStorage.instance.getToken();
+      final response = await _authDio.get(
+        '/kiduna/usage-history',
+        queryParameters: {'limit': limit, 'offset': offset},
+        options: token != null && token.isNotEmpty
+            ? Options(headers: {'Authorization': 'Bearer $token'})
+            : null,
+      );
+      return response.data as Map<String, dynamic>? ?? {};
+    } on DioException catch (e, st) {
+      _handleDioError(e, st, 'getComputeUsageHistory');
+      return {};
+    }
+  }
+
+  /// Fetch paginated KIDUNA purchase history.
+  Future<Map<String, dynamic>> getComputePurchaseHistory({
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    try {
+      final token = await SecureStorage.instance.getToken();
+      final response = await _authDio.get(
+        '/kiduna/purchase-history',
+        queryParameters: {'limit': limit, 'offset': offset},
+        options: token != null && token.isNotEmpty
+            ? Options(headers: {'Authorization': 'Bearer $token'})
+            : null,
+      );
+      return response.data as Map<String, dynamic>? ?? {};
+    } on DioException catch (e, st) {
+      _handleDioError(e, st, 'getComputePurchaseHistory');
+      return {};
+    }
+  }
+
+  /// Check whether a withdrawal can proceed, and to what limit.
+  ///
+  /// [recipient] is the external wallet that will receive the tokens and pay
+  /// the fee — the SOL check and payout ceiling are properties of that
+  /// wallet, not the account.
+  Future<Map<String, dynamic>> getWithdrawEligibility({
+    String? recipient,
+  }) async {
+    try {
+      final token = await SecureStorage.instance.getToken();
+      final response = await _authDio.get(
+        '/kiduna/withdraw-eligibility',
+        queryParameters: recipient != null ? {'recipient': recipient} : null,
+        options: token != null && token.isNotEmpty
+            ? Options(headers: {'Authorization': 'Bearer $token'})
+            : null,
+      );
+      final body = response.data as Map<String, dynamic>;
+      return body['data'] as Map<String, dynamic>? ?? {};
+    } on DioException catch (e, st) {
+      _handleDioError(e, st, 'getWithdrawEligibility');
+      return {};
+    }
+  }
+
+  /// Fetch lineage rewards earned by the current user.
+  Future<Map<String, dynamic>> getLineageRewards() async {
+    try {
+      final token = await SecureStorage.instance.getToken();
+      final response = await _authDio.get(
+        '/kiduna/lineage-rewards',
+        options: token != null && token.isNotEmpty
+            ? Options(headers: {'Authorization': 'Bearer $token'})
+            : null,
+      );
+      return response.data as Map<String, dynamic>? ?? {};
+    } on DioException catch (e, st) {
+      _handleDioError(e, st, 'getLineageRewards');
+      return {};
+    }
+  }
+
+  /// Debit the balance and get a transaction awaiting the user's signature.
+  ///
+  /// The returned transaction already carries the admin signature. The
+  /// balance is debited server-side at this point, so abandoning the wallet
+  /// prompt leaves a pending withdrawal that expires and refunds itself.
+  Future<Map<String, dynamic>> prepareWithdraw({
+    required double kidunaAmount,
+    required String recipientWallet,
+  }) async {
+    try {
+      final token = await SecureStorage.instance.getToken();
+      final response = await _authDio.post(
+        '/kiduna/withdraw/prepare',
+        data: {
+          'kidunaAmount': kidunaAmount,
+          'recipientWallet': recipientWallet,
+        },
+        options: token != null && token.isNotEmpty
+            ? Options(headers: {'Authorization': 'Bearer $token'})
+            : null,
+      );
+      final body = response.data as Map<String, dynamic>;
+      if (body.containsKey('error')) {
+        throw ValidationException(
+          body['error'] as String? ?? 'Could not prepare the withdrawal.',
+        );
+      }
+      return body['data'] as Map<String, dynamic>? ?? {};
+    } on DioException catch (e, st) {
+      _handleDioError(e, st, 'prepareWithdraw');
+      return {};
+    }
+  }
+
+  /// Broadcast the transaction once the wallet has signed it.
+  ///
+  /// Confirmation can take up to 90s, past the default receive timeout —
+  /// timing out here does not cancel the transfer, it only blinds the client
+  /// to the result, so the window is widened.
+  Future<Map<String, dynamic>> submitWithdraw({
+    required String withdrawalId,
+    required String signedTransaction,
+  }) async {
+    try {
+      final token = await SecureStorage.instance.getToken();
+      final response = await _authDio.post(
+        '/kiduna/withdraw/submit',
+        data: {
+          'withdrawalId': withdrawalId,
+          'signedTransaction': signedTransaction,
+        },
+        options: Options(
+          receiveTimeout: const Duration(seconds: 120),
+          sendTimeout: const Duration(seconds: 120),
+          headers: token != null && token.isNotEmpty
+              ? {'Authorization': 'Bearer $token'}
+              : null,
+        ),
+      );
+      final body = response.data as Map<String, dynamic>;
+      if (body.containsKey('error')) {
+        throw ValidationException(
+          body['error'] as String? ?? 'Withdrawal failed.',
+        );
+      }
+      return body['data'] as Map<String, dynamic>? ?? {};
+    } on DioException catch (e, st) {
+      _handleDioError(e, st, 'submitWithdraw');
+      return {};
+    }
+  }
+
+  /// Paginated withdrawal history.
+  Future<Map<String, dynamic>> getWithdrawHistory({
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    try {
+      final token = await SecureStorage.instance.getToken();
+      final response = await _authDio.get(
+        '/kiduna/withdraw-history',
+        queryParameters: {'limit': limit, 'offset': offset},
+        options: token != null && token.isNotEmpty
+            ? Options(headers: {'Authorization': 'Bearer $token'})
+            : null,
+      );
+      return response.data as Map<String, dynamic>? ?? {};
+    } on DioException catch (e, st) {
+      _handleDioError(e, st, 'getWithdrawHistory');
+      return {};
+    }
+  }
+
+  /// Verify Stripe onramp session and credit KIDUNA if payment complete.
+  /// This is a fallback for when the webhook hasn't arrived yet.
+  Future<Map<String, dynamic>> verifyOnrampSession({
+    required String sessionId,
+  }) async {
+    try {
+      final token = await SecureStorage.instance.getToken();
+      final response = await _authDio.post(
+        '/stripe/verify-onramp',
+        data: {'sessionId': sessionId},
+        options: token != null && token.isNotEmpty
+            ? Options(headers: {'Authorization': 'Bearer $token'})
+            : null,
+      );
+      return response.data as Map<String, dynamic>? ?? {};
+    } on DioException catch (e, st) {
+      _handleDioError(e, st, 'verifyOnrampSession');
+      return {};
+    }
+  }
+
   // ─── Forgot password ─────────────────────────────────────────────
 
   Future<void> requestPasswordReset({required String email}) async {
@@ -445,6 +700,30 @@ class AuthService {
         );
       default:
         throw const ServerException();
+    }
+  }
+
+  /// Generic authenticated POST request to kinship-backend.
+  Future<Map<String, dynamic>?> postWithAuth(
+    String path,
+    Map<String, dynamic> body,
+  ) async {
+    try {
+      final token = await SecureStorage.instance.getToken();
+      final response = await _authDio.post<Map<String, dynamic>>(
+        path,
+        data: body,
+        options: token != null && token.isNotEmpty
+            ? Options(headers: {'Authorization': 'Bearer $token'})
+            : null,
+      );
+      return response.data;
+    } on DioException catch (e, st) {
+      if (e.response?.data is Map) {
+        return e.response!.data as Map<String, dynamic>;
+      }
+      _handleDioError(e, st, 'postWithAuth:$path');
+      return null;
     }
   }
 }

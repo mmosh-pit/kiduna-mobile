@@ -5,6 +5,7 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
 import 'package:medieval_poker_engine/protocol.dart';
+import '../chips/chip_atlas.dart';
 import '../session/card_zoom.dart';
 import '../session/game_session.dart';
 import 'components/snapshot_seat_component.dart';
@@ -24,6 +25,7 @@ class TableRenderer extends FlameGame {
   final CardZoomController? cardZoom;
 
   final PokerCardAtlas _cardAtlas = PokerCardAtlas();
+  final ChipAtlas _chipAtlas = ChipAtlas();
   late TableComponent _table;
   final Map<int, SnapshotSeatComponent> _seats = {};
   final List<CardComponent> _board = [];
@@ -39,6 +41,7 @@ class TableRenderer extends FlameGame {
   @override
   Future<void> onLoad() async {
     await _cardAtlas.load();
+    await _chipAtlas.load();
 
     _table = TableComponent();
     await add(_table);
@@ -92,6 +95,7 @@ class TableRenderer extends FlameGame {
           seat: s,
           baseHoleCount: 3,
           atlas: _cardAtlas,
+          chipAtlas: _chipAtlas,
           cardZoom: cardZoom,
           cardSize: isViewer ? Vector2(48, 66) : Vector2(40, 56),
         );
@@ -130,8 +134,14 @@ class TableRenderer extends FlameGame {
     // sensible; everything below reduces to the phone layout at scale 1.0.
     final scale = (min(w, h) / 420).clamp(1.0, 1.7);
 
-    final fx = (w * 0.46).clamp(120.0, w / 2 - 8);
-    final fy = (h * 0.24).clamp(90.0, h * 0.30);
+    var fx = (w * 0.38).clamp(120.0, w * 0.40);
+    var fy = (h * 0.24).clamp(90.0, h * 0.30);
+
+    const minAspect = 2.0;
+    if (fx / fy < minAspect) {
+      fy = fx / minAspect;
+    }
+
     _table.position = Vector2(cx, cy);
     _table.size = Vector2(fx * 2, fy * 2);
 

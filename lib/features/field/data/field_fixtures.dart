@@ -1,6 +1,7 @@
 import '../../../config/assets.dart';
 import '../../../data/models/field_realm.dart';
 import '../../../data/models/ki_topic.dart';
+import 'field_models.dart';
 
 /// A selectable fact in the Inspect panel.
 typedef FieldFact = ({String label, String value, KiTopic topic});
@@ -12,6 +13,7 @@ typedef FieldAction = ({
   String panelLabel,
   String icon,
   KiTopic topic,
+  bool Function(Role role) canAccess,
 });
 
 /// A suggested-prompt chip offered beneath the Ki thread.
@@ -75,12 +77,13 @@ abstract class FieldFixtures {
   static const List<String> roles = [
     'Guest',
     'Member',
+    'Sponsor',
     'Organizer',
     'Creator',
     'Builder',
-    'Catalyst',
     'Luminary',
     'Mage',
+    'Catalyst',
   ];
 
   /// Expiration options for an invitation.
@@ -126,17 +129,18 @@ abstract class FieldFixtures {
         'changes in the Field.',
   );
 
-  static const List<FieldAction> actions = [
+  static final List<FieldAction> actions = [
     (
       id: 'invite',
       label: 'Invite people to join you here',
       panelLabel: 'Prepare a Kiduna Invitation',
       icon: '⇄',
+      canAccess: (Role role) => role.canInvite,
       topic: KiTopic(
         title: 'Invite someone',
         body:
             'Let’s prepare one invitation for one person, with a clear '
-            'purpose, exact access, and a private handshake between you.',
+            'purpose and exact access.',
         invitation:
             'Alice can fill in the invitation here or tell Ki about the '
             'person; Ki can prepare it through dialogue.',
@@ -147,6 +151,7 @@ abstract class FieldFixtures {
       label: 'Form a New Realm',
       panelLabel: 'Form a New Realm',
       icon: '✦',
+      canAccess: (Role role) => role.canCreate,
       topic: KiTopic(
         title: 'Form a New Realm',
         body:
@@ -162,6 +167,7 @@ abstract class FieldFixtures {
       label: 'Shape Kinship Duna',
       panelLabel: 'Shape Kinship Duna',
       icon: '◈',
+      canAccess: (Role role) => role.canShape,
       topic: KiTopic(
         title: 'Shape Kinship Duna',
         body:
@@ -177,6 +183,7 @@ abstract class FieldFixtures {
       label: 'Present Kinship Duna',
       panelLabel: 'Present Kinship Duna',
       icon: '◎',
+      canAccess: (Role role) => role.canPresent,
       topic: KiTopic(
         title: 'Present Kinship Duna',
         body:
@@ -185,6 +192,54 @@ abstract class FieldFixtures {
         invitation:
             'Edit the Realm directly in the working panel or ask Ki to help '
             'clarify how it should present.',
+      ),
+    ),
+    (
+      id: 'members',
+      label: 'Manage Members',
+      panelLabel: 'Realm Members',
+      icon: '⊕',
+      canAccess: (Role role) => role.canManageMembers,
+      topic: KiTopic(
+        title: 'Manage Members',
+        body:
+            'View everyone in this Realm, change their roles, or remove '
+            'members who no longer belong.',
+        invitation:
+            'Use the working panel to see all members and adjust roles, '
+            'or ask Ki for help managing the team.',
+      ),
+    ),
+    (
+      id: 'alliance',
+      label: 'View Alliance',
+      panelLabel: 'Alliance',
+      icon: '⬡',
+      canAccess: (Role role) => role.canViewAlliance,
+      topic: KiTopic(
+        title: 'View Alliance',
+        body:
+            'View the Squad wallet, balances, signers, and recent '
+            'transactions for this Realm.',
+        invitation:
+            'Open the Alliance tab to manage the shared wallet '
+            'and review activity.',
+      ),
+    ),
+    (
+      id: 'pay_compute',
+      label: 'Pay Compute',
+      panelLabel: 'Pay Compute',
+      icon: '◈',
+      canAccess: (Role role) => role.canPayCompute,
+      topic: KiTopic(
+        title: 'Pay Compute',
+        body:
+            'Purchase KIDUNA tokens and gift compute to members '
+            'of this Realm.',
+        invitation:
+            'Buy KIDUNA and transfer compute to realm members '
+            'so they can use AI services.',
       ),
     ),
   ];
@@ -403,12 +458,7 @@ abstract class FieldFixtures {
       'Schedule Meeting',
       'Reply to Email',
     ],
-    'telegram': [
-      'Send Message',
-      'Send Reply',
-      'Forward Message',
-      'Send Photo',
-    ],
+    'telegram': ['Send Message', 'Send Reply', 'Forward Message', 'Send Photo'],
     'solana': [
       'Check Balance',
       'Send SOL',
@@ -442,23 +492,54 @@ abstract class FieldFixtures {
   /// to auto-detect which tools a skill needs.
   static const Map<String, List<String>> toolKeywordMap = {
     'google': [
-      'email', 'gmail', 'inbox', 'mail', 'send email', 'read email',
-      'reply email', 'draft email', 'compose email', 'forward email',
-      'calendar', 'event', 'schedule', 'meeting', 'appointment',
-      'google meet', 'meet link',
+      'email',
+      'gmail',
+      'inbox',
+      'mail',
+      'send email',
+      'read email',
+      'reply email',
+      'draft email',
+      'compose email',
+      'forward email',
+      'calendar',
+      'event',
+      'schedule',
+      'meeting',
+      'appointment',
+      'google meet',
+      'meet link',
     ],
     'bluesky': [
-      'bluesky', 'bsky', 'post on bluesky', 'bluesky post',
-      'mention', 'timeline', 'social post', 'create post',
-      'reply to post', 'like post', 'repost',
+      'bluesky',
+      'bsky',
+      'post on bluesky',
+      'bluesky post',
+      'mention',
+      'timeline',
+      'social post',
+      'create post',
+      'reply to post',
+      'like post',
+      'repost',
     ],
     'telegram': [
-      'telegram', 'tg message', 'send message', 'bot message',
-      'telegram group', 'telegram channel',
+      'telegram',
+      'tg message',
+      'send message',
+      'bot message',
+      'telegram group',
+      'telegram channel',
     ],
     'solana': [
-      'solana', 'wallet', 'sol balance', 'transfer sol',
-      'send sol', 'token', 'transaction', 'treasury',
+      'solana',
+      'wallet',
+      'sol balance',
+      'transfer sol',
+      'send sol',
+      'token',
+      'transaction',
+      'treasury',
     ],
   };
 
@@ -466,18 +547,44 @@ abstract class FieldFixtures {
   /// to auto-detect the trigger type.
   static const Map<String, List<String>> triggerKeywordMap = {
     'event': [
-      'arrives', 'new', 'someone', 'receives', 'detected',
-      'incoming', 'when a', 'joins', 'uploaded', 'accepted',
-      'mentions', 'replies',
+      'arrives',
+      'new',
+      'someone',
+      'receives',
+      'detected',
+      'incoming',
+      'when a',
+      'joins',
+      'uploaded',
+      'accepted',
+      'mentions',
+      'replies',
     ],
     'time': [
-      'every', 'daily', 'weekly', 'monthly', 'at 9', 'at 8',
-      'schedule', 'morning', 'evening', 'hour', 'minute',
-      'first day', 'weekday',
+      'every',
+      'daily',
+      'weekly',
+      'monthly',
+      'at 9',
+      'at 8',
+      'schedule',
+      'morning',
+      'evening',
+      'hour',
+      'minute',
+      'first day',
+      'weekday',
     ],
     'condition': [
-      'drops below', 'exceeds', 'falls', 'changes',
-      'threshold', 'above', 'below', 'more than', 'less than',
+      'drops below',
+      'exceeds',
+      'falls',
+      'changes',
+      'threshold',
+      'above',
+      'below',
+      'more than',
+      'less than',
       'no activity',
     ],
   };

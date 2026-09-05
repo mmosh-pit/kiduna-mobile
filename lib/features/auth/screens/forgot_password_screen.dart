@@ -35,6 +35,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   MessageType _messageType = MessageType.success;
   Timer? _messageTimer;
   bool _isLoading = false;
+  // Tracked apart from _isLoading so the resend link does not
+  // report progress for the verify happening beside it.
+  bool _isResending = false;
   String _otpCode = '';
 
   final _emailController = TextEditingController();
@@ -133,7 +136,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   Future<void> _resendCode() async {
     final email = _emailController.text.trim();
-    setState(() => _isLoading = true);
+    setState(() => _isResending = true);
 
     try {
       await AuthService.instance.requestPasswordReset(email: email);
@@ -152,7 +155,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       _onError('Could not resend code. Please try again.');
     } finally {
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() => _isResending = false);
       }
     }
   }
@@ -260,7 +263,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       backgroundColor: colors.deep,
       body: Column(
         children: [
-          const AppHeader(),
+          const AppHeader(showUserMenu: false),
           Expanded(
             child: isMobile ? _buildMobileLayout() : _buildDesktopLayout(),
           ),
@@ -296,40 +299,52 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       color: colors.deep,
       child: LayoutBuilder(
         builder: (context, constraints) {
+          final form = Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  KidunaProgressBar(
+                    totalSteps: 3,
+                    currentStep: _currentStep,
+                  ),
+                  const SizedBox(height: 28),
+                  if (_message != null) ...[
+                    KidunaMessageBox(
+                      message: _message!,
+                      type: _messageType,
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    child: _buildCurrentStep(),
+                  ),
+                ],
+              ),
+            ),
+          );
+
+          // Mobile: this panel sits inside an outer scroll view, so its height
+          // is unbounded. Just pad the form — nesting another scroll view or
+          // deriving a minHeight from an infinite maxHeight throws during
+          // layout (the LayoutBuilder assertion seen on the iOS simulator).
+          if (!constraints.maxHeight.isFinite) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 40),
+              child: form,
+            );
+          }
+
+          // Desktop: fill the bounded panel and centre the form vertically,
+          // scrolling only if it doesn't fit.
           return SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 40),
             child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minHeight: constraints.maxHeight - 80,
-                maxWidth: double.infinity,
-              ),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 400),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      KidunaProgressBar(
-                        totalSteps: 3,
-                        currentStep: _currentStep,
-                      ),
-                      const SizedBox(height: 28),
-                      if (_message != null) ...[
-                        KidunaMessageBox(
-                          message: _message!,
-                          type: _messageType,
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 300),
-                        child: _buildCurrentStep(),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              constraints: BoxConstraints(minHeight: constraints.maxHeight - 80),
+              child: form,
             ),
           );
         },

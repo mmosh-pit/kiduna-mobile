@@ -15,6 +15,7 @@ class SignupStepTwo extends StatefulWidget {
     required this.onResend,
     required this.onError,
     this.isLoading = false,
+    this.isResending = false,
   });
 
   final String email;
@@ -23,6 +24,10 @@ class SignupStepTwo extends StatefulWidget {
   final VoidCallback onResend;
   final ValueChanged<String> onError;
   final bool isLoading;
+
+  /// Separate from [isLoading]: the resend link must not report progress
+  /// for a verification happening beside it.
+  final bool isResending;
 
   @override
   State<SignupStepTwo> createState() => _SignupStepTwoState();
@@ -61,7 +66,7 @@ class _SignupStepTwoState extends State<SignupStepTwo> {
               ),
               children: [
                 TextSpan(
-                  text: 'Step 2 of 6',
+                  text: 'Step 2 of 7',
                   style: TextStyle(
                     color: colors.text,
                     fontWeight: FontWeight.w700,
@@ -140,8 +145,8 @@ class _SignupStepTwoState extends State<SignupStepTwo> {
                       ),
                     ),
                     _LinkButton(
-                      label: widget.isLoading ? 'Sending...' : 'Resend code',
-                      onPressed: widget.isLoading ? null : widget.onResend,
+                      label: widget.isResending ? 'Sending...' : 'Resend code',
+                      onPressed: widget.isResending ? null : widget.onResend,
                     ),
                   ],
                 ),
@@ -284,6 +289,9 @@ class _LinkButton extends StatelessWidget {
         minimumSize: Size.zero,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         foregroundColor: colors.sky,
+        // Explicit: the Material default is an unrelated grey, which
+        // reads as a state change rather than a busy link.
+        disabledForegroundColor: colors.sky.withValues(alpha: 0.5),
         textStyle: const TextStyle(
           fontFamily: 'Avenir',
           fontSize: 13,

@@ -56,7 +56,10 @@ class ChatService {
       );
 
       if (statusCode == 402) {
-        throw const ServerException('Token limit exceeded');
+        // Backend rejected the request: no KIDUNA left to pay for compute.
+        throw const InsufficientBalanceException(
+          'You have no KIDUNA left. Buy more to keep chatting with Ki.',
+        );
       }
       if (statusCode >= 400) {
         throw ServerException('Chat stream returned $statusCode');
@@ -131,6 +134,25 @@ class ChatService {
       throw const NetworkException(
         'Unable to connect. Please check your internet.',
       );
+    }
+  }
+
+  /// Current-month compute usage for a wallet — tokens consumed, request
+  /// count, and cost. Served by the agent API, not kinship-backend.
+  Future<Map<String, dynamic>> fetchComputeUsage({
+    required String wallet,
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.computeUsage(wallet),
+      );
+      return response.data ?? {};
+    } on DioException catch (e) {
+      AppLogger.warning(
+        'Compute usage fetch failed: ${e.message}',
+        tag: 'ChatService',
+      );
+      return {};
     }
   }
 }

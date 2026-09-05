@@ -47,7 +47,8 @@ jobs:
             libsecret-1-dev \
             libjsoncpp-dev \
             libgstreamer1.0-dev \
-            libgstreamer-plugins-base1.0-dev
+            libgstreamer-plugins-base1.0-dev \
+            libpulse-dev
 
       - run: flutter pub get
 
@@ -134,7 +135,6 @@ jobs:
           #define AppName "Kiduna"
           #define AppExe "kiduna_mobile.exe"
           #define AppVersion "1.0.${{ github.run_number }}"
-
           [Setup]
           AppId={{B2F1B7A0-8A2A-4D4E-9B4C-KIDUNA00001}}
           AppName={#AppName}
@@ -153,34 +153,28 @@ jobs:
           PrivilegesRequiredOverridesAllowed=dialog
           WizardStyle=modern
           UninstallDisplayIcon={app}\{#AppExe}
-
           [Files]
           Source: "build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
-
           [Icons]
           Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExe}"
           Name: "{group}\Uninstall {#AppName}"; Filename: "{uninstallexe}"
           Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopicon
-
           [Tasks]
           Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription: "Additional shortcuts:"
-
           [Run]
           Filename: "{app}\{#AppExe}"; Description: "Launch {#AppName}"; Flags: nowait postinstall skipifsilent
           '@
           Set-Content -Path installer.iss -Value $iss -Encoding ASCII
-
       - name: Compile installer with Inno Setup
         shell: pwsh
         run: |
           & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" installer.iss
-
       - name: Upload Windows Installer
         uses: actions/upload-artifact@v4
         with:
           name: windows
           path: kiduna-windows-setup.exe
-
+          
   macos:
     runs-on: macos-latest
     environment: dev
@@ -253,12 +247,9 @@ jobs:
       - name: Stage release assets
         run: |
           mkdir -p release-assets
-          cp artifacts/android-apk/app-release.apk release-assets/app-release.apk
-          cp artifacts/android-aab/app-release.aab release-assets/app-release.aab
           cp artifacts/linux/linux-bundle.zip release-assets/linux-bundle.zip
           cp artifacts/web/web-bundle.zip release-assets/web-bundle.zip
           cp artifacts/windows/kiduna-windows-setup.exe release-assets/kiduna-windows-setup.exe
-          cp artifacts/macos/macos-bundle.zip release-assets/macos-bundle.zip
           cp artifacts/ios-build/ios-bundle.zip release-assets/ios-bundle.zip
           ls -la release-assets
 

@@ -85,9 +85,9 @@ class GameDriver {
     const classes = AiPersonality.values;
     const courts = CourtMember.values;
     final a = _agent(p);
-    final ci = await a.chooseClass([for (final c in classes) c.name]);
+    final ci = await a.chooseClass([for (final c in classes) c.title]);
     p.personality = classes[ci.clamp(0, classes.length - 1)];
-    final qi = await a.chooseCourt([for (final c in courts) c.name]);
+    final qi = await a.chooseCourt([for (final c in courts) c.title]);
     p.court = courts[qi.clamp(0, courts.length - 1)];
   }
 

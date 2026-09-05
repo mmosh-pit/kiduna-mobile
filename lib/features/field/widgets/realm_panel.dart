@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../config/assets.dart';
@@ -8,6 +9,7 @@ import '../../../core/errors/exceptions.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../data/services/realm_service.dart';
 import '../../auth/controllers/auth_controller.dart';
+import '../../dashboard/screens/dashboard_screen.dart';
 import '../controllers/ecosystem_controller.dart';
 import '../controllers/field_controller.dart';
 import '../data/field_fixtures.dart';
@@ -22,7 +24,20 @@ import 'field_inputs.dart';
 ///   Registration Domain, Standing Doc URL, Contact, Email, Address.
 /// **Other types** — Name, Type, Purpose (local UI-only).
 class RealmPanel extends ConsumerStatefulWidget {
-  const RealmPanel({super.key});
+  const RealmPanel({super.key, this.initialType, this.initialParentId, this.onCreated, this.lockType = false});
+
+  /// Pre-set the realm type dropdown (e.g. 'Alliance', 'Cell').
+  final String? initialType;
+
+  /// Pre-set the parent realm ID (for creating cells inside an alliance).
+  final String? initialParentId;
+
+  /// Called after successful realm creation.
+  final VoidCallback? onCreated;
+
+  /// When true, hides type/cellType/theme/focus dropdowns. Used for creating
+  /// cells inside an Alliance where type is always Cell + Temporary.
+  final bool lockType;
 
   @override
   ConsumerState<RealmPanel> createState() => _RealmPanelState();
@@ -47,12 +62,15 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
   final TextEditingController _address = TextEditingController();
 
   String _type = 'Organization';
+
   String _visibility = 'public';
+  String _cellType = 'temporary';
   String _entityType = 'company';
   String? _primaryTheme;
   String? _primaryFocus;
   bool _submitting = false;
   String? _error;
+  final _scrollCtrl = ScrollController();
 
   // Handle availability state.
   bool? _handleAvailable;
@@ -62,6 +80,9 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialType != null) {
+      _type = widget.initialType!;
+    }
     final user = ref.read(authControllerProvider).user;
     if (user != null && user.email.isNotEmpty) _email.text = user.email;
     _name.addListener(_autoSuggestHandle);
@@ -71,6 +92,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
   void dispose() {
     _name.removeListener(_autoSuggestHandle);
     _handleDebounce?.cancel();
+    _scrollCtrl.dispose();
     for (final c in [_name, _purpose, _registration, _email, _handle,
         _description, _sharedPurpose, _regDomain, _standingDocUrl,
         _designateContact, _designateEmail, _address]) {
@@ -89,7 +111,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
   bool get _isCell => _type == 'Cell';
   bool get _isDyad => _type == 'Dyad';
   bool get _isCouncil => _type == 'Council';
-  bool get _hasHandle => _isAlliance || _isInstitution || _isCommunity || _isProgram || _isProject || _isConcept || _isCell || _isDyad || _isCouncil;
+  bool get _hasHandle => _isOrganization || _isAlliance || _isInstitution || _isCommunity || _isProgram || _isProject || _isConcept || _isCell || _isDyad || _isCouncil;
   bool get _requiresTheme => _isOrganization || _isAlliance || _isInstitution || _isCommunity || _isProgram || _isProject || _isConcept || _isCell || _isDyad || _isCouncil;
 
   void _autoSuggestHandle() {
@@ -132,11 +154,19 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
   String? _validate() {
     final nameText = _name.text.trim();
     if (nameText.isEmpty) return 'Name is required.';
+    if (nameText.length < 3) return 'Name must be at least 3 characters.';
     if (nameText.length > 120) return 'Name must be 120 characters or fewer.';
 
     if (_hasHandle) {
       final h = _handle.text.trim();
       if (h.isEmpty) return 'Handle is required.';
+      if (h.length < 3) return 'Handle must be at least 3 characters.';
+      if (h.contains(' ')) {
+        return 'Handle cannot contain spaces — use underscores, dots, or hyphens instead.';
+      }
+      if (h != h.toLowerCase()) {
+        return 'Handle must be lowercase — capital letters are not allowed.';
+      }
       if (!_handleRe.hasMatch(h)) {
         return 'Handle can only contain lowercase letters, numbers, dots, hyphens, and underscores (max 25 chars).';
       }
@@ -193,6 +223,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
     final validationError = _validate();
     if (validationError != null) {
       setState(() => _error = validationError);
+      _scrollCtrl.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
       return;
     }
 
@@ -208,7 +239,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
       if (_isAlliance) {
         final realm = await RealmService.instance.createRealm(
           name: nameText, type: 'alliance',
-          parentId: enteredParentId,
+          parentId: widget.initialParentId ?? enteredParentId,
           handle: _handle.text.trim(),
           description: _description.text.trim(),
           purpose: _sharedPurpose.text.trim(),
@@ -217,7 +248,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
           primaryFocus: _primaryFocus,
           authToken: auth.token,
         );
-        if (mounted) fieldCtrl.onRealmCreated(realm);
+        if (mounted) { fieldCtrl.onRealmCreated(realm); widget.onCreated?.call(); }
       } else if (_isInstitution) {
         final realm = await RealmService.instance.createRealm(
           name: nameText, type: 'institution',
@@ -243,7 +274,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
           primaryFocus: _primaryFocus,
           authToken: auth.token,
         );
-        if (mounted) fieldCtrl.onRealmCreated(realm);
+        if (mounted) { fieldCtrl.onRealmCreated(realm); widget.onCreated?.call(); }
       } else if (_isOrganization) {
         final ecosystemState = ref.read(ecosystemControllerProvider);
         final parentId = enteredParentId ?? ecosystemState.genesis?.id;
@@ -251,8 +282,11 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
         final realm = await RealmService.instance.createRealm(
           name: nameText, type: 'organization',
           parentId: parentId,
+          handle: _handle.text.trim(),
+          description: _description.text.trim(),
           purpose: _purpose.text.trim(),
           email: _email.text.trim(),
+          visibility: _visibility,
           config: {
             if (_registration.text.trim().isNotEmpty)
               'registration': _registration.text.trim(),
@@ -262,7 +296,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
           primaryFocus: _primaryFocus,
           authToken: auth.token,
         );
-        if (mounted) fieldCtrl.onRealmCreated(realm);
+        if (mounted) { fieldCtrl.onRealmCreated(realm); widget.onCreated?.call(); }
       } else if (_isCommunity) {
         final realm = await RealmService.instance.createRealm(
           name: nameText, type: 'community',
@@ -275,7 +309,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
           primaryFocus: _primaryFocus,
           authToken: auth.token,
         );
-        if (mounted) fieldCtrl.onRealmCreated(realm);
+        if (mounted) { fieldCtrl.onRealmCreated(realm); widget.onCreated?.call(); }
       } else if (_isProgram) {
         final realm = await RealmService.instance.createRealm(
           name: nameText, type: 'program',
@@ -288,7 +322,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
           primaryFocus: _primaryFocus,
           authToken: auth.token,
         );
-        if (mounted) fieldCtrl.onRealmCreated(realm);
+        if (mounted) { fieldCtrl.onRealmCreated(realm); widget.onCreated?.call(); }
       } else if (_isProject) {
         final realm = await RealmService.instance.createRealm(
           name: nameText, type: 'project',
@@ -301,7 +335,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
           primaryFocus: _primaryFocus,
           authToken: auth.token,
         );
-        if (mounted) fieldCtrl.onRealmCreated(realm);
+        if (mounted) { fieldCtrl.onRealmCreated(realm); widget.onCreated?.call(); }
       } else if (_isConcept) {
         final realm = await RealmService.instance.createRealm(
           name: nameText, type: 'concept',
@@ -314,20 +348,39 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
           primaryFocus: _primaryFocus,
           authToken: auth.token,
         );
-        if (mounted) fieldCtrl.onRealmCreated(realm);
+        if (mounted) { fieldCtrl.onRealmCreated(realm); widget.onCreated?.call(); }
       } else if (_isCell) {
         final realm = await RealmService.instance.createRealm(
           name: nameText, type: 'cell',
-          parentId: enteredParentId,
+          parentId: widget.initialParentId ?? enteredParentId,
           handle: _handle.text.trim(),
           description: _description.text.trim(),
           purpose: _sharedPurpose.text.trim(),
           visibility: _visibility,
+          config: {'cellType': _cellType},
           primaryTheme: _primaryTheme,
           primaryFocus: _primaryFocus,
           authToken: auth.token,
         );
+
         if (mounted) fieldCtrl.onRealmCreated(realm);
+        if (mounted) {
+          if (_cellType == 'permanent') {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(
+                builder: (_) => DashboardScreen(permanentCellRealmId: realm.id),
+              ),
+              (route) => false,
+            );
+          } else {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(
+                builder: (_) => DashboardScreen(initialTab: 1, startGameInLobby: true, cellRealmId: realm.id),
+              ),
+              (route) => false,
+            );
+          }
+        }
       } else if (_isDyad) {
         final realm = await RealmService.instance.createRealm(
           name: nameText, type: 'dyad',
@@ -340,7 +393,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
           primaryFocus: _primaryFocus,
           authToken: auth.token,
         );
-        if (mounted) fieldCtrl.onRealmCreated(realm);
+        if (mounted) { fieldCtrl.onRealmCreated(realm); widget.onCreated?.call(); }
       } else if (_isCouncil) {
         final realm = await RealmService.instance.createRealm(
           name: nameText, type: 'council',
@@ -353,7 +406,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
           primaryFocus: _primaryFocus,
           authToken: auth.token,
         );
-        if (mounted) fieldCtrl.onRealmCreated(realm);
+        if (mounted) { fieldCtrl.onRealmCreated(realm); widget.onCreated?.call(); }
       } else {
         // Fallback — local UI-only
         await fieldCtrl.createRealm(
@@ -361,9 +414,9 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
         );
       }
     } on AppException catch (e) {
-      if (mounted) setState(() => _error = e.message ?? 'Something went wrong.');
+      if (mounted) { setState(() => _error = e.message ?? 'Something went wrong.'); _scrollCtrl.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeOut); }
     } catch (e) {
-      if (mounted) setState(() => _error = 'Something went wrong. Please try again.');
+      if (mounted) { setState(() => _error = 'Something went wrong. Please try again.'); _scrollCtrl.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeOut); }
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -376,8 +429,9 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
     final text = context.kidunaText;
 
     return ConstrainedBox(
-      constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.6),
+      constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.55),
       child: SingleChildScrollView(
+        controller: _scrollCtrl,
         padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -425,7 +479,9 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
                         : _isDyad ? l10n.dyadNameLabel
                         : _isCouncil ? l10n.councilNameLabel
                         : l10n.realmName,
+                    isRequired: true,
                     controller: _name,
+                    inputFormatters: [_FirstCharAlphanumericFormatter()],
                     hint: _isAlliance ? l10n.allianceNameHint
                         : _isInstitution ? l10n.institutionNameHint
                         : _isOrganization ? l10n.nameThisOrganization
@@ -451,10 +507,16 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
                   )
                 else
                   Expanded(
-                    child: FieldDropdown(
-                      label: l10n.typeLabel, value: _type,
-                      options: FieldFixtures.realmTypes,
-                      onChanged: (v) => setState(() { _type = v; _error = null; }),
+                    child: IgnorePointer(
+                      ignoring: widget.lockType,
+                      child: Opacity(
+                        opacity: widget.lockType ? 0.5 : 1.0,
+                        child: FieldDropdown(
+                          label: l10n.typeLabel, value: _type,
+                          options: FieldFixtures.realmTypes,
+                          onChanged: (v) => setState(() { _type = v; _error = null; }),
+                        ),
+                      ),
                     ),
                   ),
               ],
@@ -463,10 +525,16 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
             // ── Type dropdown below name row for Alliance/Institution ─
             if (_hasHandle) ...[
               const SizedBox(height: 8),
-              FieldDropdown(
-                label: l10n.typeLabel, value: _type,
-                options: FieldFixtures.realmTypes,
-                onChanged: (v) => setState(() { _type = v; _error = null; }),
+              IgnorePointer(
+                ignoring: widget.lockType,
+                child: Opacity(
+                  opacity: widget.lockType ? 0.5 : 1.0,
+                  child: FieldDropdown(
+                    label: l10n.typeLabel, value: _type,
+                    options: FieldFixtures.realmTypes,
+                    onChanged: (v) => setState(() { _type = v; _error = null; }),
+                  ),
+                ),
               ),
             ],
             const SizedBox(height: 12),
@@ -581,13 +649,22 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
             // ── Cell-specific fields ────────────────────────────────────
             // ═════════════════════════════════════════════════════════════
             if (_isCell) ...[
+              IgnorePointer(
+                ignoring: widget.lockType,
+                child: Opacity(
+                  opacity: widget.lockType ? 0.5 : 1.0,
+                  child: _CellTypeSelector(
+                    value: _cellType,
+                    onChanged: (v) => setState(() => _cellType = v),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
               FieldTextInput(label: l10n.descriptionLabel, controller: _description,
                   hint: l10n.cellDescriptionHint, maxLines: 3),
               const SizedBox(height: 12),
               FieldTextInput(label: l10n.purposeProjectLabel, controller: _sharedPurpose,
                   hint: l10n.cellPurposeHint),
-              const SizedBox(height: 12),
-              _VisibilitySelector(value: _visibility, onChanged: (v) => setState(() => _visibility = v)),
             ],
 
             // ═════════════════════════════════════════════════════════════
@@ -620,7 +697,12 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
             // ── Organization-specific fields ─────────────────────────────
             // ═════════════════════════════════════════════════════════════
             if (_isOrganization) ...[
+              FieldTextInput(label: l10n.descriptionLabel, controller: _description,
+                  hint: l10n.organizationDescriptionHint, maxLines: 3),
+              const SizedBox(height: 12),
               FieldTextInput(label: l10n.registrationLabel, controller: _registration, hint: l10n.registrationHint),
+              const SizedBox(height: 12),
+              _VisibilitySelector(value: _visibility, onChanged: (v) => setState(() => _visibility = v)),
               const SizedBox(height: 12),
             ],
 
@@ -628,13 +710,13 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
             if (!_isAlliance && !_isInstitution && !_isCommunity && !_isProgram && !_isProject && !_isConcept && !_isCell && !_isDyad && !_isCouncil) ...[
               FieldTextInput(label: l10n.purpose, controller: _purpose,
                   hint: _isOrganization ? l10n.whatIsTheMissionYourMembersShare : l10n.whatShouldThisRealmBringIntoBeing,
-                  maxLines: 3),
+                  maxLines: 3, isRequired: _isOrganization),
               const SizedBox(height: 12),
             ],
 
             // ── Email (Organization only) ─────────────────────────────
             if (_isOrganization) ...[
-              FieldTextInput(label: l10n.emailLabel, controller: _email, hint: l10n.emailHint),
+              FieldTextInput(label: l10n.emailLabel, controller: _email, hint: l10n.emailHint, isRequired: true),
               const SizedBox(height: 12),
             ],
 
@@ -685,12 +767,6 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
                   const SizedBox(height: 5),
                   Text(l10n.defaultPortraitDescription, style: text.micro.copyWith(color: colors.muted, fontSize: 9, height: 1.45)),
                 ])),
-                const SizedBox(width: 10),
-                OutlinedButton(onPressed: () {}, style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(0, 30), padding: const EdgeInsets.symmetric(horizontal: 12),
-                  foregroundColor: colors.skyButtonInk, backgroundColor: colors.sky,
-                  side: BorderSide.none, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
-                ), child: Text(l10n.create, style: text.label.copyWith(color: colors.skyButtonInk, fontWeight: FontWeight.w700))),
               ]),
             ),
             const SizedBox(height: 14),
@@ -701,15 +777,16 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
               child: ListenableBuilder(
                 listenable: Listenable.merge([_name, _purpose, _email, _handle, _sharedPurpose]),
                 builder: (context, _) {
-                  final nameOk = _name.text.trim().isNotEmpty;
+                  final nameOk = _name.text.trim().length >= 3;
                   bool canCreate;
-                  if (_isAlliance || _isInstitution || _isCommunity || _isProgram || _isProject || _isConcept || _isCell || _isDyad || _isCouncil) {
-                    final handleOk = _handle.text.trim().isNotEmpty && _handleAvailable != false;
-                    canCreate = nameOk && handleOk && !_submitting;
-                  } else if (_isOrganization) {
+                  if (_isOrganization) {
+                    final handleOk = _handle.text.trim().length >= 3 && _handleAvailable != false;
                     final purposeOk = _purpose.text.trim().length >= 10;
                     final emailOk = _email.text.trim().isNotEmpty;
-                    canCreate = nameOk && purposeOk && emailOk && !_submitting;
+                    canCreate = nameOk && handleOk && purposeOk && emailOk && !_submitting;
+                  } else if (_isAlliance || _isInstitution || _isCommunity || _isProgram || _isProject || _isConcept || _isCell || _isDyad || _isCouncil) {
+                    final handleOk = _handle.text.trim().length >= 3 && _handleAvailable != false;
+                    canCreate = nameOk && handleOk && !_submitting;
                   } else {
                     canCreate = nameOk && !_submitting;
                   }
@@ -751,8 +828,9 @@ class _HandleField extends StatelessWidget {
     final colors = context.kiduna; final textTheme = context.kidunaText; final l10n = context.l10n;
     final inputStyle = textTheme.caption.copyWith(color: colors.text, height: 1.4);
     Widget? suffixWidget;
-    if (checking) suffixWidget = SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 1.5, color: colors.quiet));
-    else if (available == true) suffixWidget = Icon(Icons.check_circle, size: 16, color: colors.sky);
+    if (checking) {
+      suffixWidget = SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 1.5, color: colors.quiet));
+    } else if (available == true) suffixWidget = Icon(Icons.check_circle, size: 16, color: colors.sky);
     else if (available == false) suffixWidget = Icon(Icons.cancel, size: 16, color: colors.gold);
     final border = OutlineInputBorder(borderRadius: BorderRadius.circular(context.metrics.radiusMd),
       borderSide: BorderSide(color: available == false ? colors.gold : colors.camel.withValues(alpha: 0.24)));
@@ -760,7 +838,7 @@ class _HandleField extends StatelessWidget {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       ConstrainedBox(constraints: const BoxConstraints(minHeight: 26), child: Row(children: [
         Text(l10n.handleLabel, style: textTheme.label.copyWith(color: colors.cream)),
-        Text(' *', style: textTheme.label.copyWith(color: colors.gold)),
+        Text(' *', style: textTheme.label.copyWith(color: const Color(0xFFEF4444), fontWeight: FontWeight.w700)),
       ])),
       const SizedBox(height: 6),
       TextField(controller: controller, maxLength: 25, onChanged: onChanged, style: inputStyle,
@@ -887,7 +965,7 @@ class _ThemeFocusSelector extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        FieldLabel(text: l10n.primaryThemeLabel),
+        FieldLabel(text: l10n.primaryThemeLabel, isRequired: true),
         const SizedBox(height: 6),
         _DropdownField<String>(
           value: theme,
@@ -907,7 +985,7 @@ class _ThemeFocusSelector extends StatelessWidget {
           },
         ),
         const SizedBox(height: 12),
-        FieldLabel(text: l10n.primaryFocusLabel),
+        FieldLabel(text: l10n.primaryFocusLabel, isRequired: true),
         const SizedBox(height: 6),
         _DropdownField<String>(
           value: focus,
@@ -929,6 +1007,59 @@ class _ThemeFocusSelector extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+class _CellTypeSelector extends StatelessWidget {
+  const _CellTypeSelector({required this.value, required this.onChanged});
+  final String value;
+  final ValueChanged<String> onChanged;
+  static const _options = ['temporary', 'permanent'];
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.kiduna;
+    final textTheme = context.kidunaText;
+    final l10n = context.l10n;
+    final labels = [l10n.temporaryCell, l10n.permanentCell];
+    final hints = [l10n.temporaryCellHint, l10n.permanentCellHint];
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      FieldLabel(text: l10n.cellTypeLabel),
+      const SizedBox(height: 8),
+      Row(children: List.generate(_options.length, (i) {
+        final selected = value == _options[i];
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(right: i < _options.length - 1 ? 8 : 0),
+            child: GestureDetector(
+              onTap: () => onChanged(_options[i]),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: selected ? colors.gold.withValues(alpha: 0.15) : const Color.fromRGBO(6, 3, 4, 0.66),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: selected ? colors.gold : colors.camel.withValues(alpha: 0.24)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(labels[i], style: textTheme.label.copyWith(
+                      color: selected ? colors.gold : colors.quiet,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    )),
+                    const SizedBox(height: 4),
+                    Text(hints[i], style: textTheme.micro.copyWith(
+                      color: selected ? colors.muted : colors.quiet.withValues(alpha: 0.6),
+                      fontSize: 9,
+                    )),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      })),
+    ]);
   }
 }
 
@@ -1001,5 +1132,21 @@ class _DropdownField<T> extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _FirstCharAlphanumericFormatter extends TextInputFormatter {
+  static final _leadingPattern = RegExp(r'^[^a-zA-Z0-9]');
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    if (newValue.text.isEmpty) return newValue;
+    if (_leadingPattern.hasMatch(newValue.text)) {
+      return oldValue;
+    }
+    return newValue;
   }
 }

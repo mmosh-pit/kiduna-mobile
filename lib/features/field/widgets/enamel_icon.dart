@@ -154,7 +154,7 @@ class EnamelIcon extends StatelessWidget {
                                   cacheHeight: cacheSize,
                                   gaplessPlayback: true,
                                   semanticLabel: context.l10n.realmEmblem,
-                                  errorBuilder: (_, __, ___) =>
+                                  errorBuilder: (_, _, _) =>
                                       _buildFallback(colors),
                                 ),
                               )),

@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-
 import '../../core/errors/exceptions.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/api_endpoints.dart';
@@ -112,6 +111,44 @@ class RealmService {
     }
   }
 
+  /// Update Realm fields via `PATCH /realms/:id`.
+  Future<RealmModel> updateRealm({
+    required String id,
+    String? name,
+    String? purpose,
+    String? description,
+    String? visibility,
+    String? email,
+    String? primaryTheme,
+    String? primaryFocus,
+  }) async {
+    try {
+      final data = <String, dynamic>{};
+      if (name != null) data['name'] = name;
+      if (purpose != null) data['purpose'] = purpose;
+      if (description != null) data['description'] = description;
+      if (visibility != null) data['visibility'] = visibility;
+      if (email != null) data['email'] = email;
+      if (primaryTheme != null) data['primaryTheme'] = primaryTheme;
+      if (primaryFocus != null) data['primaryFocus'] = primaryFocus;
+
+      final response = await _dio.patch<Map<String, dynamic>>(
+        ApiEndpoints.realmById(id),
+        data: data,
+      );
+      return RealmModel.fromJson(
+        response.data!['realm'] as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      final serverMsg = e.response?.data is Map
+          ? (e.response!.data as Map)['error'] as String?
+          : null;
+      throw NetworkException(
+        serverMsg ?? 'Unable to update Realm. Please try again.',
+      );
+    }
+  }
+
   /// List the caller's Realms via `GET /realms`.
   ///
   /// Optional filters: [type], [parentId], [tags].
@@ -125,8 +162,8 @@ class RealmService {
       final response = await _dio.get<Map<String, dynamic>>(
         ApiEndpoints.realms,
         queryParameters: {
-          if (type != null) 'type': type,
-          if (parentId != null) 'parentId': parentId,
+          'type': ?type,
+          'parentId': ?parentId,
           if (tags != null && tags.isNotEmpty) 'tags': tags.join(','),
         },
         options: authToken != null
@@ -138,10 +175,11 @@ class RealmService {
       if (body == null) return [];
 
       final list = body['realms'] as List<dynamic>? ?? [];
-      return list
+      final realms = list
           .whereType<Map<String, dynamic>>()
           .map(RealmModel.fromJson)
           .toList();
+      return realms;
     } on DioException catch (e) {
       if (e.error is AppException) throw e.error!;
       AppLogger.error(
@@ -169,12 +207,7 @@ class RealmService {
       final eco = body['ecosystem'] as Map<String, dynamic>?;
       if (eco == null) return null;
 
-      final ecosystem = RealmModel.fromJson(eco);
-      AppLogger.info(
-        'Ecosystem loaded: ${ecosystem.name}',
-        tag: 'RealmService',
-      );
-      return ecosystem;
+      return RealmModel.fromJson(eco);
     } on DioException catch (e) {
       if (e.error is AppException) throw e.error!;
       AppLogger.error(
@@ -203,6 +236,7 @@ class RealmService {
   }
 
   /// Fetch Realm tree (children) via `GET /realms/tree/:id`.
+  /// Fetch children of a realm via `GET /realms/:id/tree` (PostgreSQL).
   Future<List<RealmModel>> fetchRealmChildren(String realmId, {String? authToken}) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
@@ -231,6 +265,361 @@ class RealmService {
       throw const NetworkException(
         'Unable to load Realm children. Please check your connection.',
       );
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // Added for Alliance feature
+  // ═══════════════════════════════════════════════════════════════
+
+  /// Fetch a single Realm by ID via `GET /realms/:id` (PostgreSQL).
+  Future<RealmModel> fetchRealmById(String realmId, {String? authToken}) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.realmById(realmId),
+        options: authToken != null
+            ? Options(headers: {'Authorization': 'Bearer $authToken'})
+            : null,
+      );
+
+      final body = response.data;
+      if (body == null) {
+        throw const ServerException('Empty response from fetch realm');
+      }
+
+      final realmJson = body['realm'] as Map<String, dynamic>? ?? body;
+      return RealmModel.fromJson(realmJson);
+    } on DioException catch (e) {
+      if (e.error is AppException) throw e.error!;
+      throw const NetworkException('Unable to load Realm.');
+    }
+  }
+
+  /// Update a member's role via `PATCH /realms/:id/members/:memberId`.
+  Future<void> updateMemberRole({
+    required String realmId,
+    required String memberId,
+    required String role,
+    String? authToken,
+  }) async {
+    try {
+      await _dio.patch<Map<String, dynamic>>(
+        '${ApiEndpoints.realmById(realmId)}/members/$memberId',
+        data: {'role': role},
+        options: authToken != null
+            ? Options(headers: {'Authorization': 'Bearer $authToken'})
+            : null,
+      );
+      AppLogger.info('Updated member $memberId role to $role', tag: 'RealmService');
+    } on DioException catch (e) {
+      if (e.error is AppException) throw e.error!;
+      final msg = e.response?.data is Map
+          ? (e.response!.data as Map)['error'] as String?
+          : null;
+      throw NetworkException(msg ?? 'Unable to update member role.');
+    }
+  }
+
+  /// Join a realm using an invitation code via `POST /realm-invites/join/:code`.
+  Future<Map<String, dynamic>> joinWithCode({
+    required String code,
+    String? authToken,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/realm-invites/join/${code.trim().toUpperCase()}',
+        data: {},
+        options: authToken != null
+            ? Options(headers: {'Authorization': 'Bearer $authToken'})
+            : null,
+      );
+
+      final body = response.data ?? {};
+      AppLogger.info('Joined realm with code $code', tag: 'RealmService');
+      return body;
+    } on DioException catch (e) {
+      if (e.error is AppException) throw e.error!;
+      final msg = e.response?.data is Map
+          ? (e.response!.data as Map)['error'] as String?
+          : null;
+      throw NetworkException(msg ?? 'Unable to join. Invalid or expired code.');
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // Proposal endpoints — Squads on-chain operations
+  // ═══════════════════════════════════════════════════════════════
+
+  /// List all on-chain proposals for a realm.
+  Future<List<Map<String, dynamic>>> fetchProposals(String realmId, {String? authToken}) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '${ApiEndpoints.realmById(realmId)}/proposals',
+        options: authToken != null
+            ? Options(headers: {'Authorization': 'Bearer $authToken'})
+            : null,
+      );
+      final body = response.data ?? {};
+      final proposals = body['proposals'] as List<dynamic>? ?? [];
+      return proposals.cast<Map<String, dynamic>>();
+    } on DioException catch (e) {
+      if (e.error is AppException) throw e.error!;
+      throw const NetworkException('Unable to load proposals.');
+    }
+  }
+
+  /// Create a USDC transfer proposal.
+  Future<Map<String, dynamic>> createTransferUsdcProposal({
+    required String realmId,
+    required String to,
+    required double amountUsdc,
+    String? authToken,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '${ApiEndpoints.realmById(realmId)}/proposals/transfer-usdc',
+        data: {'to': to, 'amountUsdc': amountUsdc},
+        options: authToken != null
+            ? Options(headers: {'Authorization': 'Bearer $authToken'})
+            : null,
+      );
+      return response.data ?? {};
+    } on DioException catch (e) {
+      if (e.error is AppException) throw e.error!;
+      final msg = e.response?.data is Map
+          ? (e.response!.data as Map)['error'] as String?
+          : null;
+      throw NetworkException(msg ?? 'Unable to create proposal.');
+    }
+  }
+
+  /// Create a SOL transfer proposal.
+  Future<Map<String, dynamic>> createTransferSolProposal({
+    required String realmId,
+    required String to,
+    required double amountSol,
+    String? authToken,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '${ApiEndpoints.realmById(realmId)}/proposals/transfer-sol',
+        data: {'to': to, 'amountSol': amountSol},
+        options: authToken != null
+            ? Options(headers: {'Authorization': 'Bearer $authToken'})
+            : null,
+      );
+      return response.data ?? {};
+    } on DioException catch (e) {
+      if (e.error is AppException) throw e.error!;
+      final msg = e.response?.data is Map
+          ? (e.response!.data as Map)['error'] as String?
+          : null;
+      throw NetworkException(msg ?? 'Unable to create proposal.');
+    }
+  }
+
+  /// Approve a pending proposal.
+  Future<Map<String, dynamic>> approveProposal({
+    required String realmId,
+    required String transactionIndex,
+    String? authToken,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '${ApiEndpoints.realmById(realmId)}/proposals/approve',
+        data: {'transactionIndex': transactionIndex},
+        options: authToken != null
+            ? Options(headers: {'Authorization': 'Bearer $authToken'})
+            : null,
+      );
+      return response.data ?? {};
+    } on DioException catch (e) {
+      if (e.error is AppException) throw e.error!;
+      final msg = e.response?.data is Map
+          ? (e.response!.data as Map)['error'] as String?
+          : null;
+      throw NetworkException(msg ?? 'Unable to approve proposal.');
+    }
+  }
+
+  /// Reject a proposal.
+  Future<Map<String, dynamic>> rejectProposal({
+    required String realmId,
+    required String transactionIndex,
+    String? authToken,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '${ApiEndpoints.realmById(realmId)}/proposals/reject',
+        data: {'transactionIndex': transactionIndex},
+        options: authToken != null
+            ? Options(headers: {'Authorization': 'Bearer $authToken'})
+            : null,
+      );
+      return response.data ?? {};
+    } on DioException catch (e) {
+      if (e.error is AppException) throw e.error!;
+      final msg = e.response?.data is Map
+          ? (e.response!.data as Map)['error'] as String?
+          : null;
+      throw NetworkException(msg ?? 'Unable to reject proposal.');
+    }
+  }
+
+  /// Execute an approved vault proposal.
+  Future<Map<String, dynamic>> executeVaultProposal({
+    required String realmId,
+    required String transactionIndex,
+    String? authToken,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '${ApiEndpoints.realmById(realmId)}/proposals/execute-vault',
+        data: {'transactionIndex': transactionIndex},
+        options: authToken != null
+            ? Options(headers: {'Authorization': 'Bearer $authToken'})
+            : null,
+      );
+      return response.data ?? {};
+    } on DioException catch (e) {
+      if (e.error is AppException) throw e.error!;
+      final msg = e.response?.data is Map
+          ? (e.response!.data as Map)['error'] as String?
+          : null;
+      throw NetworkException(msg ?? 'Unable to execute proposal.');
+    }
+  }
+
+  /// Propose adding a signer to the Squads multisig.
+  Future<Map<String, dynamic>> addMemberProposal({
+    required String realmId,
+    required String wallet,
+    String? authToken,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '${ApiEndpoints.realmById(realmId)}/proposals/add-member',
+        data: {'wallet': wallet},
+        options: authToken != null
+            ? Options(headers: {'Authorization': 'Bearer $authToken'})
+            : null,
+      );
+      return response.data ?? {};
+    } on DioException catch (e) {
+      if (e.error is AppException) throw e.error!;
+      final msg = e.response?.data is Map
+          ? (e.response!.data as Map)['error'] as String?
+          : null;
+      throw NetworkException(msg ?? 'Unable to add member.');
+    }
+  }
+
+  /// Propose removing a signer from the Squads multisig.
+  Future<Map<String, dynamic>> removeMemberProposal({
+    required String realmId,
+    required String wallet,
+    String? authToken,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '${ApiEndpoints.realmById(realmId)}/proposals/remove-member',
+        data: {'wallet': wallet},
+        options: authToken != null
+            ? Options(headers: {'Authorization': 'Bearer $authToken'})
+            : null,
+      );
+      return response.data ?? {};
+    } on DioException catch (e) {
+      if (e.error is AppException) throw e.error!;
+      final msg = e.response?.data is Map
+          ? (e.response!.data as Map)['error'] as String?
+          : null;
+      throw NetworkException(msg ?? 'Unable to remove member.');
+    }
+  }
+
+  /// Propose changing the approval threshold.
+  Future<Map<String, dynamic>> changeThresholdProposal({
+    required String realmId,
+    required int newThreshold,
+    String? authToken,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '${ApiEndpoints.realmById(realmId)}/proposals/change-threshold',
+        data: {'newThreshold': newThreshold},
+        options: authToken != null
+            ? Options(headers: {'Authorization': 'Bearer $authToken'})
+            : null,
+      );
+      return response.data ?? {};
+    } on DioException catch (e) {
+      if (e.error is AppException) throw e.error!;
+      final msg = e.response?.data is Map
+          ? (e.response!.data as Map)['error'] as String?
+          : null;
+      throw NetworkException(msg ?? 'Unable to change threshold.');
+    }
+  }
+
+  /// Fetch vault SOL + USDC balance for a realm wallet.
+  Future<Map<String, dynamic>> fetchWalletBalance(
+    String realmId, {
+    String? authToken,
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '${ApiEndpoints.realmById(realmId)}/wallet-balance',
+        options: authToken != null
+            ? Options(headers: {'Authorization': 'Bearer $authToken'})
+            : null,
+      );
+      return response.data ?? {};
+    } on DioException catch (e) {
+      if (e.error is AppException) throw e.error!;
+      throw const NetworkException('Unable to fetch wallet balance.');
+    }
+  }
+
+  /// Fetch vault transaction history for a realm wallet.
+  Future<List<Map<String, dynamic>>> fetchWalletTransactions(
+    String realmId, {
+    int limit = 10,
+    String? authToken,
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '${ApiEndpoints.realmById(realmId)}/wallet-transactions',
+        queryParameters: {'limit': limit},
+        options: authToken != null
+            ? Options(headers: {'Authorization': 'Bearer $authToken'})
+            : null,
+      );
+      final body = response.data ?? {};
+      final txns = body['transactions'] as List<dynamic>? ?? [];
+      return txns.cast<Map<String, dynamic>>();
+    } on DioException catch (e) {
+      if (e.error is AppException) throw e.error!;
+      throw const NetworkException('Unable to fetch transactions.');
+    }
+  }
+
+  // ── Member management ──────────────────────────────────────────────────
+
+  /// Remove a member via `DELETE /realms/:id/members/:memberId`.
+  Future<void> removeMember({
+    required String realmId,
+    required String memberId,
+  }) async {
+    try {
+      await _dio.delete<Map<String, dynamic>>(
+        ApiEndpoints.realmMemberRemove(realmId, memberId),
+        data: {},
+      );
+    } on DioException catch (e) {
+      if (e.error is AppException) throw e.error!;
+      final msg = e.response?.data?['error'] as String?;
+      throw ServerException(msg ?? 'Unable to remove member.');
     }
   }
 }

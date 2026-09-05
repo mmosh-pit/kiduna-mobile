@@ -38,3 +38,10 @@ class ValidationException extends AppException {
 class ConflictException extends AppException {
   const ConflictException([super.message]);
 }
+
+/// Thrown when the backend rejects a request (HTTP 402) because the user has
+/// no KIDUNA left to pay for compute. Distinct from other failures so the UI
+/// can offer a top-up instead of a generic retry.
+class InsufficientBalanceException extends AppException {
+  const InsufficientBalanceException([super.message]);
+}

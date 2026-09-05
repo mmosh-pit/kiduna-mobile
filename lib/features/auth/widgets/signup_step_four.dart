@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/extensions/context_extensions.dart';
+import '../../../core/validators/phone_validator.dart';
 import '../../../shared/animations/slide_in_animation.dart';
 import '../../../shared/widgets/kiduna_primary_button.dart';
-import '../../../shared/widgets/kiduna_text_field.dart';
 
 class SignupStepFour extends StatefulWidget {
   const SignupStepFour({
@@ -11,6 +12,8 @@ class SignupStepFour extends StatefulWidget {
     required this.onNext,
     required this.onBack,
     required this.onError,
+    required this.countryCode,
+    required this.onCountryChanged,
     required this.mobileController,
     this.isLoading = false,
   });
@@ -18,6 +21,11 @@ class SignupStepFour extends StatefulWidget {
   final ValueChanged<String> onNext;
   final VoidCallback onBack;
   final ValueChanged<String> onError;
+  /// Owned by the signup screen so the choice survives stepping back from
+  /// the OTP screen — the number is kept in a controller for the same reason.
+  final String countryCode;
+  final ValueChanged<String> onCountryChanged;
+
   final TextEditingController mobileController;
   final bool isLoading;
 
@@ -26,42 +34,43 @@ class SignupStepFour extends StatefulWidget {
 }
 
 class _SignupStepFourState extends State<SignupStepFour> {
-  String _selectedCountryCode = '+1';
 
-  final _countryCodes = const [
-    ('+1', '🇺🇸', 'US'),
-    ('+44', '🇬🇧', 'UK'),
-    ('+91', '🇮🇳', 'IN'),
-    ('+61', '🇦🇺', 'AU'),
-    ('+49', '🇩🇪', 'DE'),
-    ('+33', '🇫🇷', 'FR'),
-    ('+81', '🇯🇵', 'JP'),
-    ('+86', '🇨🇳', 'CN'),
-    ('+82', '🇰🇷', 'KR'),
-    ('+55', '🇧🇷', 'BR'),
-    ('+52', '🇲🇽', 'MX'),
-    ('+234', '🇳🇬', 'NG'),
-    ('+27', '🇿🇦', 'ZA'),
-    ('+971', '🇦🇪', 'UAE'),
-    ('+65', '🇸🇬', 'SG'),
-  ];
+
+  CountryPhoneRule get _rule =>
+      findCountryRule(widget.countryCode) ?? countryPhoneRules.first;
 
   void _validate() {
     if (widget.isLoading) return;
 
-    final mobile = widget.mobileController.text.trim();
-    if (mobile.isEmpty) {
-      widget.onError('Please enter your mobile number.');
-      return;
-    }
-    if (mobile.length < 7) {
-      widget.onError('Please enter a valid mobile number.');
+    final result = validateMobileNumber(
+      widget.countryCode,
+      widget.mobileController.text,
+    );
+
+    if (!result.valid) {
+      widget.onError(result.error ?? 'Please enter a valid mobile number.');
       return;
     }
 
-    // Pass countryCode + mobile as combined string for backend
-    final countryCodeDigits = _selectedCountryCode.replaceAll('+', '');
-    widget.onNext('$countryCodeDigits|$mobile');
+    // Send the normalized digits, not the raw input: the user may have typed
+    // spaces, a trunk zero, or the country code again.
+    final countryCodeDigits = widget.countryCode.replaceAll('+', '');
+    widget.onNext('$countryCodeDigits|${result.normalized}');
+  }
+
+  /// Expected format for the selected country, shown under the field so the
+  /// requirement is visible before submitting rather than after.
+  String get _formatHint {
+    final r = _rule;
+    final lengths = r.lengths.length == 1
+        ? '${r.lengths.first} digits'
+        : '${r.lengths.join(' or ')} digits';
+    final prefixes = r.mobilePrefixes;
+    if (prefixes == null || prefixes.length > 4) {
+      return '${r.name} mobile numbers are $lengths';
+    }
+    return '${r.name} mobile numbers are $lengths, starting with '
+        '${prefixes.join(', ')}';
   }
 
   @override
@@ -84,7 +93,7 @@ class _SignupStepFourState extends State<SignupStepFour> {
               ),
               children: [
                 TextSpan(
-                  text: 'Step 4 of 6',
+                  text: 'Step 4 of 7',
                   style: TextStyle(
                     color: colors.text,
                     fontWeight: FontWeight.w700,
@@ -98,21 +107,25 @@ class _SignupStepFourState extends State<SignupStepFour> {
             ),
           ),
           const SizedBox(height: 20),
-          Text(
-            'Mobile number',
-            style: text.caption.copyWith(
-              color: colors.text,
-              fontWeight: FontWeight.w700,
-              fontSize: 12,
-            ),
-          ),
-          Text(
-            ' *',
-            style: text.caption.copyWith(
-              color: colors.error,
-              fontWeight: FontWeight.w700,
-              fontSize: 12,
-            ),
+          Row(
+            children: [
+              Text(
+                'Mobile number',
+                style: text.caption.copyWith(
+                  color: colors.text,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                ),
+              ),
+              Text(
+                ' *',
+                style: text.caption.copyWith(
+                  color: colors.error,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           Container(
@@ -138,7 +151,7 @@ class _SignupStepFourState extends State<SignupStepFour> {
                   ),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
-                      value: _selectedCountryCode,
+                      value: widget.countryCode,
                       dropdownColor: colors.raised,
                       style: text.body.copyWith(
                         color: colors.text,
@@ -149,11 +162,11 @@ class _SignupStepFourState extends State<SignupStepFour> {
                         color: colors.muted,
                         size: 20,
                       ),
-                      items: _countryCodes.map((cc) {
+                      items: countryPhoneRules.map((cc) {
                         return DropdownMenuItem<String>(
-                          value: cc.$1,
+                          value: cc.code,
                           child: Text(
-                            '${cc.$2} ${cc.$1}',
+                            '${cc.flag} ${cc.code}',
                             style: text.body.copyWith(
                               color: colors.text,
                               fontSize: 14,
@@ -162,9 +175,11 @@ class _SignupStepFourState extends State<SignupStepFour> {
                         );
                       }).toList(),
                       onChanged: (value) {
-                        if (value != null) {
-                          setState(() => _selectedCountryCode = value);
-                        }
+                        if (value == null) return;
+                        // A number valid for the old country is unlikely to
+                        // be valid for the new one.
+                        widget.mobileController.clear();
+                        widget.onCountryChanged(value);
                       },
                     ),
                   ),
@@ -175,7 +190,12 @@ class _SignupStepFourState extends State<SignupStepFour> {
                     controller: widget.mobileController,
                     keyboardType: TextInputType.phone,
                     textInputAction: TextInputAction.done,
+                    onChanged: (_) => setState(() {}),
                     onSubmitted: (_) => _validate(),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(_rule.maxLength),
+                    ],
                     style: text.body.copyWith(
                       color: colors.text,
                       fontSize: 15,
@@ -198,7 +218,16 @@ class _SignupStepFourState extends State<SignupStepFour> {
               ],
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 8),
+          Text(
+            _formatHint,
+            style: text.caption.copyWith(
+              color: colors.quiet,
+              fontSize: 12,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 20),
           KidunaPrimaryButton(
             label: widget.isLoading ? 'Sending code...' : 'Send code',
             onPressed: _validate,

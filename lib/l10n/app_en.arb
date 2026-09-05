@@ -39,6 +39,7 @@
   "creating": "Creating…",
   "organizationName": "Organization name",
   "nameThisOrganization": "Name this Organization",
+  "organizationDescriptionHint": "Describe what this organization does",
   "registrationLabel": "Registration",
   "registrationHint": "e.g. Kinship Duna, WV Org. ID 167085",
   "whatIsTheMissionYourMembersShare": "What is the mission your members share?",
@@ -177,16 +178,14 @@
     }
   },
   "realmPortrait": "Realm Portrait",
-  "defaultPortraitDescription": "The default Community Portrait is used until you deliberately create a custom one.",
+  "defaultPortraitDescription": "The default Realm Portrait is assigned based on the Realm type.",
   "askKi": "Ask Ki",
-  "chooseRoles": "Choose roles",
   "requiredField": "* Required",
   "change": "Change",
   "create": "Create",
-  "privateHandshakeOptional": "Private handshake · optional",
-  "shareASecretWordOrPhrase": "Share a secret word or phrase.",
   "invitationNotesHint": "Tell Ki about your relationship, the reason for the invitation, and any notes you have that will help Ki welcome your guest and make them feel at home. All notes you include will be marked \"Personal\" and only available to you.",
   "presentName": "Name",
+  "saving": "Saving…",
   "savePresentation": "Save presentation",
   "presentPurposeHint": "What should {name} make possible?",
   "@presentPurposeHint": {
@@ -196,7 +195,7 @@
       }
     }
   },
-  "presentPortraitDescription": "Default {type} Portrait. Create a custom close-range identity whenever it becomes useful.",
+  "presentPortraitDescription": "Default {type} Portrait is assigned based on the Realm type.",
   "@presentPortraitDescription": {
     "placeholders": {
       "type": {
@@ -457,8 +456,6 @@
       }
     }
   },
-  "noNestedRealmsVisible": "No nested Realms visible",
-  "useNavigationOrAskKi": "Use navigation or ask Ki",
   "allyNoneStationed": "None stationed",
 
   "kbLoading": "Loading knowledge base…",
@@ -593,8 +590,10 @@
   "setLevel": "Set Level",
   "pin": "Pin",
   "hideRealm": "Hide",
-  "noRealmsYet": "No nested Realms yet",
-  "noRealmsYetDetail": "Use 'Form a New Realm' to create one inside this Realm.",
+  "noRealmsYet": "No Realms found",
+  "noRealmsYetDetail": "Use 'Form a New Realm' to create one.",
+  "noRealmsFound": "No Realms found",
+  "noRealmsFoundDetail": "Use 'Form a New Realm' to create your first Realm.",
 
   "gameTitle": "Medieval Poker",
   "gameSubtitle": "Choose your path to glory",
@@ -606,5 +605,26 @@
   "tabMatching": "Matching",
   "tabCards": "Cards",
   "tabStandings": "Standings",
-  "tabGuilds": "Associations"
+  "tabGuilds": "Associations",
+
+  "cellTypeLabel": "Cell Type",
+  "permanentCell": "Permanent",
+  "temporaryCell": "Temporary",
+  "permanentCellHint": "Fixed group of 4 players with game history",
+  "temporaryCellHint": "Single game session, no history",
+  "cellMembers": "Members",
+  "cellOpenSlot": "Open Slot",
+  "cellGameHistory": "Game History",
+  "noGamesPlayedYet": "No games played yet.",
+  "cellActiveGames": "Active Games",
+  "noActiveGames": "No active games",
+  "startNewGame": "Start New Game",
+  "inviteMembers": "Invite Members",
+  "permanentCellBadge": "Permanent Cell",
+  "openCell": "Open Cell",
+  "joinGame": "Join",
+  "cellGames": "Games",
+  "noGamesYet": "No games yet",
+  "won": "won",
+  "rejoinGame": "Rejoin"
 }

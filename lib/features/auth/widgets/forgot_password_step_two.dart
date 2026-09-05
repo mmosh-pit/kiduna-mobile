@@ -14,6 +14,7 @@ class ForgotPasswordStepTwo extends StatefulWidget {
     required this.onResend,
     required this.onError,
     this.isLoading = false,
+    this.isResending = false,
   });
 
   final String email;
@@ -22,6 +23,10 @@ class ForgotPasswordStepTwo extends StatefulWidget {
   final VoidCallback onResend;
   final ValueChanged<String> onError;
   final bool isLoading;
+
+  /// Separate from [isLoading]: the resend link must not report progress
+  /// for a verification happening beside it.
+  final bool isResending;
 
   @override
   State<ForgotPasswordStepTwo> createState() => _ForgotPasswordStepTwoState();
@@ -104,19 +109,22 @@ class _ForgotPasswordStepTwoState extends State<ForgotPasswordStepTwo> {
                   style: text.body.copyWith(color: colors.muted, fontSize: 13),
                 ),
                 TextButton(
-                  onPressed: widget.isLoading ? null : widget.onResend,
+                  onPressed: widget.isResending ? null : widget.onResend,
                   style: TextButton.styleFrom(
                     padding: EdgeInsets.zero,
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     foregroundColor: colors.sky,
+                    // Explicit: the Material default is an unrelated grey,
+                    // which reads as a state change rather than a busy link.
+                    disabledForegroundColor: colors.sky.withValues(alpha: 0.5),
                     textStyle: const TextStyle(
                       fontFamily: 'Avenir',
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  child: Text(widget.isLoading ? 'Sending...' : 'Resend code'),
+                  child: Text(widget.isResending ? 'Sending...' : 'Resend code'),
                 ),
               ],
             ),

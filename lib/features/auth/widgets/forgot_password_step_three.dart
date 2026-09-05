@@ -29,12 +29,14 @@ class ForgotPasswordStepThree extends StatefulWidget {
 }
 
 class _ForgotPasswordStepThreeState extends State<ForgotPasswordStepThree> {
+  final _passwordFocus = FocusNode();
   final _confirmFocus = FocusNode();
   bool _showPassword = false;
   bool _showConfirmPassword = false;
 
   @override
   void dispose() {
+    _passwordFocus.dispose();
     _confirmFocus.dispose();
     super.dispose();
   }
@@ -92,6 +94,7 @@ class _ForgotPasswordStepThreeState extends State<ForgotPasswordStepThree> {
             placeholder: 'At least 12 characters',
             controller: widget.passwordController,
             required: true,
+            focusNode: _passwordFocus,
             obscureText: !_showPassword,
             maxLength: 32,
             textInputAction: TextInputAction.next,
@@ -100,6 +103,10 @@ class _ForgotPasswordStepThreeState extends State<ForgotPasswordStepThree> {
               visible: _showPassword,
               onPressed: () {
                 setState(() => _showPassword = !_showPassword);
+                // The eye is an IconButton and takes focus when tapped;
+                // without this the field is left unfocused and select-all
+                // and copy have no target.
+                _passwordFocus.requestFocus();
               },
             ),
           ),
@@ -118,6 +125,7 @@ class _ForgotPasswordStepThreeState extends State<ForgotPasswordStepThree> {
               visible: _showConfirmPassword,
               onPressed: () {
                 setState(() => _showConfirmPassword = !_showConfirmPassword);
+                _confirmFocus.requestFocus();
               },
             ),
           ),

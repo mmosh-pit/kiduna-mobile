@@ -486,6 +486,18 @@ const Map<DesignPersona, List<String>> _nestedForeground = {
   ],
 };
 
+FieldClusterId _clusterFromTheme(String? theme) {
+  if (theme == null || theme.isEmpty) return FieldClusterId.culturePlay;
+  final t = theme.toLowerCase().replaceAll(RegExp(r'[\s&_-]+'), '');
+  if (t.contains('people') || t.contains('care')) return FieldClusterId.peopleCare;
+  if (t.contains('society') || t.contains('justice')) return FieldClusterId.societyJustice;
+  if (t.contains('culture') || t.contains('play')) return FieldClusterId.culturePlay;
+  if (t.contains('place') || t.contains('planet')) return FieldClusterId.placePlanet;
+  if (t.contains('work') || t.contains('wealth')) return FieldClusterId.workWealth;
+  if (t.contains('knowledge') || t.contains('frontier')) return FieldClusterId.knowledgeFrontier;
+  return FieldClusterId.culturePlay;
+}
+
 double _clamp(double value, double minimum, double maximum) =>
     math.min(maximum, math.max(minimum, value));
 
@@ -602,7 +614,7 @@ FieldComposition _rootComposition(
 ) {
   final grouped = <FieldClusterId, List<AtlasRealm>>{};
   for (final realm in realms) {
-    final cluster = _rootCluster[realm.id] ?? FieldClusterId.workWealth;
+    final cluster = _rootCluster[realm.id] ?? _clusterFromTheme(realm.primaryTheme);
     grouped.putIfAbsent(cluster, () => []).add(realm);
   }
 
