@@ -213,8 +213,12 @@ jobs:
       - name: Package macOS bundle
         run: |
           cd build/macos/Build/Products/Release
-          find *.app -type f -perm +111 -exec strip -x {} \; 2>/dev/null || true
-          zip -ry "$GITHUB_WORKSPACE/macos-bundle.zip" *.app
+          APP_NAME=$(ls -d *.app | head -n 1)
+          find "$APP_NAME" -type f -perm +111 -exec strip -x {} \; 2>/dev/null || true
+          # Remove quarantine attributes before packaging
+          xattr -cr "$APP_NAME"
+          # Use ditto (Apple's tool) instead of zip — preserves .app bundle integrity
+          ditto -c -k --sequesterRsrc --keepParent "$APP_NAME" "$GITHUB_WORKSPACE/macos-bundle.zip"
 
       - name: Package iOS bundle
         run: |
