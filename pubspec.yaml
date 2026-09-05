@@ -52,6 +52,7 @@ flutter:
     - assets/medieval_poker/power/
     - assets/medieval_poker/items/
     - assets/medieval_poker/reference/
+    - assets/images/chips/
 
   fonts:
     - family: Avenir

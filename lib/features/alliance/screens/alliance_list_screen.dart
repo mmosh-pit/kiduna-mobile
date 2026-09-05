@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flame/game.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -49,6 +50,15 @@ class _AllianceListScreenState extends ConsumerState<AllianceListScreen> {
   bool _joining = false;
   String? _joinMsg;
   bool _joinIsError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Refresh alliances every time this tab is shown.
+    Future.microtask(() {
+      if (mounted) ref.read(allianceControllerProvider.notifier).refresh();
+    });
+  }
 
   @override
   void didChangeDependencies() {
@@ -273,6 +283,38 @@ class _AllianceListScreenState extends ConsumerState<AllianceListScreen> {
                           itemBuilder: (m) => _memberRow(m as RealmMemberModel, isCreator, colors, text),
                         ),
 
+                        // ── Cells ──
+                        const SizedBox(height: 14),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          decoration: BoxDecoration(
+                            color: colors.surface.withValues(alpha: 0.88),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: colors.camel.withValues(alpha: 0.12))),
+                          child: Row(children: [
+                            Icon(Icons.grid_view_rounded, size: 16, color: colors.gold),
+                            const SizedBox(width: 8),
+                            Text('Cells', style: text.h5.copyWith(color: colors.cream)),
+                            const Spacer(),
+                            GestureDetector(
+                              onTap: () => setState(() => _openPanel = 'newcell'),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: colors.gold.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: colors.gold.withValues(alpha: 0.25))),
+                                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                  Icon(Icons.add, size: 14, color: colors.gold),
+                                  const SizedBox(width: 4),
+                                  Text('New', style: text.caption.copyWith(
+                                    color: colors.gold, fontWeight: FontWeight.w600, fontSize: 11.0)),
+                                ]),
+                              ),
+                            ),
+                          ]),
+                        ),
+
                         // ── Wallet + Proposals (2-column grid) ──
                         if (a.walletEnabled) ...[
                           const SizedBox(height: 14),
@@ -321,6 +363,15 @@ class _AllianceListScreenState extends ConsumerState<AllianceListScreen> {
             FieldPanel(key: const ValueKey('proposal'), label: 'Create Proposal', bounds: bounds,
               width: 620, initialOffset: Offset((bounds.width * 0.5 - 310).clamp(8.0, double.infinity), bounds.height * 0.2),
               onClose: _closePanel, child: ProposalForm(realmId: a.id)),
+          if (_openPanel == 'newcell')
+            FieldPanel(key: const ValueKey('newcell'), label: 'New Cell', bounds: bounds,
+              width: 560, initialOffset: Offset((bounds.width * 0.5 - 280).clamp(8.0, double.infinity), bounds.height * 0.02),
+              onClose: _closePanel, child: RealmPanel(
+                initialType: 'Cell',
+                initialParentId: a.id,
+                lockType: true,
+                onCreated: () => _closePanel(),
+              )),
         ],
       );
     });
@@ -455,8 +506,8 @@ class _AllianceListScreenState extends ConsumerState<AllianceListScreen> {
           ],
 
           // Wallet info
-          _infoRow('Multisig', _shortenAddr(a.multisigPda ?? ''), colors, text),
-          _infoRow('Vault', _shortenAddr(a.vaultPda ?? ''), colors, text),
+          _copyableRow('Multisig', a.multisigPda ?? '', colors, text),
+          _copyableRow('Vault', a.vaultPda ?? '', colors, text),
           if (a.multisigPda == null) Text('Wallet pending setup\u2026', style: text.bodySm.copyWith(color: colors.quiet)),
           const SizedBox(height: 10),
           _pill('${a.threshold}-of-$signers signers required', colors.gold),
@@ -741,6 +792,23 @@ class _AllianceListScreenState extends ConsumerState<AllianceListScreen> {
       child: Row(children: [
         SizedBox(width: 70.0, child: Text(label, style: text.bodySm.copyWith(color: colors.muted))),
         Expanded(child: Text(value, style: text.bodySm.copyWith(color: colors.quiet))),
+      ]));
+  }
+
+  Widget _copyableRow(String label, String fullAddress, dynamic colors, dynamic text) {
+    if (fullAddress.isEmpty) return const SizedBox.shrink();
+    return Padding(padding: const EdgeInsets.only(bottom: 6),
+      child: Row(children: [
+        SizedBox(width: 70.0, child: Text(label, style: text.bodySm.copyWith(color: colors.muted))),
+        Expanded(child: Text(_shortenAddr(fullAddress), style: text.bodySm.copyWith(color: colors.quiet))),
+        GestureDetector(
+          onTap: () {
+            Clipboard.setData(ClipboardData(text: fullAddress));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('$label address copied!'), duration: const Duration(seconds: 2)));
+          },
+          child: Icon(Icons.copy, size: 14, color: colors.quiet),
+        ),
       ]));
   }
 

@@ -6,6 +6,7 @@ import '../../../../core/network/api_client.dart';
 class LobbySeat {
   final int seat;
   final String? userId;
+  final String? viewerUserId;
   final bool isAi;
   final bool ready;
   final String? username;
@@ -15,6 +16,7 @@ class LobbySeat {
   const LobbySeat({
     required this.seat,
     required this.userId,
+    this.viewerUserId,
     required this.isAi,
     required this.ready,
     this.username,
@@ -29,6 +31,7 @@ class LobbySeat {
     return LobbySeat(
       seat: j['seat'] as int,
       userId: j['userId'] as String?,
+      viewerUserId: j['viewerUserId'] as String?,
       isAi: j['isAi'] as bool? ?? false,
       ready: j['ready'] as bool? ?? false,
       username: user?['username'] as String?,
@@ -56,6 +59,7 @@ class LobbyRoom {
   final int humans;
   final bool timedLevels;
   final List<LobbySeat> seats;
+  final GameResult? result;
 
   const LobbyRoom({
     required this.id,
@@ -68,27 +72,57 @@ class LobbyRoom {
     required this.humans,
     required this.timedLevels,
     required this.seats,
+    this.result,
   });
 
   bool get isActive => status == 'active';
   bool get isLobby => status == 'lobby';
+  bool get isFinished => status == 'finished';
 
-  factory LobbyRoom.fromJson(Map<String, dynamic> j) => LobbyRoom(
-        id: j['id'] as String,
-        code: j['code'] as String,
-        game: j['game'] as String? ?? 'medieval_poker',
-        status: j['status'] as String,
-        seatCount: j['seatCount'] as int,
-        wsUrl: j['wsUrl'] as String,
-        createdBy: j['createdBy'] as String,
-        humans: j['humans'] as int? ?? 0,
-        timedLevels:
-            (j['config'] as Map<String, dynamic>?)?['timedLevels'] as bool? ??
-                true,
-        seats: [
-          for (final s in (j['seats'] as List? ?? const []))
-            LobbySeat.fromJson(s as Map<String, dynamic>)
-        ],
+  factory LobbyRoom.fromJson(Map<String, dynamic> j) {
+    final resultJson = j['result'] as Map<String, dynamic>?;
+    return LobbyRoom(
+      id: j['id'] as String,
+      code: j['code'] as String,
+      game: j['game'] as String? ?? 'medieval_poker',
+      status: j['status'] as String,
+      seatCount: j['seatCount'] as int,
+      wsUrl: j['wsUrl'] as String,
+      createdBy: j['createdBy'] as String,
+      humans: j['humans'] as int? ?? 0,
+      timedLevels:
+          (j['config'] as Map<String, dynamic>?)?['timedLevels'] as bool? ??
+              true,
+      seats: [
+        for (final s in (j['seats'] as List? ?? const []))
+          LobbySeat.fromJson(s as Map<String, dynamic>)
+      ],
+      result: resultJson != null ? GameResult.fromJson(resultJson) : null,
+    );
+  }
+}
+
+/// Result data for a finished game room.
+class GameResult {
+  final String? winnerUserId;
+  final String? winnerName;
+  final List<dynamic>? standings;
+  final DateTime? endedAt;
+
+  const GameResult({
+    this.winnerUserId,
+    this.winnerName,
+    this.standings,
+    this.endedAt,
+  });
+
+  factory GameResult.fromJson(Map<String, dynamic> j) => GameResult(
+        winnerUserId: j['winnerUserId'] as String?,
+        winnerName: j['winnerName'] as String?,
+        standings: j['standings'] as List?,
+        endedAt: j['endedAt'] != null
+            ? DateTime.tryParse(j['endedAt'] as String)
+            : null,
       );
 }
 
@@ -99,12 +133,14 @@ class LobbyTicket {
   final int seat;
   final String gameToken;
   final String wsUrl;
+  final bool isViewer;
 
   const LobbyTicket({
     required this.room,
     required this.seat,
     required this.gameToken,
     required this.wsUrl,
+    this.isViewer = false,
   });
 }
 
@@ -185,9 +221,9 @@ class LobbyClient {
 
   Future<LobbyTicket> createRoom({int? seats, bool? timedLevels, String? realmId}) async {
     final res = await _call(() => _dio.post('/games/rooms', data: {
-          if (seats != null) 'seats': seats,
-          if (timedLevels != null) 'timedLevels': timedLevels,
-          if (realmId != null) 'realmId': realmId,
+          'seats': ?seats,
+          'timedLevels': ?timedLevels,
+          'realmId': ?realmId,
         }));
     return _ticketOf(res);
   }
@@ -214,9 +250,29 @@ class LobbyClient {
     await _call(() => _dio.post('/games/rooms/$code/leave', data: _emptyBody));
   }
 
+  Future<LobbyTicket> watchRoom(String code, {int? seat}) async {
+    final res = await _call(
+      () => _dio.post('/games/rooms/$code/watch', data: {
+        'seat': ?seat,
+      }),
+    );
+    return _ticketOf(res);
+  }
+
   Future<LobbyRoom> getRoom(String code) async {
     final res = await _call(() => _dio.get('/games/rooms/$code'));
     return LobbyRoom.fromJson(_data(res)['room'] as Map<String, dynamic>);
+  }
+
+  Future<List<LobbyRoom>> realmGames(String realmId) async {
+    final res = await _call(
+      () => _dio.get('/games/rooms', queryParameters: {'realmId': realmId}),
+    );
+    final list = _data(res)['rooms'] as List? ?? const [];
+    return [
+      for (final r in list)
+        LobbyRoom.fromJson(r as Map<String, dynamic>)
+    ];
   }
 
   // ── Public matchmaking ─────────────────────────────────────────────────
@@ -289,6 +345,7 @@ class LobbyClient {
       seat: d['seat'] as int,
       gameToken: d['gameToken'] as String,
       wsUrl: d['wsUrl'] as String,
+      isViewer: d['isViewer'] as bool? ?? false,
     );
   }
 }

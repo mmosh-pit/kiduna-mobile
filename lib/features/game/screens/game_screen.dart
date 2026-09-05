@@ -9,6 +9,7 @@ import '../../../games/medieval_poker/medieval_poker_leaderboard_screen.dart';
 import '../../../games/medieval_poker/medieval_poker_lobby_screen.dart';
 import '../../../games/medieval_poker/medieval_poker_online_screen.dart';
 import '../../../games/medieval_poker/session/lobby_client.dart';
+import '../../dashboard/screens/dashboard_screen.dart';
 import '../../../features/ki_chat/controllers/ki_chat_controller.dart';
 import '../../../l10n/app_localizations.dart';
 
@@ -130,6 +131,17 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final ki = ref.read(kiChatControllerProvider.notifier);
     ki.clearGameContext();
     ki.clearLocalTips();
+    if (widget.cellRealmId != null && mounted) {
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      } else {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => DashboardScreen()),
+          (route) => false,
+        );
+      }
+      return;
+    }
     setState(() {
       _showExitConfirm = false;
       _pokerView = null;
@@ -166,6 +178,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         onLeaderboard: () => setState(() => _view = _GameView.leaderboard),
         cellRealmId: widget.cellRealmId,
         joinTicket: widget.joinTicket,
+        onLeaveRoom: widget.cellRealmId != null ? _goToModeSelector : null,
         onGameLaunch: (screen) {
           setState(() {
             _onlineScreen = screen;
@@ -290,13 +303,14 @@ class _ExitOverlay extends StatelessWidget {
 // ── Lobby + Leaderboard ──────────────────────────────────────────────
 
 class _LobbyView extends StatelessWidget {
-  const _LobbyView({required this.onBack, required this.onLeaderboard, this.cellRealmId, this.joinTicket, this.onGameLaunch, this.onGameExit});
+  const _LobbyView({required this.onBack, required this.onLeaderboard, this.cellRealmId, this.joinTicket, this.onGameLaunch, this.onGameExit, this.onLeaveRoom});
   final VoidCallback onBack;
   final VoidCallback onLeaderboard;
   final String? cellRealmId;
   final Object? joinTicket;
   final void Function(MedievalPokerOnlineScreen screen)? onGameLaunch;
   final VoidCallback? onGameExit;
+  final VoidCallback? onLeaveRoom;
 
   @override
   Widget build(BuildContext context) {
@@ -320,6 +334,7 @@ class _LobbyView extends StatelessWidget {
             initialTicket: ticket,
             onGameLaunch: onGameLaunch,
             onGameExit: onGameExit,
+            onLeaveRoom: onLeaveRoom,
           )),
     ]);
   }
@@ -387,9 +402,94 @@ class _ModeSelector extends StatelessWidget {
               label: l10n.playOnlineLabel,
               subtitle: 'Create or join a room by code',
               onTap: onPlayOnline),
+          const SizedBox(height: 32),
+          // ── Chip info — user-friendly ──
+          Container(
+            constraints: const BoxConstraints(maxWidth: 400),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: colors.deep.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: colors.gold.withValues(alpha: 0.15)),
+            ),
+            child: Column(
+              children: [
+                // Title row.
+                Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Container(
+                    width: 24, height: 24,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: colors.gold.withValues(alpha: 0.15),
+                      border: Border.all(color: colors.gold.withValues(alpha: 0.3))),
+                    child: Icon(Icons.casino_outlined, size: 14, color: colors.gold),
+                  ),
+                  const SizedBox(width: 8),
+                  Text('Free Play Chips', style: text.body.copyWith(
+                    color: colors.gold, fontWeight: FontWeight.w700, fontSize: 15.0)),
+                ]),
+                const SizedBox(height: 10),
+                // Description.
+                Text(
+                  'Everyone starts with the same chips — just for fun!\n'
+                  'No real money. Not connected to KIDUNA tokens.',
+                  textAlign: TextAlign.center,
+                  style: text.caption.copyWith(
+                    color: colors.cream.withValues(alpha: 0.5), height: 1.5, fontSize: 11.0)),
+                const SizedBox(height: 14),
+                // Divider.
+                Container(height: 1, color: colors.camel.withValues(alpha: 0.1)),
+                const SizedBox(height: 14),
+                // Chip types — 2 columns.
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Column(crossAxisAlignment: CrossAxisAlignment.start, children: const [
+                      _ChipRow(label: 'Gold', value: 1000, asset: 'assets/images/chips/chip_gold.png'),
+                      SizedBox(height: 6),
+                      _ChipRow(label: 'Onyx', value: 100, asset: 'assets/images/chips/chip_onyx.png'),
+                      SizedBox(height: 6),
+                      _ChipRow(label: 'Ruby', value: 5, asset: 'assets/images/chips/chip_ruby.png'),
+                    ]),
+                    const SizedBox(width: 28),
+                    Column(crossAxisAlignment: CrossAxisAlignment.start, children: const [
+                      _ChipRow(label: 'Sapphire', value: 500, asset: 'assets/images/chips/chip_sapphire.png'),
+                      SizedBox(height: 6),
+                      _ChipRow(label: 'Emerald', value: 25, asset: 'assets/images/chips/chip_emerald.png'),
+                      SizedBox(height: 6),
+                      _ChipRow(label: 'Opal', value: 1, asset: 'assets/images/chips/chip_opal.png'),
+                    ]),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
+  }
+}
+
+class _ChipRow extends StatelessWidget {
+  const _ChipRow({required this.label, required this.value, required this.asset});
+  final String label;
+  final int value;
+  final String asset;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Image.asset(asset, width: 32, height: 32, filterQuality: FilterQuality.medium),
+      const SizedBox(width: 8),
+      SizedBox(
+        width: 70,
+        child: Text(label, style: TextStyle(
+          color: Colors.white.withValues(alpha: 0.7), fontSize: 12,
+          fontWeight: FontWeight.w600)),
+      ),
+      Text('\$$value', style: const TextStyle(
+        color: Color(0xFFEDC169), fontSize: 12, fontWeight: FontWeight.w700)),
+    ]);
   }
 }
 

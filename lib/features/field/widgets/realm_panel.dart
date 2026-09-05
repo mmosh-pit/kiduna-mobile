@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../config/assets.dart';
@@ -23,7 +24,7 @@ import 'field_inputs.dart';
 ///   Registration Domain, Standing Doc URL, Contact, Email, Address.
 /// **Other types** — Name, Type, Purpose (local UI-only).
 class RealmPanel extends ConsumerStatefulWidget {
-  const RealmPanel({super.key, this.initialType, this.initialParentId, this.onCreated});
+  const RealmPanel({super.key, this.initialType, this.initialParentId, this.onCreated, this.lockType = false});
 
   /// Pre-set the realm type dropdown (e.g. 'Alliance', 'Cell').
   final String? initialType;
@@ -33,6 +34,10 @@ class RealmPanel extends ConsumerStatefulWidget {
 
   /// Called after successful realm creation.
   final VoidCallback? onCreated;
+
+  /// When true, hides type/cellType/theme/focus dropdowns. Used for creating
+  /// cells inside an Alliance where type is always Cell + Temporary.
+  final bool lockType;
 
   @override
   ConsumerState<RealmPanel> createState() => _RealmPanelState();
@@ -149,11 +154,13 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
   String? _validate() {
     final nameText = _name.text.trim();
     if (nameText.isEmpty) return 'Name is required.';
+    if (nameText.length < 3) return 'Name must be at least 3 characters.';
     if (nameText.length > 120) return 'Name must be 120 characters or fewer.';
 
     if (_hasHandle) {
       final h = _handle.text.trim();
       if (h.isEmpty) return 'Handle is required.';
+      if (h.length < 3) return 'Handle must be at least 3 characters.';
       if (h.contains(' ')) {
         return 'Handle cannot contain spaces — use underscores, dots, or hyphens instead.';
       }
@@ -422,7 +429,7 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
     final text = context.kidunaText;
 
     return ConstrainedBox(
-      constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.75),
+      constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.55),
       child: SingleChildScrollView(
         controller: _scrollCtrl,
         padding: const EdgeInsets.all(18),
@@ -472,7 +479,9 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
                         : _isDyad ? l10n.dyadNameLabel
                         : _isCouncil ? l10n.councilNameLabel
                         : l10n.realmName,
+                    isRequired: true,
                     controller: _name,
+                    inputFormatters: [_FirstCharAlphanumericFormatter()],
                     hint: _isAlliance ? l10n.allianceNameHint
                         : _isInstitution ? l10n.institutionNameHint
                         : _isOrganization ? l10n.nameThisOrganization
@@ -498,10 +507,16 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
                   )
                 else
                   Expanded(
-                    child: FieldDropdown(
-                      label: l10n.typeLabel, value: _type,
-                      options: FieldFixtures.realmTypes,
-                      onChanged: (v) => setState(() { _type = v; _error = null; }),
+                    child: IgnorePointer(
+                      ignoring: widget.lockType,
+                      child: Opacity(
+                        opacity: widget.lockType ? 0.5 : 1.0,
+                        child: FieldDropdown(
+                          label: l10n.typeLabel, value: _type,
+                          options: FieldFixtures.realmTypes,
+                          onChanged: (v) => setState(() { _type = v; _error = null; }),
+                        ),
+                      ),
                     ),
                   ),
               ],
@@ -510,10 +525,16 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
             // ── Type dropdown below name row for Alliance/Institution ─
             if (_hasHandle) ...[
               const SizedBox(height: 8),
-              FieldDropdown(
-                label: l10n.typeLabel, value: _type,
-                options: FieldFixtures.realmTypes,
-                onChanged: (v) => setState(() { _type = v; _error = null; }),
+              IgnorePointer(
+                ignoring: widget.lockType,
+                child: Opacity(
+                  opacity: widget.lockType ? 0.5 : 1.0,
+                  child: FieldDropdown(
+                    label: l10n.typeLabel, value: _type,
+                    options: FieldFixtures.realmTypes,
+                    onChanged: (v) => setState(() { _type = v; _error = null; }),
+                  ),
+                ),
               ),
             ],
             const SizedBox(height: 12),
@@ -628,9 +649,15 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
             // ── Cell-specific fields ────────────────────────────────────
             // ═════════════════════════════════════════════════════════════
             if (_isCell) ...[
-              _CellTypeSelector(
-                value: _cellType,
-                onChanged: (v) => setState(() => _cellType = v),
+              IgnorePointer(
+                ignoring: widget.lockType,
+                child: Opacity(
+                  opacity: widget.lockType ? 0.5 : 1.0,
+                  child: _CellTypeSelector(
+                    value: _cellType,
+                    onChanged: (v) => setState(() => _cellType = v),
+                  ),
+                ),
               ),
               const SizedBox(height: 12),
               FieldTextInput(label: l10n.descriptionLabel, controller: _description,
@@ -683,13 +710,13 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
             if (!_isAlliance && !_isInstitution && !_isCommunity && !_isProgram && !_isProject && !_isConcept && !_isCell && !_isDyad && !_isCouncil) ...[
               FieldTextInput(label: l10n.purpose, controller: _purpose,
                   hint: _isOrganization ? l10n.whatIsTheMissionYourMembersShare : l10n.whatShouldThisRealmBringIntoBeing,
-                  maxLines: 3),
+                  maxLines: 3, isRequired: _isOrganization),
               const SizedBox(height: 12),
             ],
 
             // ── Email (Organization only) ─────────────────────────────
             if (_isOrganization) ...[
-              FieldTextInput(label: l10n.emailLabel, controller: _email, hint: l10n.emailHint),
+              FieldTextInput(label: l10n.emailLabel, controller: _email, hint: l10n.emailHint, isRequired: true),
               const SizedBox(height: 12),
             ],
 
@@ -750,15 +777,15 @@ class _RealmPanelState extends ConsumerState<RealmPanel> {
               child: ListenableBuilder(
                 listenable: Listenable.merge([_name, _purpose, _email, _handle, _sharedPurpose]),
                 builder: (context, _) {
-                  final nameOk = _name.text.trim().isNotEmpty;
+                  final nameOk = _name.text.trim().length >= 3;
                   bool canCreate;
                   if (_isOrganization) {
-                    final handleOk = _handle.text.trim().isNotEmpty && _handleAvailable != false;
+                    final handleOk = _handle.text.trim().length >= 3 && _handleAvailable != false;
                     final purposeOk = _purpose.text.trim().length >= 10;
                     final emailOk = _email.text.trim().isNotEmpty;
                     canCreate = nameOk && handleOk && purposeOk && emailOk && !_submitting;
                   } else if (_isAlliance || _isInstitution || _isCommunity || _isProgram || _isProject || _isConcept || _isCell || _isDyad || _isCouncil) {
-                    final handleOk = _handle.text.trim().isNotEmpty && _handleAvailable != false;
+                    final handleOk = _handle.text.trim().length >= 3 && _handleAvailable != false;
                     canCreate = nameOk && handleOk && !_submitting;
                   } else {
                     canCreate = nameOk && !_submitting;
@@ -811,7 +838,7 @@ class _HandleField extends StatelessWidget {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       ConstrainedBox(constraints: const BoxConstraints(minHeight: 26), child: Row(children: [
         Text(l10n.handleLabel, style: textTheme.label.copyWith(color: colors.cream)),
-        Text(' *', style: textTheme.label.copyWith(color: colors.gold)),
+        Text(' *', style: textTheme.label.copyWith(color: const Color(0xFFEF4444), fontWeight: FontWeight.w700)),
       ])),
       const SizedBox(height: 6),
       TextField(controller: controller, maxLength: 25, onChanged: onChanged, style: inputStyle,
@@ -938,7 +965,7 @@ class _ThemeFocusSelector extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        FieldLabel(text: l10n.primaryThemeLabel),
+        FieldLabel(text: l10n.primaryThemeLabel, isRequired: true),
         const SizedBox(height: 6),
         _DropdownField<String>(
           value: theme,
@@ -958,7 +985,7 @@ class _ThemeFocusSelector extends StatelessWidget {
           },
         ),
         const SizedBox(height: 12),
-        FieldLabel(text: l10n.primaryFocusLabel),
+        FieldLabel(text: l10n.primaryFocusLabel, isRequired: true),
         const SizedBox(height: 6),
         _DropdownField<String>(
           value: focus,
@@ -1105,5 +1132,21 @@ class _DropdownField<T> extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _FirstCharAlphanumericFormatter extends TextInputFormatter {
+  static final _leadingPattern = RegExp(r'^[^a-zA-Z0-9]');
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    if (newValue.text.isEmpty) return newValue;
+    if (_leadingPattern.hasMatch(newValue.text)) {
+      return oldValue;
+    }
+    return newValue;
   }
 }

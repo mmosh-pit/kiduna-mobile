@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'package:medieval_poker_engine/protocol.dart';
+import '../chips/chip_display.dart';
 import 'card_zoom.dart';
 import 'game_session.dart';
 
@@ -35,12 +36,15 @@ class SessionHud extends StatefulWidget {
   /// power-card zoom still works standalone — only table cards need the shared one.
   final CardZoomController? cardZoom;
 
+  final bool isViewer;
+
   const SessionHud({
     super.key,
     required this.session,
     required this.onExit,
     this.onPlayAgain,
     this.cardZoom,
+    this.isViewer = false,
   });
 
   @override
@@ -89,31 +93,41 @@ class _SessionHudState extends State<SessionHud> {
         final over = session.gameOver.value;
         final phase = session.phase.value;
 
+        final isViewer = widget.isViewer;
+        final watchingName = isViewer && table != null
+            ? table.seats
+                .where((s) => s.seat == session.viewerSeat)
+                .map((s) => s.name)
+                .firstOrNull
+            : null;
+
         return Stack(
           children: [
-            _ExitButton(onExit: onExit),
+            _ExitButton(onExit: onExit, isViewer: isViewer),
             if (over == null) ...[
               if (table != null) _StageChip(table: table),
               if (table != null) _EventLog(lines: table.logTail),
-              if (table != null && table.yourPowerHand.isNotEmpty)
+              if (!isViewer && table != null && table.yourPowerHand.isNotEmpty)
                 _PowerHandFan(cards: table.yourPowerHand),
-              _Banner(text: _bannerText(table, prompt)),
-              _PeekToast(text: session.peek.value),
-              if (prompt != null) _promptPanel(context, prompt),
+              if (isViewer)
+                _Banner(text: 'Watching ${watchingName ?? 'Player'}')
+              else
+                _Banner(text: _bannerText(table, prompt)),
+              if (!isViewer) _PeekToast(text: session.peek.value),
+              if (!isViewer && prompt != null) _promptPanel(context, prompt),
               _HandResultFlash(result: session.handResult.value),
             ],
             if (over != null)
-              _GameOver(view: over, onExit: onExit, onPlayAgain: onPlayAgain),
+              _GameOver(view: over, onExit: onExit, onPlayAgain: isViewer ? null : onPlayAgain),
             if (over == null && phase != SessionPhase.active)
               _ConnectionOverlay(
                   phase: phase,
                   message: session.errorMessage.value,
                   onExit: onExit),
-            // Deck viewer + Rules reference render last so they overlay
-            // everything (banner, panels, deck-build overlay, game-over).
-            _DeckOverlay(session: session, hidden: over != null),
-            _RulesOverlay(hidden: over != null),
-            // Card zoom renders above everything — tap any card art to enlarge.
+            if (!isViewer) ...[
+              _DeckOverlay(session: session, hidden: over != null),
+              _RulesOverlay(hidden: over != null),
+            ],
             _CardZoomOverlay(controller: _zoom),
           ],
         );
@@ -1609,9 +1623,11 @@ class _GameOver extends StatelessWidget {
               for (final s in view.standings)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: Text('${s.label}  ·  ${s.stack}',
-                      style:
-                          const TextStyle(color: Colors.white54, fontSize: 12)),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Text('${s.label}  ·  ',
+                      style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                    ChipDisplay(total: s.stack, chipSize: 16, compact: true),
+                  ]),
                 ),
             ],
             const SizedBox(height: 20),
@@ -2009,7 +2025,8 @@ class _ConnectionOverlay extends StatelessWidget {
 
 class _ExitButton extends StatelessWidget {
   final VoidCallback onExit;
-  const _ExitButton({required this.onExit});
+  final bool isViewer;
+  const _ExitButton({required this.onExit, this.isViewer = false});
 
   Future<void> _confirmLeave(BuildContext context) async {
     final leave = await showDialog<bool>(
@@ -2084,7 +2101,7 @@ class _ExitButton extends StatelessWidget {
       top: topPadding + 2,
       left: 4,
       child: GestureDetector(
-        onTap: () => _confirmLeave(context),
+        onTap: () => isViewer ? onExit() : _confirmLeave(context),
         child: Container(
           width: 32,
           height: 32,

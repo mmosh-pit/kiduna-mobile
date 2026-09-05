@@ -785,7 +785,20 @@ class FieldController extends Notifier<FieldState> {
     return RealmService.instance.checkHandleAvailability(handle);
   }
 
-  void savePresentation({required String name, required String type}) {
+  Future<void> savePresentation({
+    required String name,
+    required String type,
+    String? purpose,
+  }) async {
+    try {
+      await RealmService.instance.updateRealm(
+        id: state.currentRealmId,
+        name: name,
+        purpose: purpose,
+      );
+    } on NetworkException {
+      return;
+    }
     state = state.copyWith(
       currentRealm: FieldRealm(
         name: name,
@@ -1613,7 +1626,7 @@ class FieldController extends Notifier<FieldState> {
     String? label,
     double kidunaPerPerson = 0,
   }) async {
-    final realmId = state.currentRealmId;
+    final realmId = state.enteredRealmId ?? state.currentRealmId;
     print('[prepareInvitation] realmId=$realmId');
     if (realmId.isEmpty) {
       state = state.copyWith(invitationError: 'No realm selected.');

@@ -111,6 +111,44 @@ class RealmService {
     }
   }
 
+  /// Update Realm fields via `PATCH /realms/:id`.
+  Future<RealmModel> updateRealm({
+    required String id,
+    String? name,
+    String? purpose,
+    String? description,
+    String? visibility,
+    String? email,
+    String? primaryTheme,
+    String? primaryFocus,
+  }) async {
+    try {
+      final data = <String, dynamic>{};
+      if (name != null) data['name'] = name;
+      if (purpose != null) data['purpose'] = purpose;
+      if (description != null) data['description'] = description;
+      if (visibility != null) data['visibility'] = visibility;
+      if (email != null) data['email'] = email;
+      if (primaryTheme != null) data['primaryTheme'] = primaryTheme;
+      if (primaryFocus != null) data['primaryFocus'] = primaryFocus;
+
+      final response = await _dio.patch<Map<String, dynamic>>(
+        ApiEndpoints.realmById(id),
+        data: data,
+      );
+      return RealmModel.fromJson(
+        response.data!['realm'] as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      final serverMsg = e.response?.data is Map
+          ? (e.response!.data as Map)['error'] as String?
+          : null;
+      throw NetworkException(
+        serverMsg ?? 'Unable to update Realm. Please try again.',
+      );
+    }
+  }
+
   /// List the caller's Realms via `GET /realms`.
   ///
   /// Optional filters: [type], [parentId], [tags].
@@ -198,6 +236,7 @@ class RealmService {
   }
 
   /// Fetch Realm tree (children) via `GET /realms/tree/:id`.
+  /// Fetch children of a realm via `GET /realms/:id/tree` (PostgreSQL).
   Future<List<RealmModel>> fetchRealmChildren(String realmId, {String? authToken}) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
@@ -233,7 +272,7 @@ class RealmService {
   // Added for Alliance feature
   // ═══════════════════════════════════════════════════════════════
 
-  /// Fetch a single Realm by ID via `GET /realms/:id`.
+  /// Fetch a single Realm by ID via `GET /realms/:id` (PostgreSQL).
   Future<RealmModel> fetchRealmById(String realmId, {String? authToken}) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
@@ -472,6 +511,25 @@ class RealmService {
           ? (e.response!.data as Map)['error'] as String?
           : null;
       throw NetworkException(msg ?? 'Unable to add member.');
+    }
+  }
+
+  /// Remove a member from a realm (soft delete).
+  Future<void> removeMember({
+    required String realmId,
+    required String memberId,
+  }) async {
+    try {
+      await _dio.delete<Map<String, dynamic>>(
+        '${ApiEndpoints.realmById(realmId)}/members/$memberId',
+        data: <String, dynamic>{},
+      );
+    } on DioException catch (e) {
+      if (e.error is AppException) throw e.error!;
+      final msg = e.response?.data is Map
+          ? (e.response!.data as Map)['error'] as String?
+          : null;
+      throw NetworkException(msg ?? 'Unable to remove member.');
     }
   }
 

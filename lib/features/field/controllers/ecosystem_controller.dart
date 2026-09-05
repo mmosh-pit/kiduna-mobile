@@ -272,6 +272,9 @@ class EcosystemController extends Notifier<EcosystemState> {
       threshold: 1,
       status: 'active',
       createdAt: DateTime.now(),
+      config: {
+        if (g.cellType != null) 'cellType': g.cellType,
+      },
       gravityLevel: g.level,
       gravityScore: g.score,
       gameStatus: g.gameStatus,

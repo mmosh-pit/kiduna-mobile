@@ -170,6 +170,7 @@ class Realm {
     this.portrait,
     this.reason,
     this.themes = const [],
+    this.cellType,
     this.gameStatus,
     this.gameRoomCode,
     this.gamePlayerCount,
@@ -192,6 +193,7 @@ class Realm {
   final String? portrait;
   final String? reason;
   final List<String> themes;
+  final String? cellType;
   final String? gameStatus;
   final String? gameRoomCode;
   final int? gamePlayerCount;
