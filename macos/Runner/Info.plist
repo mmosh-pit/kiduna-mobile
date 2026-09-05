@@ -29,6 +29,10 @@
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Kiduna needs microphone access to record voice messages.</string>
+	<string>Kiduna needs microphone access for team voice chat.</string>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>Kiduna needs access to save files to your Downloads folder.</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>Kiduna needs access to files you select for uploads and attachments.</string>
 </dict>
 </plist>

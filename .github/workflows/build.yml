@@ -207,6 +207,55 @@ jobs:
             --obfuscate \
             --split-debug-info=build/macos/debug-info
 
+      - name: Import signing certificate
+        env:
+          CERT_P12: ${{ secrets.MACOS_CERT_P12_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+          KEYCHAIN_PASSWORD: temp-ci-keychain-pwd
+        run: |
+          echo "$CERT_P12" | base64 --decode > cert.p12
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security set-keychain-settings -t 3600 -u build.keychain
+          security import cert.p12 \
+            -k build.keychain \
+            -P "$CERT_PASSWORD" \
+            -T /usr/bin/codesign \
+            -T /usr/bin/security
+          security set-key-partition-list \
+            -S apple-tool:,apple:,codesign: \
+            -s -k "$KEYCHAIN_PASSWORD" build.keychain
+          rm cert.p12
+
+      - name: Sign macOS app
+        env:
+          SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+        run: |
+          APP="build/macos/Build/Products/Release/kiduna_mobile.app"
+          codesign --deep --force --options runtime --timestamp \
+            --sign "$SIGNING_IDENTITY" \
+            --entitlements macos/Runner/Release.entitlements \
+            "$APP"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+
+      - name: Notarize macOS app
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          APP="build/macos/Build/Products/Release/kiduna_mobile.app"
+          ditto -c -k --keepParent "$APP" app-for-notarization.zip
+          xcrun notarytool submit app-for-notarization.zip \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_PASSWORD" \
+            --team-id "$TEAM_ID" \
+            --wait
+          xcrun stapler staple "$APP"
+          xcrun stapler validate "$APP"
+          rm app-for-notarization.zip
+
       - name: Build iOS
         run: flutter build ios --release --no-codesign
 
@@ -214,10 +263,6 @@ jobs:
         run: |
           cd build/macos/Build/Products/Release
           APP_NAME=$(ls -d *.app | head -n 1)
-          find "$APP_NAME" -type f -perm +111 -exec strip -x {} \; 2>/dev/null || true
-          # Remove quarantine attributes before packaging
-          xattr -cr "$APP_NAME"
-          # Use ditto (Apple's tool) instead of zip — preserves .app bundle integrity
           ditto -c -k --sequesterRsrc --keepParent "$APP_NAME" "$GITHUB_WORKSPACE/macos-bundle.zip"
 
       - name: Package iOS bundle
