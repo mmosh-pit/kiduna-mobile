@@ -207,6 +207,32 @@ jobs:
             --obfuscate \
             --split-debug-info=build/macos/debug-info
 
+      - name: Debug — verify .p12 and password
+        env:
+          CERT_P12: ${{ secrets.MACOS_CERT_P12_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+        run: |
+          echo "$CERT_P12" | base64 --decode > cert.p12
+          echo "=== File info ==="
+          ls -la cert.p12
+          file cert.p12
+          echo ""
+          echo "=== Base64 length ==="
+          echo "Length: $(echo -n "$CERT_P12" | wc -c) chars"
+          echo ""
+          echo "=== Password check ==="
+          echo "Password length: ${#CERT_PASSWORD}"
+          echo "First char: ${CERT_PASSWORD:0:1}***"
+          echo ""
+          echo "=== OpenSSL verify (better error) ==="
+          if openssl pkcs12 -in cert.p12 -noout -passin pass:"$CERT_PASSWORD" 2>&1; then
+            echo "✅ .p12 password is CORRECT"
+          else
+            echo "❌ .p12 password is WRONG"
+            exit 1
+          fi
+          rm cert.p12
+
       - name: Import signing certificate
         env:
           CERT_P12: ${{ secrets.MACOS_CERT_P12_BASE64 }}
@@ -282,36 +308,36 @@ jobs:
           name: ios-build
           path: ios-bundle.zip
 
-  release:
-    needs: [linux-android-web, windows, macos]
-    runs-on: ubuntu-latest
-    environment: dev
-    permissions:
-      contents: write
+  # release:
+  #   needs: [linux-android-web, windows, macos]
+  #   runs-on: ubuntu-latest
+  #   environment: dev
+  #   permissions:
+  #     contents: write
 
-    steps:
-      - uses: actions/checkout@v4
+  #   steps:
+  #     - uses: actions/checkout@v4
 
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
+  #     - name: Download all artifacts
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         path: artifacts
 
-      - name: Stage release assets
-        run: |
-          mkdir -p release-assets
-          cp artifacts/linux/linux-bundle.zip release-assets/linux-bundle.zip
-          cp artifacts/web/web-bundle.zip release-assets/web-bundle.zip
-          cp artifacts/windows/kiduna-windows-setup.exe release-assets/kiduna-windows-setup.exe
-          cp artifacts/ios-build/ios-bundle.zip release-assets/ios-bundle.zip
-          cp artifacts/macos/macos-bundle.zip release-assets/macos-bundle.zip
-          ls -la release-assets
+  #     - name: Stage release assets
+  #       run: |
+  #         mkdir -p release-assets
+  #         cp artifacts/linux/linux-bundle.zip release-assets/linux-bundle.zip
+  #         cp artifacts/web/web-bundle.zip release-assets/web-bundle.zip
+  #         cp artifacts/windows/kiduna-windows-setup.exe release-assets/kiduna-windows-setup.exe
+  #         cp artifacts/ios-build/ios-bundle.zip release-assets/ios-bundle.zip
+  #         cp artifacts/macos/macos-bundle.zip release-assets/macos-bundle.zip
+  #         ls -la release-assets
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: build-${{ github.run_number }}
-          name: Build ${{ github.run_number }}
-          body: |
-            Automated multi-platform build from `${{ github.ref_name }}` @ `${{ github.sha }}`.
-          files: release-assets/*
+  #     - name: Create GitHub Release
+  #       uses: softprops/action-gh-release@v2
+  #       with:
+  #         tag_name: build-${{ github.run_number }}
+  #         name: Build ${{ github.run_number }}
+  #         body: |
+  #           Automated multi-platform build from `${{ github.ref_name }}` @ `${{ github.sha }}`.
+  #         files: release-assets/*
