@@ -54,11 +54,11 @@ jobs:
 
       - run: flutter doctor -v
 
-      # - name: Build APK
-      #   run: flutter build apk --release
+      - name: Build APK
+        run: flutter build apk --release
 
-      # - name: Build AAB
-      #   run: flutter build appbundle --release
+      - name: Build AAB
+        run: flutter build appbundle --release
 
       - name: Build Linux
         run: flutter build linux --release
@@ -282,36 +282,61 @@ jobs:
           name: ios-build
           path: ios-bundle.zip
 
-  # release:
-  #   needs: [linux-android-web, windows, macos]
-  #   runs-on: ubuntu-latest
-  #   environment: dev
-  #   permissions:
-  #     contents: write
+  release:
+    needs: [linux-android-web, windows, macos]
+    runs-on: ubuntu-latest
+    environment: dev
+    if: github.ref == 'refs/heads/dev'
+    permissions:
+      contents: write
 
-  #   steps:
-  #     - uses: actions/checkout@v5
+    steps:
+      - uses: actions/checkout@v5
 
-  #     - name: Download all artifacts
-  #       uses: actions/download-artifact@v5
-  #       with:
-  #         path: artifacts
+      - name: Extract app version from pubspec
+        id: version
+        run: |
+          VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | cut -d '+' -f 1)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "App version: $VERSION"
+          echo "Release tag: v${VERSION}-beta.${{ github.run_number }}"
 
-  #     - name: Stage release assets
-  #       run: |
-  #         mkdir -p release-assets
-  #         cp artifacts/linux/linux-bundle.zip release-assets/linux-bundle.zip
-  #         cp artifacts/web/web-bundle.zip release-assets/web-bundle.zip
-  #         cp artifacts/windows/kiduna-windows-setup.exe release-assets/kiduna-windows-setup.exe
-  #         cp artifacts/ios-build/ios-bundle.zip release-assets/ios-bundle.zip
-  #         cp artifacts/macos/macos-bundle.zip release-assets/macos-bundle.zip
-  #         ls -la release-assets
+      - name: Download all artifacts
+        uses: actions/download-artifact@v5
+        with:
+          path: artifacts
 
-  #     - name: Create GitHub Release
-  #       uses: softprops/action-gh-release@v2
-  #       with:
-  #         tag_name: build-${{ github.run_number }}
-  #         name: Build ${{ github.run_number }}
-  #         body: |
-  #           Automated multi-platform build from `${{ github.ref_name }}` @ `${{ github.sha }}`.
-  #         files: release-assets/*
+      - name: Stage release assets
+        run: |
+          mkdir -p release-assets
+          cp artifacts/linux/linux-bundle.zip release-assets/linux-bundle.zip
+          cp artifacts/web/web-bundle.zip release-assets/web-bundle.zip
+          cp artifacts/windows/kiduna-windows-setup.exe release-assets/kiduna-windows-setup.exe
+          cp artifacts/ios-build/ios-bundle.zip release-assets/ios-bundle.zip
+          cp artifacts/macos/macos-bundle.zip release-assets/macos-bundle.zip
+          ls -la release-assets
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}-beta.${{ github.run_number }}
+          name: Kiduna v${{ steps.version.outputs.version }}-beta.${{ github.run_number }}
+          prerelease: true
+          body: |
+            ## Kiduna Beta Release
+
+            **Version:** `${{ steps.version.outputs.version }}-beta.${{ github.run_number }}`
+            **Branch:** `${{ github.ref_name }}`
+            **Commit:** `${{ github.sha }}`
+
+            ### Downloads
+            - **macOS:** `macos-bundle.zip` — opens directly
+            - **Windows:** `kiduna-windows-setup.exe` — installer
+            - **Linux:** `linux-bundle.zip` — extract and run
+            - **iOS:** `ios-bundle.zip` — unsigned build (dev/CI verification only)
+            - **Web:** `web-bundle.zip` — deploy to hosting
+
+            ### Links
+            - [Commit changes](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
+            - [Workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          files: release-assets/*
