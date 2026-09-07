@@ -15,3 +15,12 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+
+## Installing the macOS Build
+
+The macOS build is signed with a Developer ID Application certificate
+and notarized by Apple, so it opens directly on any Mac:
+
+1. Download `macos-bundle.zip` from the [latest release](../../releases).
+2. Unzip and drag `kiduna_mobile.app` to `/Applications`.
+3. Double-click to open.
