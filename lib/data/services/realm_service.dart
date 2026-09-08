@@ -117,6 +117,44 @@ class RealmService {
     }
   }
 
+  /// Update Realm fields via `PATCH /realms/:id`.
+  Future<RealmModel> updateRealm({
+    required String id,
+    String? name,
+    String? purpose,
+    String? description,
+    String? visibility,
+    String? email,
+    String? primaryTheme,
+    String? primaryFocus,
+  }) async {
+    try {
+      final data = <String, dynamic>{};
+      if (name != null) data['name'] = name;
+      if (purpose != null) data['purpose'] = purpose;
+      if (description != null) data['description'] = description;
+      if (visibility != null) data['visibility'] = visibility;
+      if (email != null) data['email'] = email;
+      if (primaryTheme != null) data['primaryTheme'] = primaryTheme;
+      if (primaryFocus != null) data['primaryFocus'] = primaryFocus;
+
+      final response = await _dio.patch<Map<String, dynamic>>(
+        ApiEndpoints.realmById(id),
+        data: data,
+      );
+      return RealmModel.fromJson(
+        response.data!['realm'] as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      final serverMsg = e.response?.data is Map
+          ? (e.response!.data as Map)['error'] as String?
+          : null;
+      throw NetworkException(
+        serverMsg ?? 'Unable to update Realm. Please try again.',
+      );
+    }
+  }
+
   /// List the caller's Realms via `GET /realms`.
   ///
   /// Optional filters: [type], [parentId], [tags].
@@ -579,6 +617,25 @@ class RealmService {
     } on DioException catch (e) {
       if (e.error is AppException) throw e.error!;
       throw const NetworkException('Unable to fetch transactions.');
+    }
+  }
+
+  // ── Member management ──────────────────────────────────────────────────
+
+  /// Remove a member via `DELETE /realms/:id/members/:memberId`.
+  Future<void> removeMember({
+    required String realmId,
+    required String memberId,
+  }) async {
+    try {
+      await _dio.delete<Map<String, dynamic>>(
+        ApiEndpoints.realmMemberRemove(realmId, memberId),
+        data: {},
+      );
+    } on DioException catch (e) {
+      if (e.error is AppException) throw e.error!;
+      final msg = e.response?.data?['error'] as String?;
+      throw ServerException(msg ?? 'Unable to remove member.');
     }
   }
 }

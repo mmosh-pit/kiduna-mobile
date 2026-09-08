@@ -152,6 +152,14 @@ abstract class ApiEndpoints {
   /// `GET /realms/:id` — single Realm detail + members.
   static String realmById(String id) => '/realms/$id';
 
+  /// `PATCH /realms/:id/members/:memberId` — change a member's role.
+  static String realmMemberUpdate(String realmId, String memberId) =>
+      '/realms/$realmId/members/$memberId';
+
+  /// `DELETE /realms/:id/members/:memberId` — remove a member.
+  static String realmMemberRemove(String realmId, String memberId) =>
+      '/realms/$realmId/members/$memberId';
+
   /// `GET /realms/handle-availability?handle=...` — unified handle check.
   static const String realmHandleAvailability = '/realms/handle-availability';
 

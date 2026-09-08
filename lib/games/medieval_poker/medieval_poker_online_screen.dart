@@ -38,6 +38,9 @@ class MedievalPokerOnlineScreen extends StatefulWidget {
   /// views instead of popping the wrong route.
   final VoidCallback? onExit;
 
+  /// When true, the session connects as a read-only spectator.
+  final bool isViewer;
+
   const MedievalPokerOnlineScreen({
     super.key,
     required this.wsUrl,
@@ -48,6 +51,7 @@ class MedievalPokerOnlineScreen extends StatefulWidget {
     this.timedLevels,
     this.playerName,
     this.onExit,
+    this.isViewer = false,
   });
 
   @override
@@ -72,6 +76,7 @@ class _MedievalPokerOnlineScreenState extends State<MedievalPokerOnlineScreen> {
       token: widget.token,
       timedLevels: widget.timedLevels,
       name: widget.playerName,
+      isViewer: widget.isViewer,
     ));
     _renderer = TableRenderer(session: _session, cardZoom: _cardZoom);
 
@@ -118,16 +123,20 @@ class _MedievalPokerOnlineScreenState extends State<MedievalPokerOnlineScreen> {
               game: _renderer,
               overlayBuilderMap: {
                 'hud': (context, game) => SessionHud(
-                    session: _session, onExit: _handleExit, cardZoom: _cardZoom),
+                    session: _session,
+                    onExit: _handleExit,
+                    cardZoom: _cardZoom,
+                    isViewer: widget.isViewer,
+                  ),
               },
               initialActiveOverlays: const ['hud'],
             ),
-            // Voice controls — bottom-left
-            Positioned(
-              left: 12,
-              bottom: 12,
-              child: VoiceControls(voiceService: _voiceService),
-            ),
+            if (!widget.isViewer)
+              Positioned(
+                left: 12,
+                bottom: 12,
+                child: VoiceControls(voiceService: _voiceService),
+              ),
           ],
         ),
       ),

@@ -24,6 +24,7 @@ class MedievalPokerLobbyScreen extends StatefulWidget {
     this.initialTicket,
     this.onGameLaunch,
     this.onGameExit,
+    this.onLeaveRoom,
   });
 
   /// Called when the leaderboard icon is tapped.
@@ -41,6 +42,9 @@ class MedievalPokerLobbyScreen extends StatefulWidget {
   /// Called when the player leaves the online game (inline render only).
   final VoidCallback? onGameExit;
 
+  /// Called after the player leaves a room — lets the parent navigate away.
+  final VoidCallback? onLeaveRoom;
+
   @override
   State<MedievalPokerLobbyScreen> createState() =>
       _MedievalPokerLobbyScreenState();
@@ -54,7 +58,7 @@ class _MedievalPokerLobbyScreenState extends State<MedievalPokerLobbyScreen> {
   int? _mySeat;
   String? _gameToken;
   String? _wsUrl;
-  bool _isHost = false;
+  bool _isViewer = false;
 
   String? _error;
   bool _busy = false;
@@ -72,7 +76,7 @@ class _MedievalPokerLobbyScreenState extends State<MedievalPokerLobbyScreen> {
       _mySeat = ticket.seat;
       _gameToken = ticket.gameToken;
       _wsUrl = ticket.wsUrl;
-      _isHost = false;
+      _isViewer = ticket.isViewer;
       _startPolling();
       AppLogger.debug('[Lobby] room set, polling started', tag: 'Lobby');
     }
@@ -81,8 +85,24 @@ class _MedievalPokerLobbyScreenState extends State<MedievalPokerLobbyScreen> {
   @override
   void dispose() {
     _poll?.cancel();
+    final r = _room;
+    if (r != null && !_launched) {
+      _lobby.leave(r.code);
+    }
     _codeController.dispose();
     super.dispose();
+  }
+
+  bool get _isHost {
+    final r = _room;
+    if (r == null || _mySeat == null) return false;
+    final mySeatData = r.seats.firstWhere(
+      (s) => s.seat == _mySeat,
+      orElse: () => const LobbySeat(
+        seat: -1, userId: null, isAi: false, ready: false,
+      ),
+    );
+    return mySeatData.userId != null && mySeatData.userId == r.createdBy;
   }
 
   bool get _myReady =>
@@ -116,12 +136,11 @@ class _MedievalPokerLobbyScreenState extends State<MedievalPokerLobbyScreen> {
     }
   }
 
-  void _adopt(LobbyTicket t, {required bool host}) {
+  void _adopt(LobbyTicket t) {
     _room = t.room;
     _mySeat = t.seat;
     _gameToken = t.gameToken;
     _wsUrl = t.wsUrl;
-    _isHost = host;
     _launched = false;
     _startPolling();
     _maybeLaunch();
@@ -129,14 +148,14 @@ class _MedievalPokerLobbyScreenState extends State<MedievalPokerLobbyScreen> {
 
   Future<void> _create() => _guard(() async {
         final t = await _lobby.createRoom(realmId: widget.cellRealmId);
-        if (mounted) setState(() => _adopt(t, host: true));
+        if (mounted) setState(() => _adopt(t));
       });
 
   Future<void> _join() => _guard(() async {
         final code = _codeController.text.trim().toUpperCase();
         if (code.isEmpty) throw const LobbyException('Enter a room code');
         final t = await _lobby.joinRoom(code);
-        if (mounted) setState(() => _adopt(t, host: false));
+        if (mounted) setState(() => _adopt(t));
       });
 
   Future<void> _toggleReady() => _guard(() async {
@@ -168,6 +187,7 @@ class _MedievalPokerLobbyScreenState extends State<MedievalPokerLobbyScreen> {
             _wsUrl = null;
           });
         }
+        widget.onLeaveRoom?.call();
       });
 
   void _startPolling() {
@@ -215,6 +235,7 @@ class _MedievalPokerLobbyScreenState extends State<MedievalPokerLobbyScreen> {
       timedLevels: r.timedLevels,
       playerName: _mySeatName(r),
       onExit: widget.onGameExit,
+      isViewer: _isViewer,
     );
 
     if (widget.onGameLaunch != null) {

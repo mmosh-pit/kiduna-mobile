@@ -41,6 +41,7 @@ class RealmGravity {
     required this.reason,
     this.membership,
     this.role,
+    this.cellType,
     this.gameStatus,
     this.gameRoomCode,
     this.gamePlayerCount,
@@ -56,6 +57,7 @@ class RealmGravity {
   final String reason;
   final String? membership;
   final String? role;
+  final String? cellType;
   final String? gameStatus;
   final String? gameRoomCode;
   final int? gamePlayerCount;
@@ -74,6 +76,7 @@ class RealmGravity {
       reason: json['reason'] as String? ?? '',
       membership: json['membership'] as String?,
       role: json['role'] as String?,
+      cellType: json['cell_type'] as String?,
       gameStatus: json['game_status'] as String?,
       gameRoomCode: json['game_room_code'] as String?,
       gamePlayerCount: json['game_player_count'] as int?,

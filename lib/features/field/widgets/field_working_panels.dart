@@ -13,6 +13,7 @@ import 'capacity_choices.dart';
 import 'connections_panel.dart';
 import 'field_panel.dart';
 import 'invite_panel.dart';
+import 'members_panel.dart';
 import 'kb_detail_panel.dart';
 import 'portrait_designer.dart';
 import 'presence_detail_panel.dart';
@@ -239,6 +240,8 @@ class FieldWorkingPanels extends ConsumerWidget {
         );
       case 'present':
         return const PresentPanel();
+      case 'members':
+        return const MembersPanel();
       default:
         return const SizedBox.shrink();
     }

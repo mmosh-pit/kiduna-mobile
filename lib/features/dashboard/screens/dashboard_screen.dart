@@ -46,6 +46,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         return;
       }
     }
+    if (widget.cellRealmId != null) {
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      } else {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => DashboardScreen()),
+          (route) => false,
+        );
+      }
+      return;
+    }
     setState(() => _activeTab = index);
   }
 
@@ -133,7 +144,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         final ki = ref.read(kiChatControllerProvider.notifier);
         ki.clearGameContext();
         ki.clearLocalTips();
-        setState(() => _activeTab = targetTab);
+        if (widget.cellRealmId != null) {
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          } else {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => DashboardScreen()),
+              (route) => false,
+            );
+          }
+        } else {
+          setState(() => _activeTab = targetTab);
+        }
       }
     });
   }

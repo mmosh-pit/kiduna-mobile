@@ -8,7 +8,8 @@ class GameTokenClaims {
   final int? seat;
   final String? code;
   final String? roomId;
-  const GameTokenClaims({this.userId, this.seat, this.code, this.roomId});
+  final bool isViewer;
+  const GameTokenClaims({this.userId, this.seat, this.code, this.roomId, this.isViewer = false});
 }
 
 /// Verifies the short-lived HS256 game ticket the Node lobby mints
@@ -51,6 +52,7 @@ class GameTokenVerifier {
       seat: seat is int ? seat : (seat is num ? seat.toInt() : null),
       code: payload['code'] as String?,
       roomId: payload['roomId'] as String?,
+      isViewer: payload['isViewer'] as bool? ?? false,
     );
   }
 

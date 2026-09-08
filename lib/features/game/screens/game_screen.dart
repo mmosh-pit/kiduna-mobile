@@ -9,6 +9,7 @@ import '../../../games/medieval_poker/medieval_poker_leaderboard_screen.dart';
 import '../../../games/medieval_poker/medieval_poker_lobby_screen.dart';
 import '../../../games/medieval_poker/medieval_poker_online_screen.dart';
 import '../../../games/medieval_poker/session/lobby_client.dart';
+import '../../dashboard/screens/dashboard_screen.dart';
 import '../../../features/ki_chat/controllers/ki_chat_controller.dart';
 import '../../../l10n/app_localizations.dart';
 
@@ -130,6 +131,17 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final ki = ref.read(kiChatControllerProvider.notifier);
     ki.clearGameContext();
     ki.clearLocalTips();
+    if (widget.cellRealmId != null && mounted) {
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      } else {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => DashboardScreen()),
+          (route) => false,
+        );
+      }
+      return;
+    }
     setState(() {
       _showExitConfirm = false;
       _pokerView = null;
@@ -166,6 +178,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         onLeaderboard: () => setState(() => _view = _GameView.leaderboard),
         cellRealmId: widget.cellRealmId,
         joinTicket: widget.joinTicket,
+        onLeaveRoom: widget.cellRealmId != null ? _goToModeSelector : null,
         onGameLaunch: (screen) {
           setState(() {
             _onlineScreen = screen;
@@ -290,13 +303,14 @@ class _ExitOverlay extends StatelessWidget {
 // ── Lobby + Leaderboard ──────────────────────────────────────────────
 
 class _LobbyView extends StatelessWidget {
-  const _LobbyView({required this.onBack, required this.onLeaderboard, this.cellRealmId, this.joinTicket, this.onGameLaunch, this.onGameExit});
+  const _LobbyView({required this.onBack, required this.onLeaderboard, this.cellRealmId, this.joinTicket, this.onGameLaunch, this.onGameExit, this.onLeaveRoom});
   final VoidCallback onBack;
   final VoidCallback onLeaderboard;
   final String? cellRealmId;
   final Object? joinTicket;
   final void Function(MedievalPokerOnlineScreen screen)? onGameLaunch;
   final VoidCallback? onGameExit;
+  final VoidCallback? onLeaveRoom;
 
   @override
   Widget build(BuildContext context) {
@@ -320,6 +334,7 @@ class _LobbyView extends StatelessWidget {
             initialTicket: ticket,
             onGameLaunch: onGameLaunch,
             onGameExit: onGameExit,
+            onLeaveRoom: onLeaveRoom,
           )),
     ]);
   }

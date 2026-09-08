@@ -18,6 +18,7 @@ class _LiveRoom {
   final PokerConfig config; // this room's effective config (may override timed)
   final List<PlayerAgent> agents;
   final Map<int, WebSocket> sockets = {}; // seat → live socket
+  final Map<int, List<WebSocket>> viewerSockets = {}; // seat → spectator sockets
   final Map<int, Timer> graceTimers = {}; // seat → AI-takeover countdown
 
   /// seat → userId of the human who held it (kept even after an AI takeover),
@@ -128,6 +129,7 @@ class GameServer {
 
         // Authorize before upgrading when a secret is configured.
         String? userId;
+        bool isViewer = false;
         final verifier = _verifier;
         if (verifier != null) {
           final claims = verifier.verify(q['token'] ?? '');
@@ -141,6 +143,7 @@ class GameServer {
           }
           seat = claims.seat ?? seat;
           userId = claims.userId;
+          isViewer = claims.isViewer;
         }
 
         final socket = await WebSocketTransformer.upgrade(req);
@@ -149,7 +152,8 @@ class GameServer {
             userId: userId,
             timedHint: timedHint,
             nameHint: nameHint,
-            resume: resume);
+            resume: resume,
+            isViewer: isViewer);
         return;
       }
       req.response.statusCode = HttpStatus.notFound;
@@ -190,6 +194,13 @@ class GameServer {
         try {
           await s.close();
         } catch (_) {/* already closing */}
+      }
+      for (final viewers in live.viewerSockets.values) {
+        for (final v in viewers) {
+          try {
+            await v.close();
+          } catch (_) {/* already closing */}
+        }
       }
     }
     _rooms.clear();
@@ -239,7 +250,8 @@ class GameServer {
       String? userId,
       bool? timedHint,
       String? nameHint,
-      bool resume = false}) {
+      bool resume = false,
+      bool isViewer = false}) {
     // A resume (auto-reconnect) targets an in-progress game. If this instance
     // has no such room, the original was lost (service restarted/crashed, or it
     // lives on another instance) — reject cleanly instead of silently spinning
@@ -259,6 +271,31 @@ class GameServer {
 
     final live = _ensureRoom(roomId, timedOverride: timedHint);
     if (seat < 0 || seat >= seatsPerRoom) seat = 0;
+
+    // ── Viewer (spectator) connection ──
+    // Viewers watch a seat without owning it. They receive state broadcasts
+    // but never prompts, and their actions are ignored.
+    if (isViewer) {
+      live.viewerSockets.putIfAbsent(seat, () => []).add(socket);
+      _rawSend(socket,
+          ServerMessage(type: ServerMsgType.welcome, payload: {'seat': seat, 'room': roomId}));
+      if (live.started) _rawSend(socket, live.room.resyncFor(seat));
+      socket.listen(
+        (data) {
+          try {
+            final msg = ClientMessage.fromJson(
+                jsonDecode(data as String) as Map<String, dynamic>);
+            if (msg.type == ClientMsgType.heartbeat) {
+              _rawSend(socket, const ServerMessage(type: ServerMsgType.pong));
+            }
+          } catch (_) {/* ignore malformed frames */}
+        },
+        onDone: () => _onViewerDisconnect(live, seat, socket),
+        onError: (_) => _onViewerDisconnect(live, seat, socket),
+        cancelOnError: true,
+      );
+      return;
+    }
 
     // Stamp the real player name onto the seat (replacing the "Seat N" default)
     // so every snapshot, the turn banner, and result blurbs show it. AI-held
@@ -466,6 +503,19 @@ class GameServer {
   void _sendTo(_LiveRoom live, int seat, ServerMessage msg) {
     final s = live.sockets[seat];
     if (s != null) _rawSend(s, msg);
+    final viewers = live.viewerSockets[seat];
+    if (viewers != null && msg.type != ServerMsgType.prompt) {
+      for (final v in viewers) {
+        _rawSend(v, msg);
+      }
+    }
+  }
+
+  void _onViewerDisconnect(_LiveRoom live, int seat, WebSocket socket) {
+    live.viewerSockets[seat]?.remove(socket);
+    if (live.viewerSockets[seat]?.isEmpty ?? false) {
+      live.viewerSockets.remove(seat);
+    }
   }
 
   void _rawSend(WebSocket socket, ServerMessage msg) {
