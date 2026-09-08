@@ -4,11 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../controllers/alliance_controller.dart';
 
+const _kNoVoteRoles = {'guest', 'visitor'};
+
 /// Displays on-chain proposals with approve/reject/execute actions.
 class ProposalList extends ConsumerWidget {
-  const ProposalList({super.key, required this.realmId});
+  const ProposalList({super.key, required this.realmId, this.userRole});
 
   final String realmId;
+  final String? userRole;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -32,11 +35,14 @@ class ProposalList extends ConsumerWidget {
       );
     }
 
+    final canVote = userRole != null && !_kNoVoteRoles.contains(userRole);
+
     return Column(
       children: state.proposals.map((p) {
         return _ProposalCard(
           proposal: p,
           realmId: realmId,
+          canVote: canVote,
         );
       }).toList(),
     );
@@ -47,10 +53,12 @@ class _ProposalCard extends ConsumerStatefulWidget {
   const _ProposalCard({
     required this.proposal,
     required this.realmId,
+    required this.canVote,
   });
 
   final Map<String, dynamic> proposal;
   final String realmId;
+  final bool canVote;
 
   @override
   ConsumerState<_ProposalCard> createState() => _ProposalCardState();
@@ -236,7 +244,7 @@ class _ProposalCardState extends ConsumerState<_ProposalCard> {
             ),
           ],
 
-          if (!isExecuted && !isCancelled) ...[
+          if (!isExecuted && !isCancelled && widget.canVote) ...[
             const SizedBox(height: 12),
             if (_actionLoading)
               Center(

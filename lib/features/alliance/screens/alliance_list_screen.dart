@@ -286,7 +286,9 @@ class _AllianceListScreenState extends ConsumerState<AllianceListScreen> {
                           page: _memberPage,
                           totalItems: a.members.length,
                           onPageChange: (p) => setState(() => _memberPage = p),
-                          action: _sectionBtn('Invite', Icons.person_add, 'invite'),
+                          action: (currentMember != null && currentMember.role != 'guest' && currentMember.role != 'visitor')
+                              ? _sectionBtn('Invite', Icons.person_add, 'invite')
+                              : const SizedBox.shrink(),
                           colors: colors, text: text,
                           emptyMsg: 'No members yet.',
                           emptyIcon: Icons.person_outline,
@@ -351,7 +353,7 @@ class _AllianceListScreenState extends ConsumerState<AllianceListScreen> {
                                   items: ref.watch(allianceControllerProvider).proposals,
                                   itemBuilder: (p) => const SizedBox.shrink(),
                                   useCustomChild: true,
-                                  customChild: ref.watch(allianceControllerProvider).proposals.isEmpty ? null : ProposalList(realmId: a.id),
+                                  customChild: ref.watch(allianceControllerProvider).proposals.isEmpty ? null : ProposalList(realmId: a.id, userRole: currentMember?.role),
                                 )),
                               ],
                             ),
