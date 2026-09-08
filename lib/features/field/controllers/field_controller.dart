@@ -1541,7 +1541,7 @@ class FieldController extends Notifier<FieldState> {
     double kidunaPerPerson = 0,
   }) async {
     final realmId = state.currentRealmId;
-    print('[prepareInvitation] realmId=$realmId');
+    AppLogger.debug('prepareInvitation: realmId=$realmId', tag: 'FieldController');
     if (realmId.isEmpty) {
       state = state.copyWith(invitationError: 'No realm selected.');
       return;
@@ -1579,10 +1579,15 @@ class FieldController extends Notifier<FieldState> {
         'Invitation prepared: ${response.code}',
         tag: 'FieldController',
       );
-    } on UnauthorizedException {
+    } on ConflictException catch (e) {
       state = state.copyWith(
         invitationLoading: false,
-        invitationError: 'Session expired. Please log in again.',
+        invitationError: e.message ?? 'This invitation already exists.',
+      );
+    } on UnauthorizedException catch (e) {
+      state = state.copyWith(
+        invitationLoading: false,
+        invitationError: e.message ?? 'Session expired. Please log in again.',
       );
     } on NetworkException {
       state = state.copyWith(

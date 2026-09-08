@@ -108,7 +108,7 @@ class AllianceMemberModel {
 
   final String wallet;
 
-  /// Wizard | Operator | Connector | Treasurer | Organizer | Guide | Scribe | Member | Guest
+  /// visitor | guest | member | mage | catalyst | organizer | creator | builder | luminary
   final String role;
 
   /// Whether this member is a signer on the Squads multisig on-chain.
@@ -117,7 +117,7 @@ class AllianceMemberModel {
   factory AllianceMemberModel.fromJson(Map<String, dynamic> json) {
     return AllianceMemberModel(
       wallet: json['wallet'] as String? ?? '',
-      role: json['role'] as String? ?? 'Member',
+      role: json['role'] as String? ?? 'member',
       isSigner: json['isSigner'] as bool? ?? false,
     );
   }

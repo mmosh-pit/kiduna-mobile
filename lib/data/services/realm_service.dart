@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../../config/constants.dart';
 import '../../core/errors/exceptions.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/api_endpoints.dart';
@@ -62,9 +63,14 @@ class RealmService {
           if (primaryFocus != null && primaryFocus.isNotEmpty)
             'primaryFocus': primaryFocus,
         },
-        options: authToken != null
-            ? Options(headers: {'Authorization': 'Bearer $authToken'})
-            : null,
+        options: Options(
+          headers: {
+            if (authToken != null) 'Authorization': 'Bearer $authToken',
+          },
+          receiveTimeout: walletEnabled
+              ? AppConstants.walletReceiveTimeout
+              : null,
+        ),
       );
 
       final body = response.data;
@@ -301,10 +307,20 @@ class RealmService {
       return body;
     } on DioException catch (e) {
       if (e.error is AppException) throw e.error!;
-      final msg = e.response?.data is Map
-          ? (e.response!.data as Map)['error'] as String?
-          : null;
-      throw NetworkException(msg ?? 'Unable to join. Invalid or expired code.');
+      final statusCode = e.response?.statusCode;
+      final data = e.response?.data is Map ? e.response!.data as Map : null;
+      final errorKey = data?['error'] as String?;
+      final message = data?['message'] as String?;
+      if (statusCode == 409 && errorKey == 'already-member') {
+        throw ServerException(message ?? 'You are already a member of this realm.');
+      }
+      if (statusCode == 404) {
+        throw const ServerException('Invalid or expired invitation code.');
+      }
+      if (statusCode == 410) {
+        throw const ServerException('This invitation has expired or reached its usage limit.');
+      }
+      throw NetworkException(message ?? errorKey ?? 'Unable to join. Please try again.');
     }
   }
 

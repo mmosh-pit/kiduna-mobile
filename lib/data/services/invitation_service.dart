@@ -50,14 +50,38 @@ class InvitationService {
       if (e.error is AppException) {
         throw e.error!;
       }
+      final statusCode = e.response?.statusCode;
+      final serverMsg = e.response?.data is Map
+          ? (e.response!.data as Map)['message'] as String?
+          : null;
       AppLogger.error(
         'Failed to generate invitation',
         tag: 'InvitationService',
         error: e,
         stackTrace: e.stackTrace,
       );
-      throw const NetworkException(
-        'Unable to connect. Please check your internet.',
+      if (statusCode == 401) {
+        throw const UnauthorizedException(
+          'Please sign in to create an invitation.',
+        );
+      }
+      if (statusCode == 403) {
+        throw UnauthorizedException(
+          serverMsg ?? 'You do not have permission to invite to this realm.',
+        );
+      }
+      if (statusCode == 400) {
+        throw ValidationException(
+          serverMsg ?? 'Invalid invitation details. Please check your inputs.',
+        );
+      }
+      if (statusCode == 409) {
+        throw ConflictException(
+          serverMsg ?? 'This person is already a member.',
+        );
+      }
+      throw NetworkException(
+        serverMsg ?? 'Unable to create invitation. Please try again.',
       );
     }
   }

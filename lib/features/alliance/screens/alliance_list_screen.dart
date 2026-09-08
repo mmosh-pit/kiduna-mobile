@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flame/game.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/exceptions.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/utils/logger.dart';
 import '../../../data/models/realm_model.dart';
@@ -24,6 +25,9 @@ const _kAllRoles = <String>[
 ];
 const _kSignerRoles = <String>{
   'catalyst', 'organizer', 'creator', 'builder', 'luminary',
+};
+const _kRoleChangeRoles = <String>{
+  'catalyst', 'mage', 'organizer',
 };
 const _kPerPage = 5;
 
@@ -105,9 +109,11 @@ class _AllianceListScreenState extends ConsumerState<AllianceListScreen> {
 
   Future<void> _changeRole(String wallet, String role) async {
     if (_selected == null) return;
-    final ok = await ref.read(allianceControllerProvider.notifier)
+    final error = await ref.read(allianceControllerProvider.notifier)
         .updateMemberRole(_selected!.id, wallet, role);
-    if (ok && mounted) _openDetail(_selected!);
+    if (error == null && mounted) {
+      _openDetail(_selected!);
+    }
   }
 
   Future<void> _handleJoin() async {
@@ -128,7 +134,10 @@ class _AllianceListScreenState extends ConsumerState<AllianceListScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() { _joining = false; _joinMsg = '$e'; _joinIsError = true; });
+      final msg = e is AppException
+          ? (e.message ?? 'Unable to join. Please try again.')
+          : 'Unable to join. Please check the code and try again.';
+      setState(() { _joining = false; _joinMsg = msg; _joinIsError = true; });
     }
   }
 
@@ -237,6 +246,8 @@ class _AllianceListScreenState extends ConsumerState<AllianceListScreen> {
     final a = _selected!;
     final currentWallet = ref.read(authControllerProvider).user?.wallet ?? '';
     final isCreator = a.wallet == currentWallet;
+    final currentMember = a.members.whereType<RealmMemberModel>().where((m) => m.wallet == currentWallet).firstOrNull;
+    final canEditRoles = isCreator || _kRoleChangeRoles.contains(currentMember?.role);
 
     return LayoutBuilder(builder: (context, constraints) {
       final bounds = Size(constraints.maxWidth, constraints.maxHeight);
@@ -280,7 +291,7 @@ class _AllianceListScreenState extends ConsumerState<AllianceListScreen> {
                           emptyMsg: 'No members yet.',
                           emptyIcon: Icons.person_outline,
                           items: a.members,
-                          itemBuilder: (m) => _memberRow(m as RealmMemberModel, isCreator, colors, text),
+                          itemBuilder: (m) => _memberRow(m as RealmMemberModel, canEditRoles, colors, text),
                         ),
 
                         // ── Cells ──
@@ -732,7 +743,7 @@ class _AllianceListScreenState extends ConsumerState<AllianceListScreen> {
     );
   }
 
-  Widget _memberRow(RealmMemberModel m, bool isCreator, dynamic colors, dynamic text) {
+  Widget _memberRow(RealmMemberModel m, bool canEditRoles, dynamic colors, dynamic text) {
     final w = m.wallet;
     final short = w.length > 12 ? '${w.substring(0, 6)}...${w.substring(w.length - 4)}' : w;
     final signer = _kSignerRoles.contains(m.role);
@@ -757,7 +768,7 @@ class _AllianceListScreenState extends ConsumerState<AllianceListScreen> {
               style: text.bodySm.copyWith(color: signer ? colors.gold : colors.quiet, fontWeight: FontWeight.w600)),
           ])),
           if (signer) Text('👑', style: TextStyle(fontSize: 16.0)),
-          if (isCreator) ...[
+          if (canEditRoles) ...[
             const SizedBox(width: 8),
             GestureDetector(
               onTap: () => setState(() => _editingWallet = editing ? null : w),

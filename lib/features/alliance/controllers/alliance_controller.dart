@@ -91,7 +91,8 @@ class AllianceController extends Notifier<AllianceState> {
     }
   }
 
-  Future<bool> updateMemberRole(
+  /// Returns null on success, or an error message string on failure.
+  Future<String?> updateMemberRole(
     String realmId,
     String memberId,
     String role,
@@ -104,10 +105,13 @@ class AllianceController extends Notifier<AllianceState> {
         authToken: _token,
       );
       await refresh();
-      return true;
+      return null;
+    } on AppException catch (e) {
+      AppLogger.error('Update role failed', tag: 'AllianceCtrl', error: e);
+      return e.message;
     } catch (e) {
       AppLogger.error('Update role failed', tag: 'AllianceCtrl', error: e);
-      return false;
+      return 'Failed to update member role.';
     }
   }
 
@@ -135,7 +139,8 @@ class AllianceController extends Notifier<AllianceState> {
     }
   }
 
-  Future<bool> createTransferProposal({
+  /// Returns null on success, or an error message string on failure.
+  Future<String?> createTransferProposal({
     required String realmId,
     required String to,
     required double amount,
@@ -152,53 +157,69 @@ class AllianceController extends Notifier<AllianceState> {
         );
       }
       await loadProposals(realmId);
-      return true;
+      return null;
+    } on AppException catch (e) {
+      AppLogger.error('Create proposal failed', tag: 'AllianceCtrl', error: e);
+      return e.message;
     } catch (e) {
       AppLogger.error('Create proposal failed', tag: 'AllianceCtrl', error: e);
-      return false;
+      return 'Failed to create proposal.';
     }
   }
 
-  Future<bool> approveProposal(String realmId, String txIndex) async {
+  /// Returns null on success, or an error message string on failure.
+  Future<String?> approveProposal(String realmId, String txIndex) async {
     try {
       await RealmService.instance.approveProposal(
         realmId: realmId, transactionIndex: txIndex, authToken: _token,
       );
       await loadProposals(realmId);
-      return true;
+      return null;
+    } on AppException catch (e) {
+      AppLogger.error('Approve failed', tag: 'AllianceCtrl', error: e);
+      return e.message;
     } catch (e) {
       AppLogger.error('Approve failed', tag: 'AllianceCtrl', error: e);
-      return false;
+      return 'Failed to approve proposal.';
     }
   }
 
-  Future<bool> rejectProposal(String realmId, String txIndex) async {
+  /// Returns null on success, or an error message string on failure.
+  Future<String?> rejectProposal(String realmId, String txIndex) async {
     try {
       await RealmService.instance.rejectProposal(
         realmId: realmId, transactionIndex: txIndex, authToken: _token,
       );
       await loadProposals(realmId);
-      return true;
+      return null;
+    } on AppException catch (e) {
+      AppLogger.error('Reject failed', tag: 'AllianceCtrl', error: e);
+      return e.message;
     } catch (e) {
       AppLogger.error('Reject failed', tag: 'AllianceCtrl', error: e);
-      return false;
+      return 'Failed to reject proposal.';
     }
   }
 
-  Future<bool> executeProposal(String realmId, String txIndex) async {
+  /// Returns null on success, or an error message string on failure.
+  Future<String?> executeProposal(String realmId, String txIndex) async {
     try {
       await RealmService.instance.executeVaultProposal(
         realmId: realmId, transactionIndex: txIndex, authToken: _token,
       );
       await loadProposals(realmId);
-      return true;
+      return null;
+    } on AppException catch (e) {
+      AppLogger.error('Execute failed', tag: 'AllianceCtrl', error: e);
+      return e.message;
     } catch (e) {
       AppLogger.error('Execute failed', tag: 'AllianceCtrl', error: e);
-      return false;
+      return 'Failed to execute proposal.';
     }
   }
 
-  Future<bool> memberProposal({
+  /// Returns null on success, or an error message string on failure.
+  Future<String?> memberProposal({
     required String realmId,
     required String wallet,
     required bool isAdd,
@@ -214,14 +235,18 @@ class AllianceController extends Notifier<AllianceState> {
         );
       }
       await loadProposals(realmId);
-      return true;
+      return null;
+    } on AppException catch (e) {
+      AppLogger.error('Member proposal failed', tag: 'AllianceCtrl', error: e);
+      return e.message;
     } catch (e) {
       AppLogger.error('Member proposal failed', tag: 'AllianceCtrl', error: e);
-      return false;
+      return 'Failed to create member proposal.';
     }
   }
 
-  Future<bool> changeThresholdProposal({
+  /// Returns null on success, or an error message string on failure.
+  Future<String?> changeThresholdProposal({
     required String realmId,
     required int newThreshold,
   }) async {
@@ -230,10 +255,13 @@ class AllianceController extends Notifier<AllianceState> {
         realmId: realmId, newThreshold: newThreshold, authToken: _token,
       );
       await loadProposals(realmId);
-      return true;
+      return null;
+    } on AppException catch (e) {
+      AppLogger.error('Threshold proposal failed', tag: 'AllianceCtrl', error: e);
+      return e.message;
     } catch (e) {
       AppLogger.error('Threshold proposal failed', tag: 'AllianceCtrl', error: e);
-      return false;
+      return 'Failed to create threshold proposal.';
     }
   }
 
