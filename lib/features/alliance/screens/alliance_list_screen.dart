@@ -342,7 +342,9 @@ class _AllianceListScreenState extends ConsumerState<AllianceListScreen> {
                                   page: _proposalPage,
                                   totalItems: ref.watch(allianceControllerProvider).proposals.length,
                                   onPageChange: (p) => setState(() => _proposalPage = p),
-                                  action: _sectionBtn('Create', Icons.add, 'proposal'),
+                                  action: (currentMember != null && currentMember.role != 'guest' && currentMember.role != 'visitor')
+                                      ? _sectionBtn('Create', Icons.add, 'proposal')
+                                      : const SizedBox.shrink(),
                                   colors: colors, text: text,
                                   emptyMsg: 'No proposals yet.',
                                   emptyIcon: Icons.how_to_vote_outlined,
