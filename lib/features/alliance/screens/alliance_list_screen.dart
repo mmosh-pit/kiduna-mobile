@@ -286,7 +286,7 @@ class _AllianceListScreenState extends ConsumerState<AllianceListScreen> {
                           page: _memberPage,
                           totalItems: a.members.length,
                           onPageChange: (p) => setState(() => _memberPage = p),
-                          action: (currentMember != null && currentMember.role != 'guest' && currentMember.role != 'visitor')
+                          action: (currentMember != null && currentMember.role != 'guest')
                               ? _sectionBtn('Invite', Icons.person_add, 'invite')
                               : const SizedBox.shrink(),
                           colors: colors, text: text,
@@ -344,7 +344,7 @@ class _AllianceListScreenState extends ConsumerState<AllianceListScreen> {
                                   page: _proposalPage,
                                   totalItems: ref.watch(allianceControllerProvider).proposals.length,
                                   onPageChange: (p) => setState(() => _proposalPage = p),
-                                  action: (currentMember != null && currentMember.role != 'guest' && currentMember.role != 'visitor')
+                                  action: (currentMember != null && currentMember.role != 'guest')
                                       ? _sectionBtn('Create', Icons.add, 'proposal')
                                       : const SizedBox.shrink(),
                                   colors: colors, text: text,

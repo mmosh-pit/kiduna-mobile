@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../controllers/alliance_controller.dart';
 
-const _kNoVoteRoles = {'guest', 'visitor'};
+const _kNoVoteRoles = {'guest'};
 
 /// Displays on-chain proposals with approve/reject/execute actions.
 class ProposalList extends ConsumerWidget {
