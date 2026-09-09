@@ -12,6 +12,7 @@ const _allRoles = [
   'catalyst', 'organizer', 'creator', 'builder', 'luminary',
 ];
 const _signerRoles = {'catalyst', 'organizer', 'creator', 'builder', 'luminary'};
+const _roleChangeRoles = {'catalyst', 'mage', 'organizer'};
 
 /// Alliance detail — members, cells, roles, wallet info.
 /// Opens as a full page via Navigator.push (replaces left panel content).
@@ -28,6 +29,7 @@ class _AllianceDetailState extends ConsumerState<AllianceDetailScreen> {
   List<RealmModel> _cells = [];
   bool _loadingCells = true;
   String? _editingMemberId;
+  String? _roleError;
 
   @override
   void initState() {
@@ -57,11 +59,16 @@ class _AllianceDetailState extends ConsumerState<AllianceDetailScreen> {
   }
 
   Future<void> _changeRole(String memberId, String newRole) async {
-    final ok = await ref.read(allianceControllerProvider.notifier)
+    setState(() => _roleError = null);
+    final error = await ref.read(allianceControllerProvider.notifier)
         .updateMemberRole(_alliance.id, memberId, newRole);
-    if (ok) {
+    if (!mounted) return;
+    if (error == null) {
       await _refreshAlliance();
+      if (!mounted) return;
       setState(() => _editingMemberId = null);
+    } else {
+      setState(() => _roleError = error);
     }
   }
 
@@ -71,6 +78,8 @@ class _AllianceDetailState extends ConsumerState<AllianceDetailScreen> {
     final text = context.kidunaText;
     final currentWallet = ref.read(authControllerProvider).user?.wallet ?? '';
     final isCreator = _alliance.wallet == currentWallet;
+    final currentMember = _alliance.members.where((m) => m.wallet == currentWallet).firstOrNull;
+    final canEditRoles = isCreator || (currentMember != null && _roleChangeRoles.contains(currentMember.role));
 
     return Scaffold(
       backgroundColor: colors.field,
@@ -111,7 +120,18 @@ class _AllianceDetailState extends ConsumerState<AllianceDetailScreen> {
           // ── Members ──
           _buildSection(colors, text, 'Members', _alliance.members.length),
           const SizedBox(height: 6),
-          ..._alliance.members.map((m) => _buildMemberTile(m, isCreator, colors, text)),
+          ..._alliance.members.map((m) => _buildMemberTile(m, canEditRoles, colors, text)),
+          if (_roleError != null) ...[
+            const SizedBox(height: 4),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE57373).withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(_roleError!, style: text.bodySm.copyWith(color: const Color(0xFFE57373))),
+            ),
+          ],
 
           const SizedBox(height: 16),
 
@@ -163,13 +183,22 @@ class _AllianceDetailState extends ConsumerState<AllianceDetailScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                 decoration: BoxDecoration(
+                  color: colors.sky.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                child: Text(_alliance.typeLabel, style: text.caption.copyWith(color: colors.sky, fontSize: 11.0)),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(
                   color: colors.gold.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(5),
                 ),
                 child: Text(_alliance.status, style: text.caption.copyWith(color: colors.gold, fontSize: 11.0)),
               ),
-              const SizedBox(width: 10),
-              Text('${_alliance.visibility}', style: text.caption.copyWith(color: colors.quiet)),
+              const SizedBox(width: 6),
+              Text(_alliance.visibility, style: text.caption.copyWith(color: colors.quiet)),
             ],
           ),
           if (_alliance.description != null && _alliance.description!.isNotEmpty) ...[
@@ -201,7 +230,7 @@ class _AllianceDetailState extends ConsumerState<AllianceDetailScreen> {
     );
   }
 
-  Widget _buildMemberTile(RealmMemberModel m, bool isCreator, dynamic colors, dynamic text) {
+  Widget _buildMemberTile(RealmMemberModel m, bool canEditRoles, dynamic colors, dynamic text) {
     final short = m.wallet.length > 12 ? '${m.wallet.substring(0, 6)}...${m.wallet.substring(m.wallet.length - 4)}' : m.wallet;
     final isEditing = _editingMemberId == m.wallet;
 
@@ -234,10 +263,13 @@ class _AllianceDetailState extends ConsumerState<AllianceDetailScreen> {
                   ),
                 ),
               ),
-              if (isCreator) ...[
+              if (canEditRoles) ...[
                 const SizedBox(width: 6),
                 GestureDetector(
-                  onTap: () => setState(() => _editingMemberId = isEditing ? null : m.wallet),
+                  onTap: () => setState(() {
+                    _editingMemberId = isEditing ? null : m.wallet;
+                    _roleError = null;
+                  }),
                   child: Icon(Icons.edit, size: 14, color: isEditing ? colors.gold : colors.quiet),
                 ),
               ],

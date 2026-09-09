@@ -99,10 +99,7 @@ class _KiRegionState extends ConsumerState<KiRegion> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _KiHeader(
-              focus: fieldState.fieldFocus,
-              onFocus: ref.read(fieldControllerProvider.notifier).setFieldFocus,
-            ),
+            const _KiHeader(),
             const SizedBox(height: 12),
             Expanded(
               child: _KiChatThread(
@@ -135,10 +132,7 @@ class _KiRegionState extends ConsumerState<KiRegion> {
 
 /// CSS `.ki header` — flex row, align-items center, gap 12px.
 class _KiHeader extends ConsumerWidget {
-  const _KiHeader({required this.focus, required this.onFocus});
-
-  final double focus;
-  final ValueChanged<double> onFocus;
+  const _KiHeader();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -175,9 +169,6 @@ class _KiHeader extends ConsumerWidget {
                   ),
                 ),
               if (approvalCount > 0) const SizedBox(width: 8),
-              const Flexible(child: _AlliesButton(count: 2)),
-              const SizedBox(width: 12),
-              _FocusControl(focus: focus, onFocus: onFocus),
             ],
           ),
         ),
@@ -278,143 +269,9 @@ class _PulsingBadgeState extends State<_PulsingBadge>
   }
 }
 
-/// CSS `.alliesButton` — outline pill, NOT filled. Border only, transparent bg.
-/// Teal text + count badge.
-class _AlliesButton extends StatelessWidget {
-  const _AlliesButton({required this.count});
-
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    // CSS: border 1px solid rgba(155,202,208,.28), background transparent,
-    // border-radius pill, color #84bac7, font-size ~9px
-    return GestureDetector(
-      onTap: () {},
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: Container(
-          height: 30,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          clipBehavior: Clip.hardEdge,
-          decoration: BoxDecoration(
-            color: Colors.transparent, // NOT filled
-            border: Border.all(
-              color: const Color(0x479BCAD0), // rgba(155,202,208,.28)
-            ),
-            borderRadius: BorderRadius.circular(999),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Flexible(
-                child: Text(
-                  context.l10n.yourAllies,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontFamily: 'Avenir',
-                    fontSize: 9,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF84BAC7),
-                    letterSpacing: 0.3,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 5),
-              Text(
-                '$count',
-                style: const TextStyle(
-                  fontFamily: 'Avenir',
-                  fontSize: 9,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF84BAC7),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// CSS `.focusControl` — label text on top, slider below. Column layout.
-class _FocusControl extends StatelessWidget {
-  const _FocusControl({required this.focus, required this.onFocus});
-
-  final double focus;
-  final ValueChanged<double> onFocus;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 100,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // "FIELD  100%" on row 1, "FOCUS" on row 2 — right aligned
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                    'FIELD',
-                    style: TextStyle(
-                      fontFamily: 'Avenir',
-                      fontSize: 6,
-                      fontWeight: FontWeight.w400,
-                      color: Color(0xFF918B82),
-                      letterSpacing: 0.84,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    '${focus.round()}%',
-                    style: const TextStyle(
-                      fontFamily: 'Avenir',
-                      fontSize: 6,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF03CCD9),
-                    ),
-                  ),
-                ],
-              ),
-              const Text(
-                'FOCUS',
-                style: TextStyle(
-                  fontFamily: 'Avenir',
-                  fontSize: 6,
-                  fontWeight: FontWeight.w400,
-                  color: Color(0xFF918B82),
-                  letterSpacing: 0.84,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          // Slider below the label — full width of container
-          SizedBox(
-            height: 18,
-            child: SliderTheme(
-              data: const SliderThemeData(
-                trackHeight: 3,
-                activeTrackColor: Color(0xFF03CCD9),
-                inactiveTrackColor: Color(0x2E03CCD9), // sky 18%
-                thumbColor: Color(0xFF03CCD9),
-                thumbShape: RoundSliderThumbShape(enabledThumbRadius: 6),
-                overlayShape: RoundSliderOverlayShape(overlayRadius: 0),
-              ),
-              child: Slider(value: focus, max: 100, onChanged: onFocus),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+// _AlliesButton and _FocusControl removed — they were non-functional
+// placeholder widgets with hardcoded values (count: 2, onTap: () {})
+// that appeared as ghost UI on unrelated screens like Compute.  (Bug #98)
 
 /// The chat message thread — scrollable list of user/assistant messages.
 class _KiChatThread extends StatelessWidget {
