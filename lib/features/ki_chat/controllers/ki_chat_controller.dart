@@ -12,6 +12,7 @@ import '../../../data/models/video_job_model.dart';
 import '../../../data/services/chat_service.dart';
 import '../../../data/services/theater_service.dart';
 import '../../../features/auth/controllers/auth_controller.dart';
+import '../../../features/auth/enums/auth_status.dart';
 import '../../../features/dashboard/controllers/ecosystem_controller.dart';
 import '../../../features/field/controllers/field_controller.dart';
 import 'ally_controller.dart';
@@ -106,6 +107,22 @@ class KiChatController extends Notifier<KiChatState> {
       _subscription?.cancel();
       _subscription = null;
     });
+
+    // Watch auth state — when it flips to unauthenticated (logout or token
+    // expiry), Riverpod auto-rebuilds this controller and returns a fresh
+    // empty KiChatState.  This is the safety net for bug #46: even if the
+    // logout path forgets to invalidate this provider, the auth-state change
+    // itself triggers the reset and prevents cross-account chat leakage.
+    final authStatus = ref.watch(
+      authControllerProvider.select((s) => s.status),
+    );
+    if (authStatus == AuthStatus.unauthenticated) {
+      _subscription?.cancel();
+      _subscription = null;
+      _gameContext = '';
+      return const KiChatState();
+    }
+
     return const KiChatState();
   }
 

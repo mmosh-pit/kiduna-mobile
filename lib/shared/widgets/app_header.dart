@@ -61,7 +61,7 @@ class AppHeader extends ConsumerWidget {
           // Wallet connection is a web-only concern; the button renders
           // nothing elsewhere.
           if (showUserMenu && isAuthenticated) const ConnectWalletButton(),
-          if (end != null) end,
+          ?end,
         ],
       ),
     );

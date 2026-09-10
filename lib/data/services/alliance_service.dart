@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../../config/constants.dart';
 import '../../core/errors/exceptions.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/api_endpoints.dart';
@@ -42,9 +43,14 @@ class AllianceService {
           'visibility': visibility,
           'walletEnabled': walletEnabled,
         },
-        options: authToken != null
-            ? Options(headers: {'Authorization': 'Bearer $authToken'})
-            : null,
+        options: Options(
+          headers: {
+            if (authToken != null) 'Authorization': 'Bearer $authToken',
+          },
+          receiveTimeout: walletEnabled
+              ? AppConstants.walletReceiveTimeout
+              : null,
+        ),
       );
 
       final body = response.data;
@@ -72,7 +78,7 @@ class AllianceService {
         );
       }
       if (statusCode == 409) {
-        throw const ServerException(
+        throw const ConflictException(
           'That handle is already taken — pick another.',
         );
       }

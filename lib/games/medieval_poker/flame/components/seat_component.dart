@@ -2,6 +2,8 @@ import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
 import 'package:medieval_poker_engine/medieval_poker_engine.dart';
+import '../../chips/chip_atlas.dart';
+import '../../chips/chip_model.dart';
 import '../poker_assets.dart';
 import 'card_component.dart';
 
@@ -12,19 +14,21 @@ class SeatComponent extends PositionComponent {
   final int holeCardCount;
   final Vector2 cardSize;
   final PokerCardAtlas? atlas;
+  final ChipAtlas? chipAtlas;
 
   bool isActing = false;
   bool isDealer = false;
 
   final List<CardComponent> _cards = [];
 
-  static const _plateHeight = 34.0;
+  static const _plateHeight = 52.0;
   static const _cardGap = 4.0;
 
   SeatComponent({
     required this.player,
     required this.holeCardCount,
     this.atlas,
+    this.chipAtlas,
     Vector2? cardSize,
     super.position,
   })  : cardSize = cardSize ?? Vector2(42, 58),
@@ -32,7 +36,7 @@ class SeatComponent extends PositionComponent {
     final rowWidth =
         holeCardCount * cardSize!.x + (holeCardCount - 1) * _cardGap;
     size = Vector2(
-      rowWidth < 130 ? 130 : rowWidth,
+      rowWidth < 180 ? 180 : rowWidth,
       cardSize.y + _plateHeight + 6,
     );
   }
@@ -149,6 +153,51 @@ class SeatComponent extends PositionComponent {
       Vector2(width - 8, plateTop + 5),
       anchor: Anchor.topRight,
     );
+
+    // Row 2: gem chips with count (below name row), centered.
+    if (!player.folded && player.stack > 0) {
+      final chips = breakdownChips(player.stack);
+      final visible = chips.take(3).toList();
+      const chipSize = 24.0;
+      const chipSpacing = 6.0;
+      final chipY = plateTop + 32.0;
+
+      // Calculate total width to center the row.
+      final countStyle = TextStyle(
+        color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w700);
+      var totalW = 0.0;
+      final countWidths = <double>[];
+      for (final chip in visible) {
+        final cw = TextPaint(style: countStyle.copyWith(color: chip.type.color))
+            .getLineMetrics('×${chip.count}').width;
+        countWidths.add(cw);
+        totalW += chipSize + 2 + cw;
+      }
+      totalW += (visible.length - 1) * chipSpacing;
+      var dotX = (width - totalW) / 2;
+
+      for (var i = 0; i < visible.length; i++) {
+        final chip = visible[i];
+        final sprite = chipAtlas?.spriteFor(chip.type);
+        if (sprite != null) {
+          sprite.render(canvas,
+            position: Vector2(dotX, chipY - chipSize / 2),
+            size: Vector2(chipSize, chipSize));
+        } else {
+          canvas.drawCircle(Offset(dotX + chipSize / 2, chipY), chipSize / 2,
+            Paint()..color = chip.type.color);
+          canvas.drawCircle(Offset(dotX + chipSize / 2, chipY), chipSize / 2,
+            Paint()..color = chip.type.edgeColor..style = PaintingStyle.stroke..strokeWidth = 1.2);
+        }
+        TextPaint(style: TextStyle(
+          color: chip.type.color,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+        )).render(canvas, '×${chip.count}',
+          Vector2(dotX + chipSize + 2, chipY), anchor: Anchor.centerLeft);
+        dotX += chipSize + 2 + countWidths[i] + chipSpacing;
+      }
+    }
 
     // Dealer button.
     if (isDealer) {

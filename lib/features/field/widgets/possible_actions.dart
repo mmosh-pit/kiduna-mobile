@@ -1,18 +1,86 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../../config/env.dart';
 import '../../../core/extensions/context_extensions.dart';
+import '../../compute/screens/pay_compute_screen.dart';
+import '../../dashboard/screens/dashboard_screen.dart';
 import '../controllers/field_controller.dart';
 import '../data/field_fixtures.dart';
+import '../data/field_models.dart';
 
-/// The Possible Actions panel body: a 2×2 grid of the Actions available now.
+/// Opens the Pay Compute flow.
+/// On web: pushes PayComputeScreen in-app.
+/// On desktop: opens the web app in browser.
+Future<void> _openPayCompute(BuildContext context, String? realmId) async {
+  if (kIsWeb) {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PayComputeScreen(realmId: realmId),
+      ),
+    );
+    return;
+  }
+
+  final base =
+      Env.webAppUrl.isNotEmpty ? Env.webAppUrl : 'https://mobile.kiduna.dev';
+  final path = realmId != null
+      ? '$base/pay-compute?realmId=$realmId'
+      : '$base/pay-compute';
+  final uri = Uri.parse(path);
+  if (await canLaunchUrl(uri)) {
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+}
+
+/// The Possible Actions panel body: a grid of the Actions available to the
+/// user based on their role in the current Realm.
 /// Selecting one opens its working panel and asks Ki about it.
 class PossibleActions extends ConsumerWidget {
   const PossibleActions({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    const actions = FieldFixtures.actions;
+    final fieldState = ref.watch(fieldControllerProvider);
+    final currentRealmId = fieldState.currentRealmId;
+
+    // Actions hidden at root realm (ecosystem) — they need a specific realm.
+    const _rootHiddenActions = {'pay_compute', 'alliance', 'members'};
+
+    // At root realm (no entered realm), show all actions for all users
+    // except realm-specific ones. Inside a sub-realm, filter by role.
+    final isRootRealm = fieldState.enteredRealmId == null;
+
+    final List<FieldAction> actions;
+
+    if (isRootRealm) {
+      actions = FieldFixtures.actions
+          .where((a) => !_rootHiddenActions.contains(a.id))
+          .toList();
+    } else {
+      final role = currentRealmId != null
+          ? fieldState.viewerRoleIn(currentRealmId)
+          : Role.guest;
+      actions = FieldFixtures.actions
+          .where((a) => a.canAccess(role))
+          .toList();
+    }
+
+    if (actions.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(24),
+        child: Text(
+          'No actions available for your current role.',
+          style: context.kidunaText.body.copyWith(
+            color: context.kiduna.muted,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      );
+    }
+
     final controller = ref.read(fieldControllerProvider.notifier);
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -37,17 +105,37 @@ class PossibleActions extends ConsumerWidget {
         for (var row = 0; row < actions.length; row += 2)
           Row(
             children: [
-              for (var column = row; column < row + 2; column++)
+              for (var column = row;
+                  column < row + 2 && column < actions.length;
+                  column++)
                 Expanded(
                   child: _ActionButton(
                     action: actions[column],
-                    onTap: () => controller.chooseAction(actions[column]),
+                    onTap: () {
+                      if (actions[column].id == 'alliance') {
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(
+                            builder: (_) => const DashboardScreen(initialTab: 3),
+                          ),
+                        );
+                      } else if (actions[column].id == 'pay_compute') {
+                        final fieldState = ref.read(fieldControllerProvider);
+                        final realmId = fieldState.enteredRealmId ??
+                            fieldState.currentRealmId;
+                        _openPayCompute(context, realmId);
+                      } else {
+                        controller.chooseAction(actions[column]);
+                      }
+                    },
                     // Only internal dividers: right border on the left column,
                     // bottom border on the top row.
-                    rightBorder: column.isEven,
-                    bottomBorder: column < 2,
+                    rightBorder: column.isEven && column + 1 < actions.length,
+                    bottomBorder: column < 2 && row + 2 < actions.length,
                   ),
                 ),
+              // Fill empty cell when odd count lands on last row.
+              if (row + 1 >= actions.length)
+                const Expanded(child: SizedBox.shrink()),
             ],
           ),
       ],

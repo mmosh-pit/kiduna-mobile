@@ -204,17 +204,19 @@ class RealmModel {
 @immutable
 class RealmMemberModel {
   const RealmMemberModel({
-    this.id,
+    required this.id,
     required this.wallet,
     required this.role,
     required this.isSigner,
-    this.username,
-    this.displayName,
     this.name,
+    this.displayName,
+    this.username,
     this.picture,
   });
 
-  final String? id;
+  /// Unique member row ID (used for PATCH/DELETE).
+  final String id;
+
   final String wallet;
 
   /// One of 9 roles from the Canon Taxonomy:
@@ -224,23 +226,34 @@ class RealmMemberModel {
   /// Whether this member is a signer on the Squads multisig on-chain.
   final bool isSigner;
 
-  final String? username;
-  final String? displayName;
+  /// User's full name.
   final String? name;
+
+  /// User's display name.
+  final String? displayName;
+
+  /// User's username / handle.
+  final String? username;
+
+  /// User's profile picture URL.
   final String? picture;
 
+  /// Best available label for display.
   String get label =>
-      displayName ?? username ?? name ?? '${wallet.substring(0, 4)}...${wallet.substring(wallet.length - 4)}';
+      displayName?.isNotEmpty == true ? displayName! :
+      name?.isNotEmpty == true ? name! :
+      username?.isNotEmpty == true ? '@$username' :
+      '${wallet.substring(0, 4)}…${wallet.substring(wallet.length - 4)}';
 
   factory RealmMemberModel.fromJson(Map<String, dynamic> json) {
     return RealmMemberModel(
-      id: json['id'] as String?,
+      id: json['id'] as String? ?? '',
       wallet: json['wallet'] as String? ?? '',
       role: json['role'] as String? ?? 'member',
       isSigner: json['isSigner'] as bool? ?? json['is_signer'] as bool? ?? false,
-      username: json['username'] as String?,
-      displayName: json['displayName'] as String? ?? json['display_name'] as String?,
       name: json['name'] as String?,
+      displayName: json['displayName'] as String?,
+      username: json['username'] as String?,
       picture: json['picture'] as String?,
     );
   }

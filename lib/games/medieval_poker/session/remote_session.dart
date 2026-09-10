@@ -63,10 +63,9 @@ class RemoteSession implements GameSession {
     _Conn Function(bool resume)? opener,
     _Conn? initial,
     Duration heartbeat = const Duration(seconds: 15),
-    int maxReconnects = 5,
+    this._maxReconnects = 5,
   })  : _opener = opener,
-        _heartbeatInterval = heartbeat,
-        _maxReconnects = maxReconnects {
+        _heartbeatInterval = heartbeat {
     _bind(initial ?? opener!(false)); // initial connect = a fresh join
     if (_heartbeatInterval > Duration.zero) {
       _heartbeat = Timer.periodic(_heartbeatInterval,
@@ -95,7 +94,7 @@ class RemoteSession implements GameSession {
       'room': room,
       'seat': '$seat',
       if (humans != null) 'humans': '$humans',
-      if (token != null) 'token': token,
+      'token': ?token,
       if (timedLevels != null) 'timed': timedLevels ? '1' : '0',
       if (name != null && name.isNotEmpty) 'name': name,
       if (isViewer) 'viewer': '1',

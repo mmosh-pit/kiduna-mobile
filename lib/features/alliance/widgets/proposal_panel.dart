@@ -13,6 +13,8 @@ const _kTypes = [
   'Change Threshold',
 ];
 
+final _kBase58 = RegExp(r'^[1-9A-HJ-NP-Za-km-z]{32,44}$');
+
 /// Form to create a new proposal — shown inside a FieldPanel.
 class ProposalForm extends ConsumerStatefulWidget {
   const ProposalForm({super.key, required this.realmId});
@@ -46,17 +48,26 @@ class _ProposalFormState extends ConsumerState<ProposalForm> {
     super.dispose();
   }
 
+  bool _validateWallet(String wallet) {
+    if (wallet.isEmpty) {
+      setState(() { _msg = 'Wallet address is required.'; _isError = true; });
+      return false;
+    }
+    if (!_kBase58.hasMatch(wallet)) {
+      setState(() { _msg = 'Invalid Solana wallet address.'; _isError = true; });
+      return false;
+    }
+    return true;
+  }
+
   Future<void> _submit() async {
     setState(() { _msg = null; _isError = false; });
 
     if (_isMember) {
       final wallet = _wallet.text.trim();
-      if (wallet.isEmpty) {
-        setState(() { _msg = 'Wallet address is required.'; _isError = true; });
-        return;
-      }
+      if (!_validateWallet(wallet)) return;
       setState(() => _submitting = true);
-      final ok = await ref.read(allianceControllerProvider.notifier).memberProposal(
+      final error = await ref.read(allianceControllerProvider.notifier).memberProposal(
         realmId: widget.realmId,
         wallet: wallet,
         isAdd: _type == 'Add Wallet Signer',
@@ -64,9 +75,9 @@ class _ProposalFormState extends ConsumerState<ProposalForm> {
       if (!mounted) return;
       setState(() {
         _submitting = false;
-        _msg = ok ? 'Proposal created!' : 'Failed to create proposal.';
-        _isError = !ok;
-        if (ok) _wallet.clear();
+        _msg = error ?? 'Proposal created!';
+        _isError = error != null;
+        if (error == null) { _wallet.clear(); }
       });
     } else if (_isThreshold) {
       final val = int.tryParse(_threshold.text.trim());
@@ -75,32 +86,28 @@ class _ProposalFormState extends ConsumerState<ProposalForm> {
         return;
       }
       setState(() => _submitting = true);
-      final ok = await ref.read(allianceControllerProvider.notifier).changeThresholdProposal(
+      final error = await ref.read(allianceControllerProvider.notifier).changeThresholdProposal(
         realmId: widget.realmId,
         newThreshold: val,
       );
       if (!mounted) return;
       setState(() {
         _submitting = false;
-        _msg = ok ? 'Proposal created!' : 'Failed to create proposal.';
-        _isError = !ok;
-        if (ok) _threshold.clear();
+        _msg = error ?? 'Proposal created!';
+        _isError = error != null;
+        if (error == null) { _threshold.clear(); }
       });
     } else {
-      // Transfer
       final to = _wallet.text.trim();
+      if (!_validateWallet(to)) return;
       final amountText = _amount.text.trim();
-      if (to.isEmpty) {
-        setState(() { _msg = 'Recipient wallet is required.'; _isError = true; });
-        return;
-      }
       final amount = double.tryParse(amountText);
       if (amount == null || amount <= 0) {
-        setState(() { _msg = 'Enter a valid amount.'; _isError = true; });
+        setState(() { _msg = 'Enter a valid amount greater than zero.'; _isError = true; });
         return;
       }
       setState(() => _submitting = true);
-      final ok = await ref.read(allianceControllerProvider.notifier).createTransferProposal(
+      final error = await ref.read(allianceControllerProvider.notifier).createTransferProposal(
         realmId: widget.realmId,
         to: to,
         amount: amount,
@@ -109,9 +116,9 @@ class _ProposalFormState extends ConsumerState<ProposalForm> {
       if (!mounted) return;
       setState(() {
         _submitting = false;
-        _msg = ok ? 'Proposal created!' : 'Failed to create proposal.';
-        _isError = !ok;
-        if (ok) { _wallet.clear(); _amount.clear(); _reason.clear(); }
+        _msg = error ?? 'Proposal created!';
+        _isError = error != null;
+        if (error == null) { _wallet.clear(); _amount.clear(); _reason.clear(); }
       });
     }
   }

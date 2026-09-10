@@ -29,6 +29,7 @@ class InvitationRequest {
     if (recipientName != null && recipientName!.isNotEmpty)
       'invited_name': recipientName,
     if (label != null && label!.isNotEmpty) 'label': label,
-    if (kidunaPerPerson > 0) 'kiduna_per_person': kidunaPerPerson,
+    if (kidunaPerPerson > 0)
+      'kiduna_per_person': double.parse(kidunaPerPerson.toStringAsFixed(6)),
   };
 }

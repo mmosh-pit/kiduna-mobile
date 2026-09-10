@@ -57,10 +57,14 @@ class ErrorInterceptor extends Interceptor {
     if (statusCode != null) {
       final detail = _extractDetail(err);
       AppException mapped;
-      if (statusCode == 401 || statusCode == 403) {
+      if (statusCode == 401) {
         mapped = UnauthorizedException(detail);
+      } else if (statusCode == 403) {
+        mapped = UnauthorizedException(detail ?? 'Permission denied');
       } else if (statusCode == 404) {
         mapped = NotFoundException(detail);
+      } else if (statusCode == 409) {
+        mapped = ConflictException(detail);
       } else if (statusCode >= 500) {
         mapped = ServerException(detail);
       } else {

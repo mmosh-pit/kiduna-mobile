@@ -24,6 +24,9 @@ class PokerHud extends StatelessWidget {
         return Stack(
           children: [
             _ExitButton(onExit: onExit),
+            // Chip denomination legend — bottom-right corner.
+            if (!v.gameOver && !v.showClassSelect && !v.showCourtSelect && !v.showDeckBuild)
+              const _ChipLegend(),
             if (!v.showClassSelect && !v.showCourtSelect && !v.gameOver)
               _EventLog(game: game),
             if (!v.showClassSelect && !v.showCourtSelect && !v.gameOver)
@@ -1818,6 +1821,103 @@ class _ExitButton extends StatelessWidget {
           child: const Icon(Icons.close_rounded, color: Colors.white, size: 16),
         ),
       ),
+    );
+  }
+}
+
+// ── Chip denomination legend ──────────────────────────────────────────
+
+class _ChipLegend extends StatefulWidget {
+  const _ChipLegend();
+  @override
+  State<_ChipLegend> createState() => _ChipLegendState();
+}
+
+class _ChipLegendState extends State<_ChipLegend> {
+  bool _expanded = false;
+
+  static const _chips = [
+    ('Gold', 1000, 'assets/images/chips/chip_gold.png'),
+    ('Sapphire', 500, 'assets/images/chips/chip_sapphire.png'),
+    ('Onyx', 100, 'assets/images/chips/chip_onyx.png'),
+    ('Emerald', 25, 'assets/images/chips/chip_emerald.png'),
+    ('Ruby', 5, 'assets/images/chips/chip_ruby.png'),
+    ('Opal', 1, 'assets/images/chips/chip_opal.png'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      right: 8,
+      top: 130,
+      child: GestureDetector(
+        onTap: () => setState(() => _expanded = !_expanded),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: EdgeInsets.all(_expanded ? 12 : 8),
+          decoration: BoxDecoration(
+            color: const Color(0xF21B140C),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFF6B5533).withValues(alpha: 0.5)),
+          ),
+          child: _expanded ? _buildExpanded() : _buildCollapsed(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCollapsed() {
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      for (var i = 0; i < 3; i++) ...[
+        if (i > 0) const SizedBox(width: 3),
+        Image.asset(_chips[i].$3, width: 16, height: 16, filterQuality: FilterQuality.medium),
+      ],
+      const SizedBox(width: 5),
+      const Text('Chips', style: TextStyle(
+        color: Color(0xFFEDC169), fontSize: 10, fontWeight: FontWeight.w600)),
+      const SizedBox(width: 2),
+      Icon(Icons.expand_less, size: 12, color: const Color(0xFFEDC169).withValues(alpha: 0.5)),
+    ]);
+  }
+
+  Widget _buildExpanded() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(children: [
+          const Text('Free Play Chips', style: TextStyle(
+            color: Color(0xFFEDC169), fontSize: 11, fontWeight: FontWeight.w700)),
+          const SizedBox(width: 6),
+          Icon(Icons.expand_more, size: 14, color: const Color(0xFFEDC169).withValues(alpha: 0.5)),
+        ]),
+        const SizedBox(height: 8),
+        for (final (name, value, asset) in _chips) ...[
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Container(
+                width: 22, height: 22,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 0.5),
+                ),
+                child: ClipOval(
+                  child: Image.asset(asset, width: 22, height: 22, filterQuality: FilterQuality.medium),
+                ),
+              ),
+              const SizedBox(width: 8),
+              SizedBox(width: 65, child: Text(name, style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.7), fontSize: 11, fontWeight: FontWeight.w500))),
+              Text('\$$value', style: const TextStyle(
+                color: Color(0xFFEDC169), fontSize: 11, fontWeight: FontWeight.w700)),
+            ]),
+          ),
+        ],
+        const SizedBox(height: 4),
+        Text('No real value · Not KIDUNA', style: TextStyle(
+          color: Colors.white.withValues(alpha: 0.3), fontSize: 9)),
+      ],
     );
   }
 }

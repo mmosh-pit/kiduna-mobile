@@ -172,6 +172,7 @@ class _CellDetailScreenState extends ConsumerState<CellDetailScreen> {
                             currentUserId: userId,
                             realmId: widget.realmId,
                             isPlayer: isPlayer,
+                            isMember: currentMember != null,
                           ),
                           const SizedBox(height: 24),
                         ],
@@ -711,6 +712,7 @@ class _GamesSection extends StatelessWidget {
     required this.currentUserId,
     required this.realmId,
     required this.isPlayer,
+    required this.isMember,
   });
   final dynamic colors;
   final dynamic l10n;
@@ -719,6 +721,7 @@ class _GamesSection extends StatelessWidget {
   final String? currentUserId;
   final String realmId;
   final bool isPlayer;
+  final bool isMember;
 
   @override
   Widget build(BuildContext context) {
@@ -780,6 +783,7 @@ class _GamesSection extends StatelessWidget {
                     currentUserId: currentUserId,
                     realmId: realmId,
                     isPlayer: isPlayer,
+                    isMember: isMember,
                   ),
                 const SizedBox(height: 8),
               ],
@@ -798,6 +802,7 @@ class _ActiveGameCard extends StatefulWidget {
     required this.currentUserId,
     required this.realmId,
     required this.isPlayer,
+    required this.isMember,
   });
   final dynamic colors;
   final dynamic l10n;
@@ -805,6 +810,7 @@ class _ActiveGameCard extends StatefulWidget {
   final String? currentUserId;
   final String realmId;
   final bool isPlayer;
+  final bool isMember;
 
   @override
   State<_ActiveGameCard> createState() => _ActiveGameCardState();
@@ -828,7 +834,7 @@ class _ActiveGameCardState extends State<_ActiveGameCard> {
       final lobby = LobbyClient();
       final ticket = await lobby.watchRoom(widget.room.code);
       if (!mounted) return;
-      Navigator.of(context).push(
+      await Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => DashboardScreen(
             initialTab: 1,
@@ -838,6 +844,7 @@ class _ActiveGameCardState extends State<_ActiveGameCard> {
           ),
         ),
       );
+      if (mounted) setState(() => _busy = false);
     } on LobbyException catch (e) {
       if (!mounted) return;
       setState(() => _busy = false);
@@ -855,7 +862,7 @@ class _ActiveGameCardState extends State<_ActiveGameCard> {
       final lobby = LobbyClient();
       final ticket = await lobby.joinRoom(widget.room.code);
       if (!mounted) return;
-      Navigator.of(context).push(
+      await Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => DashboardScreen(
             initialTab: 1,
@@ -865,6 +872,7 @@ class _ActiveGameCardState extends State<_ActiveGameCard> {
           ),
         ),
       );
+      if (mounted) setState(() => _busy = false);
     } on LobbyException {
       if (mounted) setState(() => _busy = false);
     } catch (_) {
@@ -942,7 +950,7 @@ class _ActiveGameCardState extends State<_ActiveGameCard> {
             ),
           ),
           const SizedBox(width: 8),
-          if (widget.isPlayer)
+          if (widget.isPlayer && widget.room.isLobby)
             SizedBox(
               height: 32,
               child: ElevatedButton(
@@ -970,7 +978,7 @@ class _ActiveGameCardState extends State<_ActiveGameCard> {
                       ),
               ),
             )
-          else if (widget.room.isActive)
+          else if (widget.isMember && widget.room.isActive)
             SizedBox(
               height: 32,
               child: OutlinedButton(
@@ -1080,7 +1088,7 @@ class _BottomActionBarState extends State<_BottomActionBar> {
       final lobby = LobbyClient();
       final ticket = await lobby.createRoom(realmId: widget.realmId);
       if (!mounted) return;
-      Navigator.of(context).push(
+      await Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => DashboardScreen(
             initialTab: 1,
@@ -1090,6 +1098,7 @@ class _BottomActionBarState extends State<_BottomActionBar> {
           ),
         ),
       );
+      if (mounted) setState(() => _busy = false);
     } on LobbyException {
       if (mounted) setState(() => _busy = false);
     } catch (_) {

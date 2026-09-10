@@ -15,6 +15,7 @@ import 'features/auth/screens/user_profile_screen.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/auth/screens/signup_screen.dart';
 import 'features/compute/screens/buy_kiduna_screen.dart';
+import 'features/compute/screens/pay_compute_screen.dart';
 import 'features/compute/screens/withdraw_screen.dart';
 import 'features/compute/screens/compute_details_screen.dart';
 import 'l10n/app_localizations.dart';
@@ -134,6 +135,8 @@ String? pendingInviteHandle;
 bool isBuyKidunaRoute = false;
 bool isWithdrawRoute = false;
 bool isComputeDetailsRoute = false;
+bool isPayComputeRoute = false;
+String? payComputeRealmId;
 
 /// Detects the /buy-kiduna route.
 void _detectBuyKidunaRoute() {
@@ -156,6 +159,12 @@ void _detectBuyKidunaRoute() {
         full.contains('/withdraw')) {
       isWithdrawRoute = true;
       AppLogger.info('Withdraw route detected', tag: 'App');
+    } else if (uri.path.contains('/pay-compute') ||
+        uri.fragment.contains('/pay-compute') ||
+        full.contains('/pay-compute')) {
+      isPayComputeRoute = true;
+      payComputeRealmId = uri.queryParameters['realmId'];
+      AppLogger.info('Pay compute route detected, realmId=$payComputeRealmId', tag: 'App');
     }
   } catch (e) {
     AppLogger.warning('Failed to detect buy-kiduna route: $e', tag: 'App');
@@ -174,7 +183,7 @@ Future<void> main() async {
 
   // Route detection from URL before anything renders
   _detectBuyKidunaRoute();
-  if (!isBuyKidunaRoute && !isWithdrawRoute && !isComputeDetailsRoute) {
+  if (!isBuyKidunaRoute && !isWithdrawRoute && !isComputeDetailsRoute && !isPayComputeRoute) {
     pendingInviteCode = _extractInviteCodeFromUrl();
   }
 
@@ -184,6 +193,7 @@ Future<void> main() async {
     'buyKiduna=$isBuyKidunaRoute, '
     'withdraw=$isWithdrawRoute, '
     'computeDetails=$isComputeDetailsRoute, '
+    'payCompute=$isPayComputeRoute, '
     'uri=${kIsWeb ? Uri.base.toString() : "non-web"}',
     tag: 'App',
   );
@@ -208,6 +218,9 @@ class KidunaApp extends StatelessWidget {
     }
     if (isWithdrawRoute) {
       return const WithdrawScreen();
+    }
+    if (isPayComputeRoute) {
+      return PayComputeScreen(realmId: payComputeRealmId);
     }
     if (pendingInviteCode != null) {
       return UserProfileScreen(

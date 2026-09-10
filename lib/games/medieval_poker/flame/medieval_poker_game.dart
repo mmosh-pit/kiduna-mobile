@@ -6,6 +6,7 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
 import 'package:medieval_poker_engine/medieval_poker_engine.dart';
+import '../chips/chip_atlas.dart';
 import 'components/card_component.dart';
 import 'components/seat_component.dart';
 import 'components/table_component.dart';
@@ -199,6 +200,7 @@ class MedievalPokerGame extends FlameGame {
   final ValueNotifier<bool> showReference = ValueNotifier(false);
 
   final PokerCardAtlas _cardAtlas = PokerCardAtlas();
+  final ChipAtlas _chipAtlas = ChipAtlas();
   late TableComponent _table;
   final List<SeatComponent> _seats = [];
   final List<CardComponent> _board = [];
@@ -311,6 +313,7 @@ class MedievalPokerGame extends FlameGame {
 
     // Load card art (falls back to drawn cards if unavailable).
     await _cardAtlas.load();
+    await _chipAtlas.load();
 
     // Table felt — added first so it renders behind everything.
     _table = TableComponent();
@@ -322,6 +325,7 @@ class MedievalPokerGame extends FlameGame {
         player: p,
         holeCardCount: config.holeCards,
         atlas: _cardAtlas,
+        chipAtlas: _chipAtlas,
         cardSize: p.isHuman ? Vector2(48, 66) : Vector2(40, 56),
       );
       _seats.add(seat);

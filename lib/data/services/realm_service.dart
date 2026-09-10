@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../../config/constants.dart';
 import '../../core/errors/exceptions.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/api_endpoints.dart';
@@ -62,9 +63,14 @@ class RealmService {
           if (primaryFocus != null && primaryFocus.isNotEmpty)
             'primaryFocus': primaryFocus,
         },
-        options: authToken != null
-            ? Options(headers: {'Authorization': 'Bearer $authToken'})
-            : null,
+        options: Options(
+          headers: {
+            if (authToken != null) 'Authorization': 'Bearer $authToken',
+          },
+          receiveTimeout: walletEnabled
+              ? AppConstants.walletReceiveTimeout
+              : null,
+        ),
       );
 
       final body = response.data;
@@ -107,6 +113,44 @@ class RealmService {
       );
       throw NetworkException(
         serverMsg ?? 'Unable to create Realm. Please try again.',
+      );
+    }
+  }
+
+  /// Update Realm fields via `PATCH /realms/:id`.
+  Future<RealmModel> updateRealm({
+    required String id,
+    String? name,
+    String? purpose,
+    String? description,
+    String? visibility,
+    String? email,
+    String? primaryTheme,
+    String? primaryFocus,
+  }) async {
+    try {
+      final data = <String, dynamic>{};
+      if (name != null) data['name'] = name;
+      if (purpose != null) data['purpose'] = purpose;
+      if (description != null) data['description'] = description;
+      if (visibility != null) data['visibility'] = visibility;
+      if (email != null) data['email'] = email;
+      if (primaryTheme != null) data['primaryTheme'] = primaryTheme;
+      if (primaryFocus != null) data['primaryFocus'] = primaryFocus;
+
+      final response = await _dio.patch<Map<String, dynamic>>(
+        ApiEndpoints.realmById(id),
+        data: data,
+      );
+      return RealmModel.fromJson(
+        response.data!['realm'] as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      final serverMsg = e.response?.data is Map
+          ? (e.response!.data as Map)['error'] as String?
+          : null;
+      throw NetworkException(
+        serverMsg ?? 'Unable to update Realm. Please try again.',
       );
     }
   }
@@ -301,10 +345,20 @@ class RealmService {
       return body;
     } on DioException catch (e) {
       if (e.error is AppException) throw e.error!;
-      final msg = e.response?.data is Map
-          ? (e.response!.data as Map)['error'] as String?
-          : null;
-      throw NetworkException(msg ?? 'Unable to join. Invalid or expired code.');
+      final statusCode = e.response?.statusCode;
+      final data = e.response?.data is Map ? e.response!.data as Map : null;
+      final errorKey = data?['error'] as String?;
+      final message = data?['message'] as String?;
+      if (statusCode == 409 && errorKey == 'already-member') {
+        throw ServerException(message ?? 'You are already a member of this realm.');
+      }
+      if (statusCode == 404) {
+        throw const ServerException('Invalid or expired invitation code.');
+      }
+      if (statusCode == 410) {
+        throw const ServerException('This invitation has expired or reached its usage limit.');
+      }
+      throw NetworkException(message ?? errorKey ?? 'Unable to join. Please try again.');
     }
   }
 
@@ -476,25 +530,6 @@ class RealmService {
     }
   }
 
-  /// Remove a member from a realm (soft delete).
-  Future<void> removeMember({
-    required String realmId,
-    required String memberId,
-  }) async {
-    try {
-      await _dio.delete<Map<String, dynamic>>(
-        '${ApiEndpoints.realmById(realmId)}/members/$memberId',
-        data: <String, dynamic>{},
-      );
-    } on DioException catch (e) {
-      if (e.error is AppException) throw e.error!;
-      final msg = e.response?.data is Map
-          ? (e.response!.data as Map)['error'] as String?
-          : null;
-      throw NetworkException(msg ?? 'Unable to remove member.');
-    }
-  }
-
   /// Propose removing a signer from the Squads multisig.
   Future<Map<String, dynamic>> removeMemberProposal({
     required String realmId,
@@ -582,6 +617,25 @@ class RealmService {
     } on DioException catch (e) {
       if (e.error is AppException) throw e.error!;
       throw const NetworkException('Unable to fetch transactions.');
+    }
+  }
+
+  // ── Member management ──────────────────────────────────────────────────
+
+  /// Remove a member via `DELETE /realms/:id/members/:memberId`.
+  Future<void> removeMember({
+    required String realmId,
+    required String memberId,
+  }) async {
+    try {
+      await _dio.delete<Map<String, dynamic>>(
+        ApiEndpoints.realmMemberRemove(realmId, memberId),
+        data: {},
+      );
+    } on DioException catch (e) {
+      if (e.error is AppException) throw e.error!;
+      final msg = e.response?.data?['error'] as String?;
+      throw ServerException(msg ?? 'Unable to remove member.');
     }
   }
 }
