@@ -9,6 +9,7 @@ import '../../features/compute/controllers/compute_controller.dart';
 import '../../features/compute/open_buy_kiduna.dart';
 import '../../features/ki_chat/controllers/ally_controller.dart';
 import '../../features/ki_chat/controllers/ki_chat_controller.dart';
+import '../../features/ki_chat/widgets/chat_video_message.dart';
 import 'ki_composer.dart';
 import 'ki_message_bubble.dart';
 
@@ -257,25 +258,49 @@ class _KiChatThread extends StatelessWidget {
       return const _WelcomeContent();
     }
 
+    // EVERY item needs a stable key. This ListView is reversed and indexed as
+    // items.length - 1 - index, so appending a message shifts every existing
+    // item's index. Without keys Flutter matches elements positionally, which
+    // discards the video player's State and makes it reload on every send.
     final items = <Widget>[];
 
     for (final msg in messages) {
       items.add(
         msg.role == ChatRole.user
-            ? KiUserBubble(message: msg)
-            : KiAssistantBubble(text: msg.content),
+            ? KiUserBubble(key: ValueKey('msg_${msg.id}'), message: msg)
+            : KiAssistantBubble(
+                key: ValueKey('msg_${msg.id}'),
+                text: msg.content,
+              ),
       );
+      final video = msg.video;
+      if (video != null) {
+        items.add(
+          Padding(
+            // Keyed on the job, so the player survives list reordering.
+            key: ValueKey('video_${video.jobId}'),
+            padding: const EdgeInsets.only(top: 8),
+            child: ChatVideoMessage(video: video),
+          ),
+        );
+      }
     }
 
     if (isStreaming && streamingBuffer.isNotEmpty) {
-      items.add(KiStreamingBubble(text: streamingBuffer));
+      items.add(
+        KiStreamingBubble(
+          key: const ValueKey('streaming'),
+          text: streamingBuffer,
+        ),
+      );
     } else if (isStreaming) {
-      items.add(const KiTypingIndicator());
+      items.add(const KiTypingIndicator(key: ValueKey('typing')));
     }
 
     if (error != null) {
       items.add(
         Padding(
+          key: const ValueKey('error'),
           padding: const EdgeInsets.only(top: 8),
           child: Text(
             error!,
@@ -292,9 +317,13 @@ class _KiChatThread extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(0, 12, 0, 8),
       itemCount: items.length,
       itemBuilder: (context, index) {
+        final child = items[items.length - 1 - index];
         return Padding(
+          // Hoist the item's key so the sliver matches elements by identity
+          // rather than by position.
+          key: child.key,
           padding: const EdgeInsets.symmetric(vertical: 6),
-          child: items[items.length - 1 - index],
+          child: child,
         );
       },
     );

@@ -626,5 +626,38 @@
   "cellGames": "Games",
   "noGamesYet": "No games yet",
   "won": "won",
-  "rejoinGame": "Rejoin"
+  "rejoinGame": "Rejoin",
+  "theater": "Theater",
+  "theaterEmpty": "No videos published yet.",
+  "theaterEmptyHint": "Ask Ki to make a video, then publish it here.",
+  "generatingYourVideo": "Generating your video\u2026",
+  "thisTakesAFewMinutes": "This can take a few minutes.",
+  "videoGenerationFailed": "The video could not be generated.",
+  "publishToTheater": "Publish to Theater",
+  "publishing": "Publishing\u2026",
+  "publishedToTheater": "Published to Theater",
+  "videoCouldNotBePublished": "This video can't be published to Theater.",
+  "removeFromTheater": "Remove from Theater",
+  "removePostConfirm": "Remove this video from Theater?",
+  "tryAgain": "Try again",
+  "playVideo": "Play video",
+  "pauseVideo": "Pause video",
+  "videoUnavailable": "This video can't be played right now.",
+  "myVideos": "My Videos",
+  "myVideosEmpty": "You haven't made any videos yet.",
+  "myVideosEmptyHint": "Ask Ki to create one, then publish it to Theater.",
+  "videoStillGenerating": "Still generating\u2026",
+  "videoFailed": "This one didn't finish.",
+  "onTheater": "On Theater",
+  "generatedOn": "Generated {date}",
+  "@generatedOn": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "deleteVideo": "Delete video",
+  "deleteVideoConfirm": "Delete this video permanently? If it's on Theater it will be taken down too. This can't be undone.",
+  "delete": "Delete",
+  "videoDeleted": "Video deleted",
+  "unableToDeleteVideo": "Unable to delete the video."
 }

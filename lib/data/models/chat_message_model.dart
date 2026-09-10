@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import 'video_job_model.dart';
+
 enum ChatRole {
   user,
   assistant,
@@ -24,6 +26,7 @@ class ChatMessageModel {
     required this.content,
     this.timestamp,
     this.status = ChatMessageStatus.complete,
+    this.video,
   });
 
   final String id;
@@ -31,6 +34,10 @@ class ChatMessageModel {
   final String content;
   final String? timestamp;
   final ChatMessageStatus status;
+
+  /// A video Ki generated for this message, if any. Present from the moment
+  /// generation starts, so the bubble can show progress before the clip exists.
+  final VideoJobModel? video;
 
   factory ChatMessageModel.fromJson(Map<String, dynamic> json) {
     return ChatMessageModel(
@@ -54,7 +61,9 @@ class ChatMessageModel {
     String? content,
     String? timestamp,
     ChatMessageStatus? status,
+    VideoJobModel? video,
     bool clearTimestamp = false,
+    bool clearVideo = false,
   }) {
     return ChatMessageModel(
       id: id ?? this.id,
@@ -62,6 +71,7 @@ class ChatMessageModel {
       content: content ?? this.content,
       timestamp: clearTimestamp ? null : (timestamp ?? this.timestamp),
       status: status ?? this.status,
+      video: clearVideo ? null : (video ?? this.video),
     );
   }
 
@@ -74,10 +84,11 @@ class ChatMessageModel {
           role == other.role &&
           content == other.content &&
           timestamp == other.timestamp &&
-          status == other.status;
+          status == other.status &&
+          video == other.video;
 
   @override
-  int get hashCode => Object.hash(id, role, content, timestamp, status);
+  int get hashCode => Object.hash(id, role, content, timestamp, status, video);
 
   @override
   String toString() =>

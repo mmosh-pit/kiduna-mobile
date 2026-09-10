@@ -214,6 +214,9 @@ class KiChatController extends Notifier<KiChatState> {
                 clearStreamingBuffer: true,
               );
               _subscription = null;
+            // Video generation is surfaced in the ki_chat controller only;
+            // this Field chat ignores tool results.
+            case SseToolResultEvent():
             case SseInfoEvent():
               break;
           }
