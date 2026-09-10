@@ -20,6 +20,12 @@ sealed class SseEvent {
         error: (json['error'] ?? 'Unknown error') as String,
         code: (json['code'] ?? '') as String,
       ),
+      'toolResult' => SseToolResultEvent(
+        toolName: (json['toolName'] ?? '') as String,
+        success: json['success'] as bool? ?? true,
+        output: (json['output'] ?? '') as String,
+        callId: (json['callId'] ?? '') as String,
+      ),
       _ => SseInfoEvent(event: event, data: json),
     };
   }
@@ -67,6 +73,30 @@ class SseErrorEvent extends SseEvent {
 
   @override
   String toString() => 'SseErrorEvent(code: $code, error: $error)';
+}
+
+/// A tool the agent invoked finished running.
+///
+/// [output] is the tool's raw return value, truncated by the backend to 300
+/// characters — tools that need to return more put an ID in it and expose the
+/// rest over their own endpoint.
+@immutable
+class SseToolResultEvent extends SseEvent {
+  const SseToolResultEvent({
+    required this.toolName,
+    required this.success,
+    required this.output,
+    this.callId = '',
+  });
+
+  final String toolName;
+  final bool success;
+  final String output;
+  final String callId;
+
+  @override
+  String toString() =>
+      'SseToolResultEvent(tool: $toolName, success: $success)';
 }
 
 @immutable

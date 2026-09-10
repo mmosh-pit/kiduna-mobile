@@ -905,9 +905,9 @@ class _StatChip extends StatelessWidget {
       children: [
         Text(value,
             style: text.body.copyWith(
-                color: colors.gold, fontWeight: FontWeight.w700, fontSize: 20)),
+                color: colors.gold, fontWeight: FontWeight.w700, fontSize: 20.0)),
         Text(label,
-            style: text.caption.copyWith(color: colors.muted, fontSize: 11)),
+            style: text.caption.copyWith(color: colors.muted, fontSize: 11.0)),
       ],
     );
   }

@@ -6,6 +6,7 @@ import '../../core/extensions/context_extensions.dart';
 import '../../features/auth/controllers/auth_controller.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/user_profile_screen.dart';
+import '../../features/theater/screens/my_videos_screen.dart';
 
 /// Header trailing actions — the user avatar with its account popup
 /// (wallet copy + sign out). Shared by the dashboard and the web
@@ -36,8 +37,9 @@ class _UserAvatarPopupInternal extends StatelessWidget {
     final authState = ref.watch(authControllerProvider);
     final user = authState.user;
 
-    final initial =
-        (user?.name.isNotEmpty ?? false) ? user!.name.characters.first : 'U';
+    final initial = (user?.name.isNotEmpty ?? false)
+        ? user!.name.characters.first
+        : 'U';
 
     return PopupMenuButton<String>(
       offset: const Offset(0, 52),
@@ -71,6 +73,11 @@ class _UserAvatarPopupInternal extends StatelessWidget {
             }
           }
         }
+        if (value == 'my_videos') {
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (_) => const MyVideosScreen()),
+          );
+        }
         if (value == 'copy_wallet') {
           final wallet = user?.wallet;
           if (wallet != null && wallet.isNotEmpty) {
@@ -102,8 +109,8 @@ class _UserAvatarPopupInternal extends StatelessWidget {
                   const LoginScreen(),
               transitionsBuilder:
                   (context, animation, secondaryAnimation, child) {
-                return FadeTransition(opacity: animation, child: child);
-              },
+                    return FadeTransition(opacity: animation, child: child);
+                  },
               transitionDuration: const Duration(milliseconds: 300),
             ),
             (_) => false,
@@ -159,8 +166,27 @@ class _UserAvatarPopupInternal extends StatelessWidget {
               children: [
                 Icon(Icons.person_outline, size: 18, color: colors.cream),
                 const SizedBox(width: 12),
-                Text('View Profile',
-                    style: text.body.copyWith(color: colors.cream)),
+                Text(
+                  'View Profile',
+                  style: text.body.copyWith(color: colors.cream),
+                ),
+              ],
+            ),
+          ),
+          PopupMenuItem<String>(
+            value: 'my_videos',
+            child: Row(
+              children: [
+                Icon(
+                  Icons.video_library_outlined,
+                  size: 18,
+                  color: colors.cream,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  context.l10n.myVideos,
+                  style: text.body.copyWith(color: colors.cream),
+                ),
               ],
             ),
           ),
@@ -244,7 +270,10 @@ class _UserAvatarPopupInternal extends StatelessWidget {
               children: [
                 Icon(Icons.logout_rounded, size: 18, color: colors.error),
                 const SizedBox(width: 12),
-                Text('Sign Out', style: text.body.copyWith(color: colors.error)),
+                Text(
+                  'Sign Out',
+                  style: text.body.copyWith(color: colors.error),
+                ),
               ],
             ),
           ),

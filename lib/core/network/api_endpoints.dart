@@ -252,4 +252,37 @@ abstract class ApiEndpoints {
 
   /// `GET /api/usage/{wallet}` — current-month compute usage (agent API).
   static String computeUsage(String wallet) => '/api/usage/$wallet';
+
+  // ── Theater (kinship-agent) ───────────────────────────────────────────
+
+  /// `GET /api/video-jobs/{jobId}?wallet={wallet}` — poll a generation job.
+  static String videoJob(String jobId, String wallet) =>
+      '/api/video-jobs/$jobId?wallet=${Uri.encodeComponent(wallet)}';
+
+  /// `DELETE /api/video-jobs/{jobId}?wallet={wallet}` — delete one video.
+  /// Same path as [videoJob]; kept separate so intent reads at the call site.
+  static String videoJobDelete(String jobId, String wallet) =>
+      '/api/video-jobs/$jobId?wallet=${Uri.encodeComponent(wallet)}';
+
+  /// `GET /api/video-jobs?wallet={wallet}` — the caller's generations.
+  static String videoJobs(String wallet, {int limit = 50}) =>
+      '/api/video-jobs?wallet=${Uri.encodeComponent(wallet)}&limit=$limit';
+
+  /// `POST /api/theater/publish` — publish a finished video to the feed.
+  static const String theaterPublish = '/api/theater/publish';
+
+  /// `GET /api/theater/feed?realmId={realmId}` — published videos for a realm.
+  static String theaterFeed({String? realmId, String? before, int limit = 20}) {
+    final params = <String, String>{'limit': '$limit'};
+    if (realmId != null && realmId.isNotEmpty) params['realmId'] = realmId;
+    if (before != null && before.isNotEmpty) params['before'] = before;
+    return '/api/theater/feed?${Uri(queryParameters: params).query}';
+  }
+
+  /// `GET /api/theater/mine?wallet={wallet}` — the caller's own posts.
+  static String theaterMine(String wallet) =>
+      '/api/theater/mine?wallet=${Uri.encodeComponent(wallet)}';
+
+  /// `POST /api/theater/{postId}/remove` — take down one of your posts.
+  static String theaterRemove(String postId) => '/api/theater/$postId/remove';
 }

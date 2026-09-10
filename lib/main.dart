@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
+import 'package:media_kit/media_kit.dart';
 
 import 'config/constants.dart';
 import 'config/env.dart';
@@ -188,6 +189,9 @@ Future<void> main() async {
   );
 
   ApiClient.instance.init(tokenProvider: SecureStorage.instance.getToken);
+
+  // Required before any Theater video surface builds a player.
+  MediaKit.ensureInitialized();
 
   runApp(const ProviderScope(child: KidunaApp()));
 }

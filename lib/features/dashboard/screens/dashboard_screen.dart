@@ -10,6 +10,7 @@ import '../../../shared/layouts/responsive_layout.dart';
 import '../../../shared/widgets/app_header.dart';
 import '../../../shared/widgets/ki_agent.dart';
 import '../../cell/screens/cell_detail_screen.dart';
+import '../../theater/screens/theater_screen.dart';
 import '../controllers/ecosystem_controller.dart';
 import '../../../features/ki_chat/controllers/ki_chat_controller.dart';
 
@@ -215,6 +216,13 @@ class _BottomTabBar extends StatelessWidget {
             label: l10n.tabGuilds,
             isActive: activeTab == 3,
             onTap: () => onTabChanged(3),
+          ),
+          _TabItem(
+            icon: Icons.movie_outlined,
+            activeIcon: Icons.movie,
+            label: l10n.theater,
+            isActive: activeTab == 4,
+            onTap: () => onTabChanged(4),
           ),
         ],
       ),
@@ -427,8 +435,9 @@ Widget _buildLeftPanel(BuildContext context, int activeTab, {bool startInLobby =
 
   return switch (activeTab) {
     0 => const FieldStack(),
-    1 => GameScreen(startInLobby: startInLobby, cellRealmId: cellRealmId, joinTicket: joinTicket),    
+    1 => GameScreen(startInLobby: startInLobby, cellRealmId: cellRealmId, joinTicket: joinTicket),
     3 => const AllianceListScreen(),
+    4 => const TheaterScreen(),
 
     _ => _ComingSoonPanel(
         title: switch (activeTab) {
