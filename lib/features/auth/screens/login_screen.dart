@@ -85,7 +85,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
 
       final destination = kIsWeb
-          ? const DownloadAppScreen()
+          ? const DashboardScreen()
           : const DashboardScreen();
       Navigator.of(context).pushReplacement(
         PageRouteBuilder<void>(
@@ -114,7 +114,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         final destination = kIsWeb
-            ? const DownloadAppScreen()
+            ? const DashboardScreen()
             : const DashboardScreen();
         Navigator.of(context).pushReplacement(
           PageRouteBuilder<void>(
