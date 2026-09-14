@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../data/models/video_job_model.dart';
 import '../../../shared/widgets/theater_video_player.dart';
+import '../../../shared/widgets/video_failure_message.dart';
 
 /// The video Ki generated for a chat message.
 ///
@@ -34,7 +35,8 @@ class ChatVideoAttachment extends StatelessWidget {
     }
     return switch (video.status) {
       VideoJobStatus.generating => const _GeneratingCard(),
-      VideoJobStatus.ready || VideoJobStatus.failed => const _FailedCard(),
+      VideoJobStatus.ready ||
+      VideoJobStatus.failed => _FailedCard(video: video),
     };
   }
 }
@@ -83,13 +85,16 @@ class _GeneratingCard extends StatelessWidget {
 }
 
 class _FailedCard extends StatelessWidget {
-  const _FailedCard();
+  const _FailedCard({required this.video});
+
+  final VideoJobModel video;
 
   @override
   Widget build(BuildContext context) {
     return _Frame(
       child: Text(
-        context.l10n.videoGenerationFailed,
+        videoFailureMessage(context, video.failureReason),
+        textAlign: TextAlign.center,
         style: context.textStyles.bodyMedium?.copyWith(
           color: context.kiduna.muted,
         ),

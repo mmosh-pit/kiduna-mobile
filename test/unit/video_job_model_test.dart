@@ -59,6 +59,28 @@ void main() {
       expect(job.status, VideoJobStatus.ready);
       expect(job.isReady, isFalse);
     });
+
+    test('parses a stable prompt-blocked failure reason', () {
+      final job = VideoJobModel.fromJson(const {
+        'jobId': 'job_3',
+        'status': 'failed',
+        'failureCode': 'prompt_blocked',
+        'error': 'Safe fallback message',
+      });
+
+      expect(job.failureReason, VideoFailureReason.promptBlocked);
+      expect(job.error, 'Safe fallback message');
+    });
+
+    test('does not trust an unknown failure code', () {
+      final job = VideoJobModel.fromJson(const {
+        'jobId': 'job_4',
+        'status': 'failed',
+        'failureCode': 'provider_internal_stack_trace',
+      });
+
+      expect(job.failureReason, isNull);
+    });
   });
 
   group('VideoJobModel.fromToolOutput', () {

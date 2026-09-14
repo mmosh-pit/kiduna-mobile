@@ -62,11 +62,13 @@ void main() {
       final job = VideoJobModel.fromJson(const {
         'jobId': 'job_2',
         'status': 'failed',
-        'error': 'Veo generation timed out after 420s',
+        'failureCode': 'provider_timeout',
+        'error': 'The video provider took too long to respond.',
       });
 
       expect(job.status, VideoJobStatus.failed);
-      expect(job.error, contains('timed out'));
+      expect(job.failureReason, VideoFailureReason.providerTimeout);
+      expect(job.error, contains('too long'));
       expect(job.isReady, isFalse);
     });
 

@@ -17,6 +17,24 @@ enum VideoJobStatus {
   bool get isTerminal => this != VideoJobStatus.generating;
 }
 
+/// Stable failure categories returned by the video-jobs API.
+enum VideoFailureReason {
+  promptBlocked,
+  providerUnavailable,
+  providerTimeout,
+  generationFailed;
+
+  static VideoFailureReason? fromString(String? value) {
+    return switch (value) {
+      'prompt_blocked' => VideoFailureReason.promptBlocked,
+      'provider_unavailable' => VideoFailureReason.providerUnavailable,
+      'provider_timeout' => VideoFailureReason.providerTimeout,
+      'generation_failed' => VideoFailureReason.generationFailed,
+      _ => null,
+    };
+  }
+}
+
 /// A video Ki is generating (or has generated) for a chat message.
 ///
 /// Veo takes anywhere from seconds to minutes, so a message carries this from
@@ -31,6 +49,7 @@ class VideoJobModel {
     this.videoUrl,
     this.assetId,
     this.error,
+    this.failureReason,
     this.durationSeconds = 8,
     this.kidunaCost,
     this.isPublished = false,
@@ -43,6 +62,7 @@ class VideoJobModel {
   final String? videoUrl;
   final String? assetId;
   final String? error;
+  final VideoFailureReason? failureReason;
   final int durationSeconds;
   final double? kidunaCost;
 
@@ -65,6 +85,9 @@ class VideoJobModel {
       videoUrl: json['videoUrl'] as String?,
       assetId: json['assetId'] as String?,
       error: json['error'] as String?,
+      failureReason: VideoFailureReason.fromString(
+        json['failureCode'] as String?,
+      ),
       durationSeconds: (json['durationSeconds'] as num?)?.toInt() ?? 8,
       kidunaCost: (json['kidunaCost'] as num?)?.toDouble(),
       createdAt: DateTime.tryParse((json['createdAt'] ?? '') as String),
@@ -88,11 +111,13 @@ class VideoJobModel {
     String? videoUrl,
     String? assetId,
     String? error,
+    VideoFailureReason? failureReason,
     int? durationSeconds,
     double? kidunaCost,
     bool? isPublished,
     DateTime? createdAt,
     bool clearError = false,
+    bool clearFailureReason = false,
   }) {
     return VideoJobModel(
       jobId: jobId ?? this.jobId,
@@ -101,6 +126,9 @@ class VideoJobModel {
       videoUrl: videoUrl ?? this.videoUrl,
       assetId: assetId ?? this.assetId,
       error: clearError ? null : (error ?? this.error),
+      failureReason: clearFailureReason
+          ? null
+          : (failureReason ?? this.failureReason),
       durationSeconds: durationSeconds ?? this.durationSeconds,
       kidunaCost: kidunaCost ?? this.kidunaCost,
       isPublished: isPublished ?? this.isPublished,
@@ -118,9 +146,17 @@ class VideoJobModel {
           videoUrl == other.videoUrl &&
           assetId == other.assetId &&
           error == other.error &&
+          failureReason == other.failureReason &&
           isPublished == other.isPublished;
 
   @override
-  int get hashCode =>
-      Object.hash(jobId, status, videoUrl, assetId, error, isPublished);
+  int get hashCode => Object.hash(
+    jobId,
+    status,
+    videoUrl,
+    assetId,
+    error,
+    failureReason,
+    isPublished,
+  );
 }
