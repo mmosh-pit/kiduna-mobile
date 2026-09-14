@@ -8,6 +8,7 @@ import '../../../core/errors/exceptions.dart';
 import '../../../core/utils/logger.dart';
 import '../../../data/models/chat_message_model.dart';
 import '../../../data/models/sse_event.dart';
+import '../../../data/models/video_duration_request_model.dart';
 import '../../../data/models/video_job_model.dart';
 import '../../../data/services/chat_service.dart';
 import '../../../data/services/theater_service.dart';
@@ -88,6 +89,12 @@ class KiChatController extends Notifier<KiChatState> {
   /// message — far up the thread and effectively invisible.
   VideoJobModel? _awaitingAssistantMessage;
 
+  /// A duration selector waiting for this turn's assistant message to exist.
+  VideoDurationRequestModel? _awaitingDurationRequest;
+
+  /// Picker disabled while its follow-up chat turn is being submitted.
+  String? _submittedDurationMessageId;
+
   /// Current game context (cards, board, pot). Set by game_screen when
   /// a game is active. Cleared when the game ends or player leaves.
   String _gameContext = '';
@@ -142,11 +149,7 @@ class KiChatController extends Notifier<KiChatState> {
         fieldRealmId != 'kinship-duna' &&
         fieldRealmId != ecosystemId;
 
-    final id = useField ? fieldRealmId : ecosystemId;
-    print(
-      '[DashboardKiChat] _realmId = $id (field=$fieldRealmId, eco=$ecosystemId)',
-    );
-    return id;
+    return useField ? fieldRealmId : ecosystemId;
   }
 
   Future<void> loadHistory() async {
@@ -261,13 +264,16 @@ class KiChatController extends Notifier<KiChatState> {
                 streamingBuffer: state.streamingBuffer + token,
               );
             case SseDoneEvent(:final fullResponse):
+              _reopenSubmittedDuration();
               final assistantMessage = ChatMessageModel(
                 id: 'resp_${DateTime.now().millisecondsSinceEpoch}',
                 role: ChatRole.assistant,
                 content: fullResponse,
                 video: _awaitingAssistantMessage,
+                videoDurationRequest: _awaitingDurationRequest,
               );
               _awaitingAssistantMessage = null;
+              _awaitingDurationRequest = null;
               state = state.copyWith(
                 messages: [...state.messages, assistantMessage],
                 isStreaming: false,
@@ -276,6 +282,9 @@ class KiChatController extends Notifier<KiChatState> {
               _subscription = null;
             case SseErrorEvent(:final error, :final code):
               AppLogger.error('SSE error: $code — $error', tag: 'KiChat');
+              _reopenSubmittedDuration();
+              _awaitingAssistantMessage = null;
+              _awaitingDurationRequest = null;
               state = state.copyWith(
                 isStreaming: false,
                 error: 'SSE error ($code): $error',
@@ -299,9 +308,14 @@ class KiChatController extends Notifier<KiChatState> {
             stackTrace: st,
           );
           if (e is InsufficientBalanceException) {
+            _reopenSubmittedDuration();
+            _awaitingDurationRequest = null;
             _handleOutOfBalance(e, userMessage);
             return;
           }
+          _awaitingAssistantMessage = null;
+          _awaitingDurationRequest = null;
+          _reopenSubmittedDuration();
           state = state.copyWith(
             isStreaming: false,
             error: 'Stream error: [${e.runtimeType}] $e',
@@ -311,18 +325,33 @@ class KiChatController extends Notifier<KiChatState> {
         },
         onDone: () {
           if (!ref.mounted) return;
+          _reopenSubmittedDuration();
           if (state.isStreaming && state.streamingBuffer.isNotEmpty) {
             final assistantMessage = ChatMessageModel(
               id: 'resp_${DateTime.now().millisecondsSinceEpoch}',
               role: ChatRole.assistant,
               content: state.streamingBuffer,
               video: _awaitingAssistantMessage,
+              videoDurationRequest: _awaitingDurationRequest,
             );
             _awaitingAssistantMessage = null;
+            _awaitingDurationRequest = null;
             state = state.copyWith(
               messages: [...state.messages, assistantMessage],
               isStreaming: false,
               clearStreamingBuffer: true,
+            );
+          } else if (state.isStreaming && _awaitingDurationRequest != null) {
+            final assistantMessage = ChatMessageModel(
+              id: 'resp_${DateTime.now().millisecondsSinceEpoch}',
+              role: ChatRole.assistant,
+              content: '',
+              videoDurationRequest: _awaitingDurationRequest,
+            );
+            _awaitingDurationRequest = null;
+            state = state.copyWith(
+              messages: [...state.messages, assistantMessage],
+              isStreaming: false,
             );
           } else if (state.isStreaming) {
             state = state.copyWith(isStreaming: false);
@@ -333,9 +362,13 @@ class KiChatController extends Notifier<KiChatState> {
       );
     } on InsufficientBalanceException catch (e) {
       if (!ref.mounted) return;
+      _reopenSubmittedDuration();
       _handleOutOfBalance(e, userMessage);
     } catch (e, st) {
       if (!ref.mounted) return;
+      _reopenSubmittedDuration();
+      _awaitingAssistantMessage = null;
+      _awaitingDurationRequest = null;
       AppLogger.error(
         'Send failed [${e.runtimeType}]: $e',
         tag: 'KiChat',
@@ -500,7 +533,16 @@ class KiChatController extends Notifier<KiChatState> {
       return;
     }
 
+    if (parsed['action'] == 'select_video_duration') {
+      _awaitingDurationRequest = VideoDurationRequestModel.fromToolOutput(
+        parsed,
+      );
+      state = state.copyWith(clearVideoBlockedReason: true);
+      return;
+    }
+
     if (parsed['success'] != true) {
+      _reopenSubmittedDuration();
       final reason = parsed['message'] as String?;
       AppLogger.info(
         'Video generation refused: ${parsed['error']}',
@@ -516,9 +558,83 @@ class KiChatController extends Notifier<KiChatState> {
     if (job.jobId.isEmpty) return;
 
     _pendingVideoJobId = job.jobId;
+    _submittedDurationMessageId = null;
     _awaitingAssistantMessage = job;
+    _awaitingDurationRequest = null;
     state = state.copyWith(clearVideoBlockedReason: true);
     unawaited(_pollVideoJob(job));
+  }
+
+  /// Mark a duration picker as used, then send the user's choice through KI.
+  Future<void> submitVideoDuration({
+    required String messageId,
+    required int seconds,
+    required String followUpMessage,
+  }) async {
+    if (state.isStreaming) return;
+    final messages = messagesWithSubmittedDuration(
+      state.messages,
+      messageId: messageId,
+      seconds: seconds,
+    );
+    if (messages == null) return;
+
+    state = state.copyWith(messages: messages);
+    _submittedDurationMessageId = messageId;
+    await sendMessage(followUpMessage);
+  }
+
+  void _reopenSubmittedDuration() {
+    final messageId = _submittedDurationMessageId;
+    if (messageId == null) return;
+    _submittedDurationMessageId = null;
+
+    final messages = messagesWithReopenedDuration(
+      state.messages,
+      messageId: messageId,
+    );
+    if (messages != null) {
+      state = state.copyWith(messages: messages);
+    }
+  }
+
+  /// Apply one duration selection without allowing duplicate or invalid use.
+  @visibleForTesting
+  static List<ChatMessageModel>? messagesWithSubmittedDuration(
+    List<ChatMessageModel> messages, {
+    required String messageId,
+    required int seconds,
+  }) {
+    final index = messages.indexWhere((message) => message.id == messageId);
+    if (index == -1) return null;
+    final request = messages[index].videoDurationRequest;
+    if (request == null || request.isSubmitted || !request.accepts(seconds)) {
+      return null;
+    }
+
+    final updated = [...messages];
+    updated[index] = updated[index].copyWith(
+      videoDurationRequest: request.copyWith(submittedSeconds: seconds),
+    );
+    return updated;
+  }
+
+  /// Re-enable a submitted picker when its follow-up did not start a job.
+  @visibleForTesting
+  static List<ChatMessageModel>? messagesWithReopenedDuration(
+    List<ChatMessageModel> messages, {
+    required String messageId,
+  }) {
+    final index = messages.indexWhere((message) => message.id == messageId);
+    if (index == -1) return null;
+    final request = messages[index].videoDurationRequest;
+    if (request == null || !request.isSubmitted) return null;
+
+    final updated = [...messages];
+    updated[index] = updated[index].copyWith(
+      videoDurationRequest: request.copyWith(clearSubmittedSeconds: true),
+    );
+    return updated;
   }
 
   /// Poll one job until it finishes, updating the message bubble in place.
@@ -531,7 +647,8 @@ class KiChatController extends Notifier<KiChatState> {
     var job = initial;
 
     const pollInterval = Duration(seconds: 5);
-    const maxAttempts = 96; // ~8 minutes, past Veo's worst case
+    // Chained Seedance jobs can contain two serial 30-second generations.
+    final maxAttempts = initial.durationSeconds > 30 ? 240 : 120;
 
     for (var attempt = 0; attempt < maxAttempts; attempt++) {
       await Future<void>.delayed(pollInterval);
@@ -630,12 +747,18 @@ class KiChatController extends Notifier<KiChatState> {
     _subscription?.cancel();
     _subscription = null;
     if (state.isStreaming) {
-      if (state.streamingBuffer.isNotEmpty) {
+      if (state.streamingBuffer.isNotEmpty ||
+          _awaitingAssistantMessage != null ||
+          _awaitingDurationRequest != null) {
         final partialMessage = ChatMessageModel(
           id: 'resp_${DateTime.now().millisecondsSinceEpoch}',
           role: ChatRole.assistant,
           content: state.streamingBuffer,
+          video: _awaitingAssistantMessage,
+          videoDurationRequest: _awaitingDurationRequest,
         );
+        _awaitingAssistantMessage = null;
+        _awaitingDurationRequest = null;
         state = state.copyWith(
           messages: [...state.messages, partialMessage],
           isStreaming: false,
