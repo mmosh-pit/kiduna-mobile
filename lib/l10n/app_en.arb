@@ -633,6 +633,9 @@
   "generatingYourVideo": "Generating your video\u2026",
   "thisTakesAFewMinutes": "This can take a few minutes.",
   "videoGenerationFailed": "The video could not be generated.",
+  "videoPromptBlocked": "This prompt was blocked by the video provider. Try rephrasing it and removing sensitive or restricted terms.",
+  "videoProviderUnavailable": "Video generation is unavailable right now. Please try again later.",
+  "videoProviderTimedOut": "The video provider took too long to respond. Please try again.",
   "publishToTheater": "Publish to Theater",
   "publishing": "Publishing\u2026",
   "publishedToTheater": "Published to Theater",
@@ -659,5 +662,31 @@
   "deleteVideoConfirm": "Delete this video permanently? If it's on Theater it will be taken down too. This can't be undone.",
   "delete": "Delete",
   "videoDeleted": "Video deleted",
-  "unableToDeleteVideo": "Unable to delete the video."
+  "unableToDeleteVideo": "Unable to delete the video.",
+  "howLongShouldVideoBe": "How long should this video be?",
+  "longerVideosTakeMoreTime": "Longer videos take more time and KIDUNA.",
+  "secondsShort": "{seconds}s",
+  "@secondsShort": {
+    "placeholders": {
+      "seconds": { "type": "int" }
+    }
+  },
+  "generateSecondsVideo": "Generate {seconds}s video",
+  "@generateSecondsVideo": {
+    "placeholders": {
+      "seconds": { "type": "int" }
+    }
+  },
+  "generatingSecondsVideo": "Generating {seconds}s video\u2026",
+  "@generatingSecondsVideo": {
+    "placeholders": {
+      "seconds": { "type": "int" }
+    }
+  },
+  "generateDiscussedVideoSeconds": "Generate the video we just discussed as a {seconds}-second video.",
+  "@generateDiscussedVideoSeconds": {
+    "placeholders": {
+      "seconds": { "type": "int" }
+    }
+  }
 }

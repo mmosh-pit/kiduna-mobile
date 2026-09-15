@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../data/models/video_job_model.dart';
 import '../../../shared/widgets/theater_video_player.dart';
+import '../../../shared/widgets/video_failure_message.dart';
 
 /// One of the user's generated videos, with its publish state.
 class MyVideoCard extends StatelessWidget {
@@ -108,8 +109,10 @@ class _StatusBox extends StatelessWidget {
               Text(
                 generating
                     ? context.l10n.videoStillGenerating
-                    : context.l10n.videoFailed,
+                    : videoFailureMessage(context, video.failureReason),
                 textAlign: TextAlign.center,
+                maxLines: 5,
+                overflow: TextOverflow.ellipsis,
                 style: context.textStyles.bodySmall?.copyWith(
                   color: context.kiduna.muted,
                 ),

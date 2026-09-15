@@ -10,6 +10,7 @@ import '../../features/compute/open_buy_kiduna.dart';
 import '../../features/ki_chat/controllers/ally_controller.dart';
 import '../../features/ki_chat/controllers/ki_chat_controller.dart';
 import '../../features/ki_chat/widgets/chat_video_message.dart';
+import '../../features/ki_chat/widgets/video_duration_picker.dart';
 import 'ki_composer.dart';
 import 'ki_message_bubble.dart';
 
@@ -60,6 +61,17 @@ class _KiAgentState extends ConsumerState<KiAgent> {
     ref.read(kiChatControllerProvider.notifier).sendMessage(text);
   }
 
+  Future<void> _selectVideoDuration(String messageId, int seconds) async {
+    final followUpMessage = context.l10n.generateDiscussedVideoSeconds(seconds);
+    await ref
+        .read(kiChatControllerProvider.notifier)
+        .submitVideoDuration(
+          messageId: messageId,
+          seconds: seconds,
+          followUpMessage: followUpMessage,
+        );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = context.kiduna;
@@ -107,6 +119,7 @@ class _KiAgentState extends ConsumerState<KiAgent> {
                   streamingBuffer: chatState.streamingBuffer,
                   isLoading: chatState.isLoading,
                   error: chatState.error,
+                  onVideoDurationSelected: _selectVideoDuration,
                 ),
               ),
             const SizedBox(height: 8),
@@ -230,6 +243,7 @@ class _KiChatThread extends StatelessWidget {
     required this.isStreaming,
     required this.streamingBuffer,
     required this.isLoading,
+    required this.onVideoDurationSelected,
     this.error,
   });
 
@@ -238,6 +252,8 @@ class _KiChatThread extends StatelessWidget {
   final String streamingBuffer;
   final bool isLoading;
   final String? error;
+  final Future<void> Function(String messageId, int seconds)
+  onVideoDurationSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -281,6 +297,19 @@ class _KiChatThread extends StatelessWidget {
             key: ValueKey('video_${video.jobId}'),
             padding: const EdgeInsets.only(top: 8),
             child: ChatVideoMessage(video: video),
+          ),
+        );
+      }
+      final durationRequest = msg.videoDurationRequest;
+      if (durationRequest != null) {
+        items.add(
+          Padding(
+            key: ValueKey('video_duration_${msg.id}'),
+            padding: const EdgeInsets.only(top: 8),
+            child: VideoDurationPicker(
+              request: durationRequest,
+              onGenerate: (seconds) => onVideoDurationSelected(msg.id, seconds),
+            ),
           ),
         );
       }

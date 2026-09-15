@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import 'video_duration_request_model.dart';
 import 'video_job_model.dart';
 
 enum ChatRole {
@@ -27,6 +28,7 @@ class ChatMessageModel {
     this.timestamp,
     this.status = ChatMessageStatus.complete,
     this.video,
+    this.videoDurationRequest,
   });
 
   final String id;
@@ -38,6 +40,9 @@ class ChatMessageModel {
   /// A video Ki generated for this message, if any. Present from the moment
   /// generation starts, so the bubble can show progress before the clip exists.
   final VideoJobModel? video;
+
+  /// A duration choice Ki needs before it can create this message's video.
+  final VideoDurationRequestModel? videoDurationRequest;
 
   factory ChatMessageModel.fromJson(Map<String, dynamic> json) {
     return ChatMessageModel(
@@ -62,8 +67,10 @@ class ChatMessageModel {
     String? timestamp,
     ChatMessageStatus? status,
     VideoJobModel? video,
+    VideoDurationRequestModel? videoDurationRequest,
     bool clearTimestamp = false,
     bool clearVideo = false,
+    bool clearVideoDurationRequest = false,
   }) {
     return ChatMessageModel(
       id: id ?? this.id,
@@ -72,6 +79,9 @@ class ChatMessageModel {
       timestamp: clearTimestamp ? null : (timestamp ?? this.timestamp),
       status: status ?? this.status,
       video: clearVideo ? null : (video ?? this.video),
+      videoDurationRequest: clearVideoDurationRequest
+          ? null
+          : (videoDurationRequest ?? this.videoDurationRequest),
     );
   }
 
@@ -85,10 +95,19 @@ class ChatMessageModel {
           content == other.content &&
           timestamp == other.timestamp &&
           status == other.status &&
-          video == other.video;
+          video == other.video &&
+          videoDurationRequest == other.videoDurationRequest;
 
   @override
-  int get hashCode => Object.hash(id, role, content, timestamp, status, video);
+  int get hashCode => Object.hash(
+    id,
+    role,
+    content,
+    timestamp,
+    status,
+    video,
+    videoDurationRequest,
+  );
 
   @override
   String toString() =>
