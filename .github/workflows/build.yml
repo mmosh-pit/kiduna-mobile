@@ -48,7 +48,10 @@ jobs:
             libjsoncpp-dev \
             libgstreamer1.0-dev \
             libgstreamer-plugins-base1.0-dev \
-            libpulse-dev
+            libpulse-dev \
+            libmpv-dev \ 
+            mpv
+
 
       - run: flutter pub get
 
