@@ -4,11 +4,11 @@ on:
   push:
     branches:
       - main
-      - dev
+    tags: 
+      - "v*"
   pull_request:
     branches:
       - main
-      - dev
   schedule:
     - cron: "30 2 * * 1"
 
