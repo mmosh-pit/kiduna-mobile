@@ -2,10 +2,8 @@ name: Flutter Multi Platform Build
 
 on:
   push:
-    branches:
-      - feat/build-application-gitactions
-      - feat/feature-build-worflow
-      - dev
+    tags:
+      - "v*"
   workflow_dispatch:
 
 jobs:
