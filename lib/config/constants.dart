@@ -17,7 +17,7 @@ abstract class AppConstants {
   static const double spacing8 = 32;
   static const double spacing12 = 48;
 
-  static const Duration connectTimeout = Duration(seconds: 10);
+  static const Duration connectTimeout = Duration(seconds: 80);
   static const Duration receiveTimeout = Duration(seconds: 30);
   static const Duration walletReceiveTimeout = Duration(seconds: 90);
 }
