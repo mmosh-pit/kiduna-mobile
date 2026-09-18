@@ -24,17 +24,22 @@ void main() {
   testWidgets('selects a five-second step and submits it', (tester) async {
     int? selected;
     await tester.pumpWidget(
-      subject(onGenerate: (seconds) async => selected = seconds),
+      subject(
+        request: const VideoDurationRequestModel(usdcPerSecond: 0.56),
+        onGenerate: (seconds) async => selected = seconds,
+      ),
     );
 
     expect(find.text('How long should this video be?'), findsOneWidget);
     expect(find.text('15s'), findsOneWidget);
+    expect(find.text('Approx. cost: 8.40 USDC'), findsOneWidget);
     expect(find.text('5s'), findsOneWidget);
     expect(find.text('60s'), findsOneWidget);
 
     final slider = tester.widget<Slider>(find.byType(Slider));
     slider.onChanged!(30);
     await tester.pump();
+    expect(find.text('Approx. cost: 16.80 USDC'), findsOneWidget);
     expect(find.text('Generate 30s video'), findsOneWidget);
 
     await tester.tap(find.text('Generate 30s video'));
