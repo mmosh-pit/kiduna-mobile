@@ -8,6 +8,7 @@ class VideoDurationRequestModel {
     this.maxSeconds = 60,
     this.stepSeconds = 5,
     this.initialSeconds = 15,
+    this.usdcPerSecond,
     this.submittedSeconds,
   });
 
@@ -15,9 +16,16 @@ class VideoDurationRequestModel {
   final int maxSeconds;
   final int stepSeconds;
   final int initialSeconds;
+  final double? usdcPerSecond;
   final int? submittedSeconds;
 
   bool get isSubmitted => submittedSeconds != null;
+
+  double? estimatedUsdcCost(int seconds) {
+    final rate = usdcPerSecond;
+    if (rate == null) return null;
+    return rate * seconds;
+  }
 
   bool accepts(int seconds) {
     return stepSeconds > 0 &&
@@ -43,12 +51,17 @@ class VideoDurationRequestModel {
     final initialSeconds =
         minSeconds +
         ((clampedInitial - minSeconds) / stepSeconds).round() * stepSeconds;
+    final parsedUsdcRate = json['usdc_per_second'];
+    final usdcPerSecond = parsedUsdcRate is num && parsedUsdcRate >= 0
+        ? parsedUsdcRate.toDouble()
+        : null;
 
     return VideoDurationRequestModel(
       minSeconds: minSeconds,
       maxSeconds: maxSeconds,
       stepSeconds: stepSeconds,
       initialSeconds: initialSeconds,
+      usdcPerSecond: usdcPerSecond,
     );
   }
 
@@ -57,7 +70,9 @@ class VideoDurationRequestModel {
     int? maxSeconds,
     int? stepSeconds,
     int? initialSeconds,
+    double? usdcPerSecond,
     int? submittedSeconds,
+    bool clearUsdcPerSecond = false,
     bool clearSubmittedSeconds = false,
   }) {
     return VideoDurationRequestModel(
@@ -65,6 +80,9 @@ class VideoDurationRequestModel {
       maxSeconds: maxSeconds ?? this.maxSeconds,
       stepSeconds: stepSeconds ?? this.stepSeconds,
       initialSeconds: initialSeconds ?? this.initialSeconds,
+      usdcPerSecond: clearUsdcPerSecond
+          ? null
+          : (usdcPerSecond ?? this.usdcPerSecond),
       submittedSeconds: clearSubmittedSeconds
           ? null
           : (submittedSeconds ?? this.submittedSeconds),
@@ -83,6 +101,7 @@ class VideoDurationRequestModel {
             maxSeconds == other.maxSeconds &&
             stepSeconds == other.stepSeconds &&
             initialSeconds == other.initialSeconds &&
+            usdcPerSecond == other.usdcPerSecond &&
             submittedSeconds == other.submittedSeconds;
   }
 
@@ -92,6 +111,7 @@ class VideoDurationRequestModel {
     maxSeconds,
     stepSeconds,
     initialSeconds,
+    usdcPerSecond,
     submittedSeconds,
   );
 }
