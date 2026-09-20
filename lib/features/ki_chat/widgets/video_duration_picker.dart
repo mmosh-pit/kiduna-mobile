@@ -56,7 +56,10 @@ class _VideoDurationPickerState extends State<VideoDurationPicker> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _DurationHeading(seconds: _selectedSeconds),
+              _DurationHeading(
+                seconds: _selectedSeconds,
+                estimatedUsdcCost: request.estimatedUsdcCost(_selectedSeconds),
+              ),
               const SizedBox(height: 12),
               SliderTheme(
                 data: _sliderTheme(context),
@@ -102,9 +105,13 @@ class _VideoDurationPickerState extends State<VideoDurationPicker> {
 }
 
 class _DurationHeading extends StatelessWidget {
-  const _DurationHeading({required this.seconds});
+  const _DurationHeading({
+    required this.seconds,
+    required this.estimatedUsdcCost,
+  });
 
   final int seconds;
+  final double? estimatedUsdcCost;
 
   @override
   Widget build(BuildContext context) {
@@ -120,6 +127,15 @@ class _DurationHeading extends StatelessWidget {
           context.l10n.secondsShort(seconds),
           style: context.kidunaText.h2.copyWith(color: context.kiduna.sky),
         ),
+        if (estimatedUsdcCost case final cost?) ...[
+          const SizedBox(height: 4),
+          Text(
+            context.l10n.approximateVideoCost(cost.toStringAsFixed(2)),
+            style: context.kidunaText.labelStrong.copyWith(
+              color: context.kiduna.cream,
+            ),
+          ),
+        ],
         const SizedBox(height: 4),
         Text(
           context.l10n.longerVideosTakeMoreTime,

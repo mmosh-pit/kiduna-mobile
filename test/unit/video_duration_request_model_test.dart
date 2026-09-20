@@ -8,12 +8,15 @@ void main() {
       'max_seconds': 60,
       'step_seconds': 5,
       'initial_seconds': 15,
+      'usdc_per_second': 0.56,
     });
 
     expect(request.minSeconds, 5);
     expect(request.maxSeconds, 60);
     expect(request.stepSeconds, 5);
     expect(request.initialSeconds, 15);
+    expect(request.usdcPerSecond, 0.56);
+    expect(request.estimatedUsdcCost(15), closeTo(8.4, 0.000001));
     expect(request.isSubmitted, isFalse);
   });
 
@@ -41,10 +44,13 @@ void main() {
       'max_seconds': 2,
       'step_seconds': 0,
       'initial_seconds': 100,
+      'usdc_per_second': -1,
     });
 
     expect(request.maxSeconds, 60);
     expect(request.stepSeconds, 5);
+    expect(request.usdcPerSecond, isNull);
+    expect(request.estimatedUsdcCost(15), isNull);
     expect(request.initialSeconds, 60);
   });
 }

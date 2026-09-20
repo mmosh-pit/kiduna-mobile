@@ -665,6 +665,12 @@
   "unableToDeleteVideo": "Unable to delete the video.",
   "howLongShouldVideoBe": "How long should this video be?",
   "longerVideosTakeMoreTime": "Longer videos take more time and KIDUNA.",
+  "approximateVideoCost": "Approx. cost: {cost} USDC",
+  "@approximateVideoCost": {
+    "placeholders": {
+      "cost": { "type": "String" }
+    }
+  },
   "secondsShort": "{seconds}s",
   "@secondsShort": {
     "placeholders": {
