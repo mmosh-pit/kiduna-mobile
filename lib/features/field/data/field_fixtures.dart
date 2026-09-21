@@ -235,10 +235,10 @@ abstract class FieldFixtures {
       topic: KiTopic(
         title: 'Pay Compute',
         body:
-            'Purchase KIDUNA tokens and gift compute to members '
+            'Purchase KI tokens and gift compute to members '
             'of this Realm.',
         invitation:
-            'Buy KIDUNA and transfer compute to realm members '
+            'Buy KI and transfer compute to realm members '
             'so they can use AI services.',
       ),
     ),
@@ -328,7 +328,7 @@ abstract class FieldFixtures {
     ),
     (
       label: 'Treasury',
-      value: '0 KIDUNA',
+      value: '0 KI',
       topic: KiTopic(
         title: 'Ecosystem treasury',
         body:
@@ -381,8 +381,8 @@ abstract class FieldFixtures {
   ];
 
   /// Compute balance shown in the Field (fixture values).
-  static const String computeBalance = '18,400 KIDUNA';
-  static const String computeRateLabel = '1 KIDUNA';
+  static const String computeBalance = '18,400 KI';
+  static const String computeRateLabel = '1 KI';
   static const String computeRateValue = '0.25 USDC';
   static const String computeTotalLabel = 'Total value';
   static const String computeTotalValue = '4,600 USDC';

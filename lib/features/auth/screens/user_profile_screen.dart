@@ -156,7 +156,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
         _joinSuccess = alreadyMember
             ? 'You are already a member of $realmName.'
             : 'Joined $realmName!'
-                '${kiduna > 0 ? ' +${_formatKiduna(kiduna.toDouble())} KIDUNA' : ''}';
+                '${kiduna > 0 ? ' +${_formatKiduna(kiduna.toDouble())} KI' : ''}';
       });
     } catch (e) {
       if (!mounted) return;
@@ -308,7 +308,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
                 ],
                 if (kidunaPerPerson > 0)
                   _buildInfoRow(colors, text, Icons.toll,
-                      '${_formatKiduna(kidunaPerPerson)} KIDUNA sponsored for you'),
+                      '${_formatKiduna(kidunaPerPerson)} KI sponsored for you'),
                 if (maxUses > 0)
                   _buildInfoRow(colors, text, Icons.people_outline,
                       '${maxUses - currentUses} of $maxUses spots remaining'),
@@ -742,7 +742,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
                     const SizedBox(height: 2),
                     Text(
                       '${mu - cu}/$mu spots'
-                      '${k > 0 ? ' · ${_formatKiduna(k)} KIDUNA' : ''}'
+                      '${k > 0 ? ' · ${_formatKiduna(k)} KI' : ''}'
                       '${lbl != null ? ' · $lbl' : ''}',
                       style: text.caption
                           .copyWith(color: colors.muted, fontSize: 11),

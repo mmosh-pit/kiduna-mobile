@@ -664,7 +664,7 @@
   "videoDeleted": "Video deleted",
   "unableToDeleteVideo": "Unable to delete the video.",
   "howLongShouldVideoBe": "How long should this video be?",
-  "longerVideosTakeMoreTime": "Longer videos take more time and KIDUNA.",
+  "longerVideosTakeMoreTime": "Longer videos take more time and KI.",
   "approximateVideoCost": "Approx. cost: {cost} USDC",
   "@approximateVideoCost": {
     "placeholders": {

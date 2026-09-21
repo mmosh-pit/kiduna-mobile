@@ -81,7 +81,7 @@ class InvitationResponse {
     final parts = <String>['Join $realmName on Kiduna!'];
     if (kidunaPerPerson > 0) {
       parts.add(
-        '${formatKiduna(kidunaPerPerson)} KIDUNA sponsored for you.',
+        '${formatKiduna(kidunaPerPerson)} KI sponsored for you.',
       );
     }
     parts.add(invitationLink);
@@ -93,7 +93,7 @@ class InvitationResponse {
     final parts = <String>[];
     parts.add('$maxUses ${maxUses == 1 ? 'person' : 'people'}');
     if (kidunaPerPerson > 0) {
-      parts.add('${formatKiduna(kidunaPerPerson)} KIDUNA each');
+      parts.add('${formatKiduna(kidunaPerPerson)} KI each');
     }
     parts.add('Role: $role');
     return parts.join(' · ');
