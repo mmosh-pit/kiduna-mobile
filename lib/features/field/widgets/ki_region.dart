@@ -830,7 +830,7 @@ class _OutOfKidunaBar extends ConsumerWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'You are out of KIDUNA. Top up to keep chatting with Ki.',
+              'You are out of KI. Top up to keep chatting with Ki.',
               style: text.caption.copyWith(
                 color: colors.muted,
                 fontSize: 12,
@@ -858,7 +858,7 @@ class _OutOfKidunaBar extends ConsumerWidget {
                 border: Border.all(color: colors.gold.withValues(alpha: 0.4)),
               ),
               child: Text(
-                'Buy KIDUNA',
+                'Buy KI',
                 style: text.label.copyWith(
                   color: colors.gold,
                   fontWeight: FontWeight.w700,

@@ -109,7 +109,7 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
                   'Your wallet needs at least ${_minSol.toStringAsFixed(3)} SOL '
                       'to receive tokens. It currently has '
                       '${_recipientSol.toStringAsFixed(4)} SOL.',
-                'no-balance' => 'You have no KIDUNA to withdraw.',
+                'no-balance' => 'You have no KI to withdraw.',
                 _ => 'Withdrawals are temporarily unavailable. '
                     'Please try again later.',
               };
@@ -264,10 +264,10 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Withdraw KIDUNA', style: text.h4.copyWith(color: colors.gold)),
+        Text('Withdraw KI', style: text.h4.copyWith(color: colors.gold)),
         const SizedBox(height: 6),
         Text(
-          'Send KIDUNA to a wallet you control. You pay the network fee '
+          'Send KI to a wallet you control. You pay the network fee '
           'from that wallet.',
           style: text.body.copyWith(
             color: colors.muted,
@@ -279,7 +279,7 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
 
         _Row(
           label: 'Your Balance',
-          value: '${KidunaPurchasePanel.formatKiduna(compute.balance)} KIDUNA',
+          value: '${KidunaPurchasePanel.formatKiduna(compute.balance)} KI',
           gold: true,
         ),
 
@@ -297,7 +297,7 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
             icon: Icons.account_balance_wallet_outlined,
             title: 'Connect your wallet',
             body: 'Use the Connect Wallet button in the header to choose '
-                'where your KIDUNA should go.',
+                'where your KI should go.',
           )
         else ...[
           _Row(label: 'Sending to', value: wallet.shortAddress),
@@ -369,7 +369,7 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
                     ),
                   ),
                   Text(
-                    'KIDUNA',
+                    'KI',
                     style: text.body.copyWith(
                       color: colors.gold,
                       fontWeight: FontWeight.w700,
@@ -449,7 +449,7 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
         Text('Withdrawal Sent', style: text.h4.copyWith(color: colors.gold)),
         const SizedBox(height: 10),
         Text(
-          '${KidunaPurchasePanel.formatKiduna(_withdrawnAmount)} KIDUNA is on '
+          '${KidunaPurchasePanel.formatKiduna(_withdrawnAmount)} KI is on '
           'its way to your wallet.',
           textAlign: TextAlign.center,
           style: text.body.copyWith(
@@ -508,7 +508,7 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
         ),
         const SizedBox(height: 10),
         Text(
-          'Log in to your Kiduna account to withdraw KIDUNA.',
+          'Log in to your Kiduna account to withdraw KI.',
           style: text.body.copyWith(
             color: colors.muted,
             fontSize: 14,

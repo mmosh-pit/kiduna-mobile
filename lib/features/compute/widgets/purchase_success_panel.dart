@@ -92,7 +92,7 @@ class _PurchaseSuccessPanelState extends State<PurchaseSuccessPanel> {
               _Row(
                 label: 'You Received',
                 value:
-                    '${KidunaPurchasePanel.formatKiduna(widget.kidunaReceived)} KIDUNA',
+                    '${KidunaPurchasePanel.formatKiduna(widget.kidunaReceived)} KI',
                 isGold: true,
               ),
               const SizedBox(height: 10),
@@ -101,7 +101,7 @@ class _PurchaseSuccessPanelState extends State<PurchaseSuccessPanel> {
               _Row(
                 label: 'New Balance',
                 value:
-                    '${KidunaPurchasePanel.formatKiduna(widget.newBalance)} KIDUNA',
+                    '${KidunaPurchasePanel.formatKiduna(widget.newBalance)} KI',
               ),
             ],
           ),

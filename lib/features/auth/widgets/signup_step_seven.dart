@@ -114,7 +114,7 @@ class _SignupStepSevenState extends State<SignupStepSeven> {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                const TextSpan(text: ' · Get KIDUNA Tokens'),
+                const TextSpan(text: ' · Get KI Tokens'),
               ],
             ),
           ),
@@ -140,7 +140,7 @@ class _SignupStepSevenState extends State<SignupStepSeven> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Purchase KIDUNA tokens to power your AI chat compute. '
+          'Purchase KI tokens to power your AI chat compute. '
           'Pay with your card — we handle the conversion.',
           style: text.body.copyWith(
             color: colors.muted,
@@ -212,7 +212,7 @@ class _SignupStepSevenState extends State<SignupStepSeven> {
                   style: text.h2.copyWith(color: colors.gold, fontSize: 28),
                 ),
               ),
-              _Badge(label: 'KIDUNA', color: colors.gold),
+              _Badge(label: 'KI', color: colors.gold),
             ],
           ),
         ),
@@ -254,14 +254,14 @@ class _SignupStepSevenState extends State<SignupStepSeven> {
               const SizedBox(height: 8),
               _ReviewRow(
                 label: 'You Receive',
-                value: '${_formatKiduna(_kidunaAmount)} KIDUNA',
+                value: '${_formatKiduna(_kidunaAmount)} KI',
                 isGold: true,
                 isBold: true,
               ),
               const SizedBox(height: 4),
               _ReviewRow(
                 label: 'Rate',
-                value: '1 KIDUNA = \$${widget.tokenPrice}',
+                value: '1 KI = \$${widget.tokenPrice}',
                 isMuted: true,
               ),
             ],
@@ -283,7 +283,7 @@ class _SignupStepSevenState extends State<SignupStepSeven> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'About KIDUNA Tokens',
+                'About KI Tokens',
                 style: text.body.copyWith(
                   color: colors.gold,
                   fontWeight: FontWeight.w700,
@@ -339,7 +339,7 @@ class _SignupStepSevenState extends State<SignupStepSeven> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'I understand this purchase is final and KIDUNA tokens '
+                  'I understand this purchase is final and KI tokens '
                   'are non-refundable.',
                   style: text.caption.copyWith(
                     color: colors.muted,

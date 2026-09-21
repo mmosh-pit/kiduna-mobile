@@ -143,7 +143,7 @@ class _PayComputeScreenState extends ConsumerState<PayComputeScreen> {
       if (data?['success'] == true) {
         setState(() {
           _transferResult =
-              'Transferred ${amount.toStringAsFixed(0)} KIDUNA to ${_selectedMember!.label}';
+              'Transferred ${amount.toStringAsFixed(0)} KI to ${_selectedMember!.label}';
           _transferIsError = false;
           _amountController.clear();
           _selectedMember = null;
@@ -223,7 +223,7 @@ class _PayComputeScreenState extends ConsumerState<PayComputeScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'You need to be signed in to transfer KIDUNA to realm members.',
+            'You need to be signed in to transfer KI to realm members.',
             style: text.bodySmall.copyWith(color: colors.muted),
             textAlign: TextAlign.center,
           ),
@@ -272,7 +272,7 @@ class _PayComputeScreenState extends ConsumerState<PayComputeScreen> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Transfer KIDUNA to a realm member',
+          'Transfer KI to a realm member',
           style: text.bodySmall.copyWith(color: colors.muted),
           textAlign: TextAlign.center,
         ),
@@ -301,7 +301,7 @@ class _PayComputeScreenState extends ConsumerState<PayComputeScreen> {
                           text.eyebrowSmall.copyWith(color: colors.muted)),
                   const SizedBox(height: 2),
                   Text(
-                    '${compute.balance.toStringAsFixed(0)} KIDUNA',
+                    '${compute.balance.toStringAsFixed(0)} KI',
                     style: text.h4.copyWith(color: colors.gold),
                   ),
                 ],
@@ -383,7 +383,7 @@ class _PayComputeScreenState extends ConsumerState<PayComputeScreen> {
         const SizedBox(height: 20),
 
         // ── Amount ──
-        Text('AMOUNT (KIDUNA)',
+        Text('AMOUNT (KI)',
             style: text.eyebrowSmall.copyWith(color: colors.muted)),
         const SizedBox(height: 8),
         TextField(

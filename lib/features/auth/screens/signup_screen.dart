@@ -581,7 +581,7 @@ class _SignupScreenState extends State<SignupScreen> {
       final currentBalance = (balance['balance'] as num?)?.toDouble() ?? 0;
       if (currentBalance > 0) {
         _showMessage(
-          'Payment confirmed! You received ${_formatKidunaCompact(currentBalance)} KIDUNA.',
+          'Payment confirmed! You received ${_formatKidunaCompact(currentBalance)} KI.',
           MessageType.success,
         );
         setState(() => _waitingForPayment = false);

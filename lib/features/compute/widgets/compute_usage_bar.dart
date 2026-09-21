@@ -64,7 +64,7 @@ class ComputeUsageBar extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${KidunaPurchasePanel.formatKiduna(balance)} KIDUNA',
+                    '${KidunaPurchasePanel.formatKiduna(balance)} KI',
                     style: text.h4.copyWith(color: colors.gold),
                   ),
                 ],
@@ -122,7 +122,7 @@ class ComputeUsageBar extends StatelessWidget {
                 child: _Stat(
                   label: 'Spent',
                   value:
-                      '${KidunaPurchasePanel.formatKiduna(totalSpent)} KIDUNA',
+                      '${KidunaPurchasePanel.formatKiduna(totalSpent)} KI',
                 ),
               ),
               const SizedBox(width: 12),
@@ -130,7 +130,7 @@ class ComputeUsageBar extends StatelessWidget {
                 child: _Stat(
                   label: 'Purchased',
                   value:
-                      '${KidunaPurchasePanel.formatKiduna(totalPurchased)} KIDUNA',
+                      '${KidunaPurchasePanel.formatKiduna(totalPurchased)} KI',
                 ),
               ),
             ],

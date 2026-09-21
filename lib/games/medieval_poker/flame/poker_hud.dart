@@ -1915,7 +1915,7 @@ class _ChipLegendState extends State<_ChipLegend> {
           ),
         ],
         const SizedBox(height: 4),
-        Text('No real value · Not KIDUNA', style: TextStyle(
+        Text('No real value · Not KI', style: TextStyle(
           color: Colors.white.withValues(alpha: 0.3), fontSize: 9)),
       ],
     );

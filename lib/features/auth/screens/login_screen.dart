@@ -75,7 +75,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           final kiduna = result['kidunaReceived'] as num? ?? 0;
           AppLogger.info(
             'Auto-joined $realmName after login'
-            '${kiduna > 0 ? ' (+$kiduna KIDUNA)' : ''}',
+            '${kiduna > 0 ? ' (+$kiduna KI)' : ''}',
             tag: 'Auth',
           );
         } catch (e) {

@@ -432,7 +432,7 @@ class _ModeSelector extends StatelessWidget {
                 // Description.
                 Text(
                   'Everyone starts with the same chips — just for fun!\n'
-                  'No real money. Not connected to KIDUNA tokens.',
+                  'No real money. Not connected to KI tokens.',
                   textAlign: TextAlign.center,
                   style: text.caption.copyWith(
                     color: colors.cream.withValues(alpha: 0.5), height: 1.5, fontSize: 11.0)),

@@ -254,10 +254,10 @@ class _BuyKidunaScreenState extends ConsumerState<BuyKidunaScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (!_purchaseComplete) ...[
-          Text('Buy KIDUNA', style: text.h4.copyWith(color: colors.gold)),
+          Text('Buy KI', style: text.h4.copyWith(color: colors.gold)),
           const SizedBox(height: 6),
           Text(
-            'KIDUNA powers your AI chat compute. '
+            'KI powers your AI chat compute. '
             'Pay with your card — we handle the conversion.',
             style: text.body.copyWith(
               color: colors.muted,
@@ -330,7 +330,7 @@ class _BuyKidunaScreenState extends ConsumerState<BuyKidunaScreen> {
         ),
         const SizedBox(height: 10),
         Text(
-          'Log in to your Kiduna account to buy KIDUNA tokens. '
+          'Log in to your Kiduna account to buy KI tokens. '
           'You will come back to this page once signed in.',
           style: text.body.copyWith(
             color: colors.muted,

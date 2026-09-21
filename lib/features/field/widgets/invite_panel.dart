@@ -229,7 +229,7 @@ class _InvitePanelState extends ConsumerState<InvitePanel> {
 
             // Row 3: KIDUNA per Person | Label
             _ValidatedInput(
-              label: 'KIDUNA per Person',
+              label: 'KI per Person',
               controller: _kidunaPerPerson,
               error: _kidunaError,
               hint: '0 — no sponsorship',
@@ -260,7 +260,7 @@ class _InvitePanelState extends ConsumerState<InvitePanel> {
                     ),
                   ),
                   child: Text(
-                    'Total KIDUNA to lock: ${_formatNumber(_totalKidunaLock)}'
+                    'Total KI to lock: ${_formatNumber(_totalKidunaLock)}'
                     ' (${_formatNumber(_kidunaAmount)} × $_maxUsesValue people)',
                     style: context.kidunaText.caption.copyWith(
                       color: colors.gold,
@@ -867,7 +867,7 @@ class _EmailSendSectionState extends ConsumerState<_EmailSendSection> {
           'Subject: You\'re invited to join ${invitation.realmName} on Kiduna. '
           'Body: You have been invited to join ${invitation.realmName} on Kiduna! '
           'Your role: ${invitation.role}. '
-          '${invitation.kidunaPerPerson > 0 ? '${InvitationResponse.formatKiduna(invitation.kidunaPerPerson)} KIDUNA has been sponsored for you. ' : ''}'
+          '${invitation.kidunaPerPerson > 0 ? '${InvitationResponse.formatKiduna(invitation.kidunaPerPerson)} KI has been sponsored for you. ' : ''}'
           'Use this link to join: ${invitation.invitationLink} '
           'Or use invitation code: ${invitation.code}';
 

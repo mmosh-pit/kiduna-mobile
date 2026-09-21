@@ -295,7 +295,7 @@ class KiChatController extends Notifier<KiChatState> {
       messages: state.messages.where((m) => m.id != userMessage.id).toList(),
       isStreaming: false,
       outOfBalance: true,
-      error: e.message ?? 'You have no KIDUNA left.',
+      error: e.message ?? 'You have no KI left.',
       clearStreamingBuffer: true,
     );
   }

@@ -204,7 +204,7 @@ class _ComputeDetailsScreenState extends ConsumerState<ComputeDetailsScreen>
 
           const SizedBox(height: 14),
           KidunaGoldButton(
-            label: 'Buy More KIDUNA',
+            label: 'Buy More KI',
             onPressed: _buy,
           ),
           const SizedBox(height: 10),
@@ -261,7 +261,7 @@ class _ComputeStats extends StatelessWidget {
                 style: text.eyebrowSmall.copyWith(color: colors.quiet),
               ),
               Text(
-                '1 KIDUNA = \$${compute.tokenPrice}',
+                '1 KI = \$${compute.tokenPrice}',
                 style: text.label.copyWith(color: colors.cream),
               ),
             ],
@@ -423,7 +423,7 @@ class _PurchaseRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '+${KidunaPurchasePanel.formatKiduna(entry.kidunaAmount)} KIDUNA',
+                '+${KidunaPurchasePanel.formatKiduna(entry.kidunaAmount)} KI',
                 style: text.label.copyWith(
                   color: colors.gold,
                   fontWeight: FontWeight.w700,

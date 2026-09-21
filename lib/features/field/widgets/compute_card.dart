@@ -103,7 +103,7 @@ class _ComputeCardState extends ConsumerState<ComputeCard>
           // ── Buy button ───────────────────────────────────────
           Semantics(
             button: true,
-            label: 'Buy More KIDUNA',
+            label: 'Buy More KI',
             child: InkWell(
               onTap: _openBuyPage,
               borderRadius: BorderRadius.circular(6),
@@ -123,7 +123,7 @@ class _ComputeCardState extends ConsumerState<ComputeCard>
                         size: 13, color: colors.gold),
                     const SizedBox(width: 6),
                     Text(
-                      'Buy More KIDUNA',
+                      'Buy More KI',
                       style: text.label.copyWith(
                         color: colors.gold,
                         fontWeight: FontWeight.w700,
