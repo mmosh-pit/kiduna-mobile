@@ -117,13 +117,13 @@ abstract class FieldFixtures {
 
   static const KiTopic defaultKi = KiTopic(
     body:
-        'Welcome Alice! Let’s get to work, unless you have some questions. '
+        'Welcome! Let’s get to work, unless you have some questions. '
         'In that case, ask away!',
   );
 
   static const KiTopic messagePreserved = KiTopic(
     title: 'Let’s work through it',
-    body: 'Ki has kept Alice’s message in this conversation.',
+    body: 'Ki has kept your message in this conversation.',
     invitation:
         'Ki will ask for only the next detail needed and show any prepared '
         'changes in the Field.',
@@ -142,7 +142,7 @@ abstract class FieldFixtures {
             'Let’s prepare one invitation for one person, with a clear '
             'purpose and exact access.',
         invitation:
-            'Alice can fill in the invitation here or tell Ki about the '
+            'You can fill in the invitation here or tell Ki about the '
             'person; Ki can prepare it through dialogue.',
       ),
     ),
@@ -315,7 +315,7 @@ abstract class FieldFixtures {
     ),
     (
       label: 'Members',
-      value: '1 · Alice',
+      value: '1 · You',
       topic: KiTopic(
         title: 'Members',
         body:
@@ -341,12 +341,12 @@ abstract class FieldFixtures {
     ),
     (
       label: 'Catalyst',
-      value: 'Alice · Ecosystem-wide authority',
+      value: 'You · Ecosystem-wide authority',
       topic: KiTopic(
         title: 'Catalyst authority',
         body:
             'The Catalyst can initiate and direct work across this Ecosystem. '
-            'Alice’s Ecosystem-wide authority remains available without '
+            'Your Ecosystem-wide authority remains available without '
             'filling the interface with controls.',
         invitation:
             'Ask Ki about any authority, boundary, or consequential Action '
@@ -361,7 +361,7 @@ abstract class FieldFixtures {
       topic: KiTopic(
         title: 'A useful first move',
         body:
-            'Start with the thing Alice wants Kinship Duna to make possible. '
+            'Start with the thing you want Kinship Duna to make possible. '
             'From there, Ki can help decide whether to invite someone, form a '
             'Realm, shape the Ecosystem, or design an Ally.',
         invitation: 'What do you want to make possible?',

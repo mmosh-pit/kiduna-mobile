@@ -59,7 +59,7 @@ class _NestedRealmScreenState extends ConsumerState<NestedRealmScreen> {
           KiTopic(
             title: 'Inside ${realm.name}',
             body:
-                'Alice is now inside ${realm.name}, a ${realm.type.label}. '
+                'You are now inside ${realm.name}, a ${realm.type.label}. '
                 '${realm.purpose}',
             invitation: invitation,
           ),

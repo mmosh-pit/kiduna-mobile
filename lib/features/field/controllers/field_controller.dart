@@ -520,7 +520,7 @@ class FieldController extends Notifier<FieldState> {
       realmPath: state.realmPath.sublist(0, index + 1),
       kiTopic: KiTopic(
         title: 'Inside $name',
-        body: 'Alice is now inside $name, a $typeLabel. $purpose',
+        body: 'You are now inside $name, a $typeLabel. $purpose',
         invitation:
             'Possible Actions shows what can be done here. Inspect any '
             'nested Realm or use the breadcrumb to go back.',
@@ -661,7 +661,7 @@ class FieldController extends Notifier<FieldState> {
       kiTopic: KiTopic(
         title: 'Inside ${realm.name}',
         body:
-            'Alice is now inside ${realm.name}, a ${realm.type.label}. '
+            'You are now inside ${realm.name}, a ${realm.type.label}. '
             '${realm.purpose}',
         invitation: invitation,
       ),
@@ -694,7 +694,7 @@ class FieldController extends Notifier<FieldState> {
       KiTopic(
         title: '$name created',
         body:
-            'Ki has created $name as a $type and brought Alice inside it. '
+            'Ki has created $name as a $type and brought you inside it. '
             'Kinship Duna remains its containing Ecosystem and return path.',
         invitation:
             "Ki can help shape the new Realm's purpose, boundaries, "
@@ -721,7 +721,7 @@ class FieldController extends Notifier<FieldState> {
         title: '$name created',
         body:
             'Ki has created $name as an Organization under the Genesis '
-            'ecosystem and brought Alice inside it.',
+            'ecosystem and brought you inside it.',
         invitation:
             "Ki can help shape the new Organization's purpose, boundaries, "
             'capacities, and people through dialogue.',
