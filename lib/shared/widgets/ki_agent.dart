@@ -10,6 +10,7 @@ import '../../features/compute/open_buy_kiduna.dart';
 import '../../features/ki_chat/controllers/ally_controller.dart';
 import '../../features/ki_chat/controllers/ki_chat_controller.dart';
 import '../../features/ki_chat/widgets/chat_video_message.dart';
+import '../../features/ki_chat/widgets/chat_image_attachment.dart';
 import '../../features/ki_chat/widgets/video_duration_picker.dart';
 import 'ki_composer.dart';
 import 'ki_message_bubble.dart';
@@ -300,6 +301,16 @@ class _KiChatThread extends StatelessWidget {
           ),
         );
       }
+      final image = msg.image;
+      if (image != null) {
+        items.add(
+          Padding(
+            key: ValueKey('image_${image.jobId}'),
+            padding: const EdgeInsets.only(top: 8),
+            child: ChatImageAttachment(image: image),
+          ),
+        );
+      }
       final durationRequest = msg.videoDurationRequest;
       if (durationRequest != null) {
         items.add(
@@ -327,12 +338,15 @@ class _KiChatThread extends StatelessWidget {
     }
 
     if (error != null) {
+      final errorMessage = error == 'chat_connection_interrupted'
+          ? context.l10n.chatConnectionInterrupted
+          : error;
       items.add(
         Padding(
           key: const ValueKey('error'),
           padding: const EdgeInsets.only(top: 8),
           child: Text(
-            error!,
+            errorMessage!,
             style: text.caption.copyWith(
               color: colors.gold.withValues(alpha: 0.7),
             ),

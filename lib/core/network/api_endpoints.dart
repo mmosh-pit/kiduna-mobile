@@ -276,6 +276,10 @@ abstract class ApiEndpoints {
   static String videoJobs(String wallet, {int limit = 50}) =>
       '/api/video-jobs?wallet=${Uri.encodeComponent(wallet)}&limit=$limit';
 
+  /// `GET /api/image-jobs/{jobId}?wallet={wallet}` — poll an image job.
+  static String imageJob(String jobId, String wallet) =>
+      '/api/image-jobs/$jobId?wallet=${Uri.encodeComponent(wallet)}';
+
   /// `POST /api/theater/publish` — publish a finished video to the feed.
   static const String theaterPublish = '/api/theater/publish';
 

@@ -10,6 +10,7 @@ import '../../../data/models/chat_message_model.dart';
 import '../../../data/models/ki_topic.dart';
 import '../../compute/controllers/compute_controller.dart';
 import '../../compute/open_buy_kiduna.dart';
+import '../../ki_chat/widgets/chat_image_attachment.dart';
 import '../controllers/ally_controller.dart';
 import '../controllers/field_controller.dart';
 import '../controllers/ki_chat_controller.dart';
@@ -58,7 +59,6 @@ class _KiRegionState extends ConsumerState<KiRegion> {
 
   @override
   Widget build(BuildContext context) {
-    final fieldState = ref.watch(fieldControllerProvider);
     final allyState = ref.watch(allyControllerProvider);
     final chatState = ref.watch(kiChatControllerProvider);
 
@@ -70,14 +70,16 @@ class _KiRegionState extends ConsumerState<KiRegion> {
       );
       // Fetch pending approval count once ally is available (wallet is ready).
       Future.microtask(
-        () => ref.read(fieldControllerProvider.notifier)
+        () => ref
+            .read(fieldControllerProvider.notifier)
             .fetchPendingApprovalCount(),
       );
       // Poll approval count every 15 seconds.
       _approvalPollTimer?.cancel();
       _approvalPollTimer = Timer.periodic(
         const Duration(seconds: 15),
-        (_) => ref.read(fieldControllerProvider.notifier)
+        (_) => ref
+            .read(fieldControllerProvider.notifier)
             .fetchPendingApprovalCount(),
       );
     }
@@ -164,7 +166,9 @@ class _KiHeader extends ConsumerWidget {
                   child: _PulsingBadge(
                     count: approvalCount,
                     onTap: () {
-                      ref.read(fieldControllerProvider.notifier).openApprovals();
+                      ref
+                          .read(fieldControllerProvider.notifier)
+                          .openApprovals();
                     },
                   ),
                 ),
@@ -201,12 +205,14 @@ class _PulsingBadgeState extends State<_PulsingBadge>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
-    _scale = Tween<double>(begin: 1.0, end: 1.08).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-    _glow = Tween<double>(begin: 0.3, end: 0.7).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _scale = Tween<double>(
+      begin: 1.0,
+      end: 1.08,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    _glow = Tween<double>(
+      begin: 0.3,
+      end: 0.7,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -236,7 +242,8 @@ class _PulsingBadgeState extends State<_PulsingBadge>
                 borderRadius: BorderRadius.circular(999),
                 boxShadow: [
                   BoxShadow(
-                    color: Color(0xFFF59E0B).withValues(alpha: _glow.value * 0.3),
+                    color: Color(0xFFF59E0B)
+                        .withValues(alpha: _glow.value * 0.3),
                     blurRadius: 8,
                     spreadRadius: 1,
                   ),
@@ -324,6 +331,16 @@ class _KiChatThread extends StatelessWidget {
             ? _UserBubble(text: msg.content)
             : _AssistantBubble(text: msg.content),
       );
+      final image = msg.image;
+      if (image != null) {
+        items.add(
+          Padding(
+            key: ValueKey('field_image_${image.jobId}'),
+            padding: const EdgeInsets.only(top: 8),
+            child: ChatImageAttachment(image: image),
+          ),
+        );
+      }
     }
 
     if (isStreaming) {
@@ -336,7 +353,8 @@ class _KiChatThread extends StatelessWidget {
 
     if (error != null && !isStreaming) {
       // If error is about missing conversation history, show welcome instead.
-      final isNoHistory = error!.contains('conversation') ||
+      final isNoHistory =
+          error!.contains('conversation') ||
           error!.contains('404') ||
           error!.contains('Not Found') ||
           error!.contains('Unable to load');
@@ -463,18 +481,12 @@ class _WelcomeBanner extends StatelessWidget {
             const SizedBox(height: 14),
             Text(
               'Start a new conversation',
-              style: text.heading.copyWith(
-                color: colors.cream,
-                fontSize: 18,
-              ),
+              style: text.heading.copyWith(color: colors.cream, fontSize: 18),
             ),
             const SizedBox(height: 6),
             Text(
               'Ask Ki anything or use the suggestions below',
-              style: text.caption.copyWith(
-                color: colors.muted,
-                fontSize: 12,
-              ),
+              style: text.caption.copyWith(color: colors.muted, fontSize: 12),
             ),
           ],
         ),
@@ -482,6 +494,7 @@ class _WelcomeBanner extends StatelessWidget {
     );
   }
 }
+
 class _ErrorBanner extends StatelessWidget {
   const _ErrorBanner({required this.error, this.onRetry});
 

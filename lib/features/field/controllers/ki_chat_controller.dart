@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,8 +7,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/errors/exceptions.dart';
 import '../../../core/utils/logger.dart';
 import '../../../data/models/chat_message_model.dart';
+import '../../../data/models/image_job_model.dart';
 import '../../../data/models/sse_event.dart';
 import '../../../data/services/chat_service.dart';
+import '../../../data/services/image_generation_service.dart';
 import '../../../features/auth/controllers/auth_controller.dart';
 import '../controllers/field_controller.dart';
 import 'ally_controller.dart';
@@ -67,6 +70,8 @@ class KiChatState {
 /// user's wallet from [authControllerProvider].
 class KiChatController extends Notifier<KiChatState> {
   StreamSubscription<SseEvent>? _subscription;
+  ImageJobModel? _awaitingImageMessage;
+  String? _pendingImageJobId;
 
   @override
   KiChatState build() {
@@ -80,11 +85,7 @@ class KiChatController extends Notifier<KiChatState> {
   String? get _presenceId => ref.read(allyControllerProvider).ally?.id;
   String? get _userWallet => ref.read(authControllerProvider).user?.wallet;
   String? get _userId => ref.read(authControllerProvider).user?.id;
-  String? get _realmId {
-    final id = ref.read(fieldControllerProvider).currentRealmId;
-    print('[FieldKiChat] _realmId = $id');
-    return id;
-  }
+  String? get _realmId => ref.read(fieldControllerProvider).currentRealmId;
 
   /// Load conversation history from the server.
   Future<void> loadHistory() async {
@@ -199,7 +200,9 @@ class KiChatController extends Notifier<KiChatState> {
                 id: 'resp_${DateTime.now().millisecondsSinceEpoch}',
                 role: ChatRole.assistant,
                 content: fullResponse,
+                image: _awaitingImageMessage,
               );
+              _awaitingImageMessage = null;
               state = state.copyWith(
                 messages: [...state.messages, assistantMessage],
                 isStreaming: false,
@@ -208,15 +211,17 @@ class KiChatController extends Notifier<KiChatState> {
               _subscription = null;
             case SseErrorEvent(:final error, :final code):
               AppLogger.error('SSE error: $code — $error', tag: 'KiChat');
+              _attachPendingImageMessage();
               state = state.copyWith(
                 isStreaming: false,
                 error: 'Unable to get a response. Please try again.',
                 clearStreamingBuffer: true,
               );
               _subscription = null;
-            // Video generation is surfaced in the ki_chat controller only;
-            // this Field chat ignores tool results.
-            case SseToolResultEvent():
+            case SseToolResultEvent(:final toolName, :final output):
+              if (toolName == 'generate_image') {
+                _handleImageToolResult(output);
+              }
             case SseInfoEvent():
               break;
           }
@@ -233,6 +238,7 @@ class KiChatController extends Notifier<KiChatState> {
             _handleOutOfBalance(e, userMessage);
             return;
           }
+          _attachPendingImageMessage();
           state = state.copyWith(
             isStreaming: false,
             error: 'Unable to get a response. Please try again.',
@@ -249,12 +255,17 @@ class KiChatController extends Notifier<KiChatState> {
               id: 'resp_${DateTime.now().millisecondsSinceEpoch}',
               role: ChatRole.assistant,
               content: state.streamingBuffer,
+              image: _awaitingImageMessage,
             );
+            _awaitingImageMessage = null;
             state = state.copyWith(
               messages: [...state.messages, assistantMessage],
               isStreaming: false,
               clearStreamingBuffer: true,
             );
+          } else if (state.isStreaming && _awaitingImageMessage != null) {
+            _attachPendingImageMessage();
+            state = state.copyWith(isStreaming: false);
           } else if (state.isStreaming) {
             state = state.copyWith(isStreaming: false);
           }
@@ -305,18 +316,101 @@ class KiChatController extends Notifier<KiChatState> {
     state = state.copyWith(outOfBalance: false, clearError: true);
   }
 
+  void _handleImageToolResult(String output) {
+    final parsed = _decodeToolPayload(output);
+    if (parsed == null || parsed['success'] != true) {
+      AppLogger.info('Image generation did not start', tag: 'KiChat');
+      return;
+    }
+    final job = ImageJobModel.fromToolOutput(parsed);
+    if (job.jobId.isEmpty) return;
+    _pendingImageJobId = job.jobId;
+    _awaitingImageMessage = job;
+    unawaited(_pollImageJob(job));
+  }
+
+  static Map<String, dynamic>? _decodeToolPayload(String output) {
+    try {
+      final decoded = jsonDecode(output);
+      return decoded is Map<String, dynamic> ? decoded : null;
+    } on FormatException {
+      return null;
+    }
+  }
+
+  Future<void> _pollImageJob(ImageJobModel initial) async {
+    var job = initial;
+    const pollInterval = Duration(seconds: 5);
+    const maxAttempts = 360;
+    for (var attempt = 0; attempt < maxAttempts; attempt++) {
+      await Future<void>.delayed(pollInterval);
+      if (!ref.mounted) return;
+      final wallet = _userWallet;
+      if (wallet == null || wallet.isEmpty) return;
+      try {
+        job = await ImageGenerationService.instance.fetchJob(
+          jobId: job.jobId,
+          wallet: wallet,
+        );
+      } on AppException catch (error) {
+        AppLogger.warning(
+          'Image job poll failed: ${error.message}',
+          tag: 'KiChat',
+        );
+        continue;
+      }
+      if (!ref.mounted) return;
+      _attachImage(job);
+      if (job.status.isTerminal) {
+        if (_pendingImageJobId == job.jobId) _pendingImageJobId = null;
+        return;
+      }
+    }
+  }
+
+  void _attachImage(ImageJobModel job) {
+    final messages = [...state.messages];
+    final existing = messages.lastIndexWhere(
+      (message) => message.image?.jobId == job.jobId,
+    );
+    if (existing == -1) {
+      _awaitingImageMessage = job;
+      return;
+    }
+    if (_awaitingImageMessage?.jobId == job.jobId) {
+      _awaitingImageMessage = null;
+    }
+    messages[existing] = messages[existing].copyWith(image: job);
+    state = state.copyWith(messages: messages);
+  }
+
+  void _attachPendingImageMessage() {
+    final image = _awaitingImageMessage;
+    if (image == null) return;
+    _awaitingImageMessage = null;
+    final message = ChatMessageModel(
+      id: 'resp_${DateTime.now().millisecondsSinceEpoch}',
+      role: ChatRole.assistant,
+      content: state.streamingBuffer,
+      image: image,
+    );
+    state = state.copyWith(messages: [...state.messages, message]);
+  }
+
   /// Cancel any active streaming.
   void cancelStream() {
     _subscription?.cancel();
     _subscription = null;
     if (state.isStreaming) {
       // Keep whatever has streamed so far as a complete message.
-      if (state.streamingBuffer.isNotEmpty) {
+      if (state.streamingBuffer.isNotEmpty || _awaitingImageMessage != null) {
         final partialMessage = ChatMessageModel(
           id: 'resp_${DateTime.now().millisecondsSinceEpoch}',
           role: ChatRole.assistant,
           content: state.streamingBuffer,
+          image: _awaitingImageMessage,
         );
+        _awaitingImageMessage = null;
         state = state.copyWith(
           messages: [...state.messages, partialMessage],
           isStreaming: false,
