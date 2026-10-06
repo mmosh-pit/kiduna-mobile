@@ -7,10 +7,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/errors/exceptions.dart';
 import '../../../core/utils/logger.dart';
 import '../../../data/models/chat_message_model.dart';
+import '../../../data/models/image_job_model.dart';
 import '../../../data/models/sse_event.dart';
 import '../../../data/models/video_duration_request_model.dart';
 import '../../../data/models/video_job_model.dart';
 import '../../../data/services/chat_service.dart';
+import '../../../data/services/image_generation_service.dart';
 import '../../../data/services/theater_service.dart';
 import '../../../features/auth/controllers/auth_controller.dart';
 import '../../../features/auth/enums/auth_status.dart';
@@ -81,6 +83,7 @@ class KiChatController extends Notifier<KiChatState> {
 
   /// Job currently being polled, so a second generation supersedes the first.
   String? _pendingVideoJobId;
+  String? _pendingImageJobId;
 
   /// A generated video waiting for this turn's assistant message to exist.
   ///
@@ -88,6 +91,7 @@ class KiChatController extends Notifier<KiChatState> {
   /// so attaching immediately pinned the video to the PREVIOUS assistant
   /// message — far up the thread and effectively invisible.
   VideoJobModel? _awaitingAssistantMessage;
+  ImageJobModel? _awaitingImageMessage;
 
   /// A duration selector waiting for this turn's assistant message to exist.
   VideoDurationRequestModel? _awaitingDurationRequest;
@@ -270,9 +274,11 @@ class KiChatController extends Notifier<KiChatState> {
                 role: ChatRole.assistant,
                 content: fullResponse,
                 video: _awaitingAssistantMessage,
+                image: _awaitingImageMessage,
                 videoDurationRequest: _awaitingDurationRequest,
               );
               _awaitingAssistantMessage = null;
+              _awaitingImageMessage = null;
               _awaitingDurationRequest = null;
               state = state.copyWith(
                 messages: [...state.messages, assistantMessage],
@@ -283,17 +289,19 @@ class KiChatController extends Notifier<KiChatState> {
             case SseErrorEvent(:final error, :final code):
               AppLogger.error('SSE error: $code — $error', tag: 'KiChat');
               _reopenSubmittedDuration();
-              _awaitingAssistantMessage = null;
+              _attachPendingMediaMessage();
               _awaitingDurationRequest = null;
               state = state.copyWith(
                 isStreaming: false,
-                error: 'SSE error ($code): $error',
+                error: 'chat_connection_interrupted',
                 clearStreamingBuffer: true,
               );
               _subscription = null;
             case SseToolResultEvent(:final toolName, :final output):
               if (toolName == 'generate_video') {
                 _handleVideoToolResult(output);
+              } else if (toolName == 'generate_image') {
+                _handleImageToolResult(output);
               }
             case SseInfoEvent():
               break;
@@ -313,12 +321,12 @@ class KiChatController extends Notifier<KiChatState> {
             _handleOutOfBalance(e, userMessage);
             return;
           }
-          _awaitingAssistantMessage = null;
+          _attachPendingMediaMessage();
           _awaitingDurationRequest = null;
           _reopenSubmittedDuration();
           state = state.copyWith(
             isStreaming: false,
-            error: 'Stream error: [${e.runtimeType}] $e',
+            error: 'chat_connection_interrupted',
             clearStreamingBuffer: true,
           );
           _subscription = null;
@@ -332,15 +340,22 @@ class KiChatController extends Notifier<KiChatState> {
               role: ChatRole.assistant,
               content: state.streamingBuffer,
               video: _awaitingAssistantMessage,
+              image: _awaitingImageMessage,
               videoDurationRequest: _awaitingDurationRequest,
             );
             _awaitingAssistantMessage = null;
+            _awaitingImageMessage = null;
             _awaitingDurationRequest = null;
             state = state.copyWith(
               messages: [...state.messages, assistantMessage],
               isStreaming: false,
               clearStreamingBuffer: true,
             );
+          } else if (state.isStreaming &&
+              (_awaitingAssistantMessage != null ||
+                  _awaitingImageMessage != null)) {
+            _attachPendingMediaMessage();
+            state = state.copyWith(isStreaming: false);
           } else if (state.isStreaming && _awaitingDurationRequest != null) {
             final assistantMessage = ChatMessageModel(
               id: 'resp_${DateTime.now().millisecondsSinceEpoch}',
@@ -368,6 +383,7 @@ class KiChatController extends Notifier<KiChatState> {
       if (!ref.mounted) return;
       _reopenSubmittedDuration();
       _awaitingAssistantMessage = null;
+      _awaitingImageMessage = null;
       _awaitingDurationRequest = null;
       AppLogger.error(
         'Send failed [${e.runtimeType}]: $e',
@@ -377,7 +393,7 @@ class KiChatController extends Notifier<KiChatState> {
       );
       state = state.copyWith(
         isStreaming: false,
-        error: 'Send error: [${e.runtimeType}] $e',
+        error: 'chat_connection_interrupted',
       );
     }
   }
@@ -565,6 +581,32 @@ class KiChatController extends Notifier<KiChatState> {
     unawaited(_pollVideoJob(job));
   }
 
+  /// Ki called `generate_image`. Attach a placeholder and poll the durable job
+  /// outside the SSE connection so model loading cannot hold the chat open.
+  void _handleImageToolResult(String output) {
+    final parsed = _decodeToolPayload(output);
+    if (parsed == null) {
+      AppLogger.warning(
+        'Unparseable generate_image output (len ${output.length})',
+        tag: 'KiChat',
+      );
+      return;
+    }
+    if (parsed['success'] != true) {
+      AppLogger.info(
+        'Image generation refused: ${parsed['error']}',
+        tag: 'KiChat',
+      );
+      return;
+    }
+
+    final job = ImageJobModel.fromToolOutput(parsed);
+    if (job.jobId.isEmpty) return;
+    _pendingImageJobId = job.jobId;
+    _awaitingImageMessage = job;
+    unawaited(_pollImageJob(job));
+  }
+
   /// Mark a duration picker as used, then send the user's choice through KI.
   Future<void> submitVideoDuration({
     required String messageId,
@@ -679,6 +721,38 @@ class KiChatController extends Notifier<KiChatState> {
     AppLogger.warning('Gave up polling video job ${job.jobId}', tag: 'KiChat');
   }
 
+  Future<void> _pollImageJob(ImageJobModel initial) async {
+    var job = initial;
+    const pollInterval = Duration(seconds: 5);
+    const maxAttempts = 360;
+
+    for (var attempt = 0; attempt < maxAttempts; attempt++) {
+      await Future<void>.delayed(pollInterval);
+      if (!ref.mounted) return;
+      final wallet = _userWallet;
+      if (wallet == null || wallet.isEmpty) return;
+
+      try {
+        job = await ImageGenerationService.instance.fetchJob(
+          jobId: job.jobId,
+          wallet: wallet,
+        );
+      } on AppException catch (e) {
+        AppLogger.warning('Image job poll failed: ${e.message}', tag: 'KiChat');
+        continue;
+      }
+
+      if (!ref.mounted) return;
+      _attachImageToLatestAssistantMessage(job);
+      if (job.status.isTerminal) {
+        if (_pendingImageJobId == job.jobId) _pendingImageJobId = null;
+        return;
+      }
+    }
+
+    AppLogger.warning('Gave up polling image job ${job.jobId}', tag: 'KiChat');
+  }
+
   /// Put [job] on the newest assistant message, replacing any earlier state
   /// for the same job.
   void _attachVideoToLatestAssistantMessage(VideoJobModel job) {
@@ -705,6 +779,38 @@ class KiChatController extends Notifier<KiChatState> {
     // This turn's reply hasn't landed yet — keep the job parked so the `done`
     // handler attaches it, rather than pinning it to an earlier message.
     _awaitingAssistantMessage = job;
+  }
+
+  void _attachImageToLatestAssistantMessage(ImageJobModel job) {
+    final messages = [...state.messages];
+    final existing = messages.lastIndexWhere(
+      (message) => message.image?.jobId == job.jobId,
+    );
+    if (existing != -1) {
+      if (_awaitingImageMessage?.jobId == job.jobId) {
+        _awaitingImageMessage = null;
+      }
+      messages[existing] = messages[existing].copyWith(image: job);
+      state = state.copyWith(messages: messages);
+      return;
+    }
+    _awaitingImageMessage = job;
+  }
+
+  void _attachPendingMediaMessage() {
+    if (_awaitingAssistantMessage == null && _awaitingImageMessage == null) {
+      return;
+    }
+    final assistantMessage = ChatMessageModel(
+      id: 'resp_${DateTime.now().millisecondsSinceEpoch}',
+      role: ChatRole.assistant,
+      content: state.streamingBuffer,
+      video: _awaitingAssistantMessage,
+      image: _awaitingImageMessage,
+    );
+    _awaitingAssistantMessage = null;
+    _awaitingImageMessage = null;
+    state = state.copyWith(messages: [...state.messages, assistantMessage]);
   }
 
   /// Publish a generated video to the Theater feed.
@@ -749,15 +855,18 @@ class KiChatController extends Notifier<KiChatState> {
     if (state.isStreaming) {
       if (state.streamingBuffer.isNotEmpty ||
           _awaitingAssistantMessage != null ||
+          _awaitingImageMessage != null ||
           _awaitingDurationRequest != null) {
         final partialMessage = ChatMessageModel(
           id: 'resp_${DateTime.now().millisecondsSinceEpoch}',
           role: ChatRole.assistant,
           content: state.streamingBuffer,
           video: _awaitingAssistantMessage,
+          image: _awaitingImageMessage,
           videoDurationRequest: _awaitingDurationRequest,
         );
         _awaitingAssistantMessage = null;
+        _awaitingImageMessage = null;
         _awaitingDurationRequest = null;
         state = state.copyWith(
           messages: [...state.messages, partialMessage],

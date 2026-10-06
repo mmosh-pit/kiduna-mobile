@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import 'video_duration_request_model.dart';
 import 'video_job_model.dart';
+import 'image_job_model.dart';
 
 enum ChatRole {
   user,
@@ -28,6 +29,7 @@ class ChatMessageModel {
     this.timestamp,
     this.status = ChatMessageStatus.complete,
     this.video,
+    this.image,
     this.videoDurationRequest,
   });
 
@@ -40,6 +42,9 @@ class ChatMessageModel {
   /// A video Ki generated for this message, if any. Present from the moment
   /// generation starts, so the bubble can show progress before the clip exists.
   final VideoJobModel? video;
+
+  /// An image Ki is generating or has generated for this message.
+  final ImageJobModel? image;
 
   /// A duration choice Ki needs before it can create this message's video.
   final VideoDurationRequestModel? videoDurationRequest;
@@ -67,9 +72,11 @@ class ChatMessageModel {
     String? timestamp,
     ChatMessageStatus? status,
     VideoJobModel? video,
+    ImageJobModel? image,
     VideoDurationRequestModel? videoDurationRequest,
     bool clearTimestamp = false,
     bool clearVideo = false,
+    bool clearImage = false,
     bool clearVideoDurationRequest = false,
   }) {
     return ChatMessageModel(
@@ -79,6 +86,7 @@ class ChatMessageModel {
       timestamp: clearTimestamp ? null : (timestamp ?? this.timestamp),
       status: status ?? this.status,
       video: clearVideo ? null : (video ?? this.video),
+      image: clearImage ? null : (image ?? this.image),
       videoDurationRequest: clearVideoDurationRequest
           ? null
           : (videoDurationRequest ?? this.videoDurationRequest),
@@ -96,6 +104,7 @@ class ChatMessageModel {
           timestamp == other.timestamp &&
           status == other.status &&
           video == other.video &&
+          image == other.image &&
           videoDurationRequest == other.videoDurationRequest;
 
   @override
@@ -106,6 +115,7 @@ class ChatMessageModel {
     timestamp,
     status,
     video,
+    image,
     videoDurationRequest,
   );
 

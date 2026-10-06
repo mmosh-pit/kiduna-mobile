@@ -14,6 +14,16 @@ void main() {
     expect(r['job_id'], 'abc');
   });
 
+  test('decodes a generate_image job output', () {
+    final result = KiChatController.decodeToolPayload(
+      '{"success": true, "job_id": "image-123", "status": "generating"}',
+    );
+
+    expect(result, isNotNull);
+    expect(result!['job_id'], 'image-123');
+    expect(result['status'], 'generating');
+  });
+
   test('decodes a stringified ToolMessage wrapper', () {
     const wrapped =
         "content='{\"success\": true, \"job_id\": \"8504a3dd\", "
