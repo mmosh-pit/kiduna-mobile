@@ -573,11 +573,18 @@ class KiChatController extends Notifier<KiChatState> {
     final job = VideoJobModel.fromToolOutput(parsed);
     if (job.jobId.isEmpty) return;
 
+    // A user may type "make it 15 seconds" instead of pressing the picker.
+    // The backend correctly starts that job, but the earlier picker would stay
+    // active because only submitVideoDuration() marked it as consumed.
+    final messages = messagesWithLatestDurationSubmitted(
+      state.messages,
+      seconds: job.durationSeconds,
+    );
     _pendingVideoJobId = job.jobId;
     _submittedDurationMessageId = null;
     _awaitingAssistantMessage = job;
     _awaitingDurationRequest = null;
-    state = state.copyWith(clearVideoBlockedReason: true);
+    state = state.copyWith(messages: messages, clearVideoBlockedReason: true);
     unawaited(_pollVideoJob(job));
   }
 
@@ -659,6 +666,31 @@ class KiChatController extends Notifier<KiChatState> {
       videoDurationRequest: request.copyWith(submittedSeconds: seconds),
     );
     return updated;
+  }
+
+  /// Consume the newest open picker when a typed duration starts a video job.
+  ///
+  /// Typed requests can use any whole duration accepted by the backend, even
+  /// when that value is not one of the slider's visual steps.
+  @visibleForTesting
+  static List<ChatMessageModel>? messagesWithLatestDurationSubmitted(
+    List<ChatMessageModel> messages, {
+    required int seconds,
+  }) {
+    for (var index = messages.length - 1; index >= 0; index--) {
+      final request = messages[index].videoDurationRequest;
+      if (request == null || request.isSubmitted) continue;
+      if (seconds < request.minSeconds || seconds > request.maxSeconds) {
+        return null;
+      }
+
+      final updated = [...messages];
+      updated[index] = updated[index].copyWith(
+        videoDurationRequest: request.copyWith(submittedSeconds: seconds),
+      );
+      return updated;
+    }
+    return null;
   }
 
   /// Re-enable a submitted picker when its follow-up did not start a job.

@@ -70,4 +70,50 @@ void main() {
     expect(updated, isNotNull);
     expect(updated!.single.videoDurationRequest!.isSubmitted, isFalse);
   });
+
+  test('typed duration consumes the newest open picker', () {
+    const older = ChatMessageModel(
+      id: 'assistant_older',
+      role: ChatRole.assistant,
+      content: 'Choose a duration.',
+      videoDurationRequest: VideoDurationRequestModel(),
+    );
+    const newer = ChatMessageModel(
+      id: 'assistant_newer',
+      role: ChatRole.assistant,
+      content: 'Choose a duration.',
+      videoDurationRequest: VideoDurationRequestModel(),
+    );
+
+    final updated = KiChatController.messagesWithLatestDurationSubmitted(const [
+      older,
+      newer,
+    ], seconds: 8);
+
+    expect(updated, isNotNull);
+    expect(updated![0].videoDurationRequest!.isSubmitted, isFalse);
+    expect(updated[1].videoDurationRequest!.submittedSeconds, 8);
+  });
+
+  test(
+    'typed duration leaves picker open when no valid job duration exists',
+    () {
+      expect(
+        KiChatController.messagesWithLatestDurationSubmitted(const [
+          message,
+        ], seconds: 61),
+        isNull,
+      );
+      expect(
+        KiChatController.messagesWithLatestDurationSubmitted(const [
+          ChatMessageModel(
+            id: 'plain',
+            role: ChatRole.assistant,
+            content: 'No picker.',
+          ),
+        ], seconds: 15),
+        isNull,
+      );
+    },
+  );
 }
