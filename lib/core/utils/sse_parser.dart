@@ -10,11 +10,15 @@ class SseParser {
   static Stream<SseEvent> parse(Stream<List<int>> byteStream) async* {
     final buffer = StringBuffer();
 
-    await for (final bytes in byteStream) {
-      final chunk = utf8.decode(bytes);
+    // Decode the stream incrementally so a UTF-8 code point split across two
+    // network chunks is not treated as malformed input.
+    final textStream = byteStream
+        .map<List<int>>((bytes) => bytes)
+        .transform(utf8.decoder);
+    await for (final chunk in textStream) {
       buffer.write(chunk);
 
-      final raw = buffer.toString();
+      final raw = _normalizeLineEndings(buffer.toString());
       final frames = raw.split('\n\n');
 
       if (frames.length <= 1) {
@@ -33,13 +37,30 @@ class SseParser {
         ..write(frames.last);
     }
 
-    final remaining = buffer.toString().trim();
+    final remaining = _normalizeLineEndings(
+      buffer.toString(),
+      streamComplete: true,
+    ).trim();
     if (remaining.isNotEmpty) {
       final event = _parseFrame(remaining);
       if (event != null) {
         yield event;
       }
     }
+  }
+
+  /// SSE permits CRLF, LF, and CR line endings. Preserve a trailing CR while
+  /// the stream is open because the matching LF may arrive in the next chunk.
+  static String _normalizeLineEndings(
+    String input, {
+    bool streamComplete = false,
+  }) {
+    final preserveTrailingCr = !streamComplete && input.endsWith('\r');
+    var normalized = preserveTrailingCr
+        ? input.substring(0, input.length - 1)
+        : input;
+    normalized = normalized.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+    return preserveTrailingCr ? '$normalized\r' : normalized;
   }
 
   static SseEvent? _parseFrame(String frame) {
