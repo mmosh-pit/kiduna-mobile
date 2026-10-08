@@ -702,5 +702,12 @@
     "placeholders": {
       "seconds": { "type": "int" }
     }
+  },
+  "generateVideoSecondsWithPrompt": "Generate a {seconds}-second video using this scene: {prompt}",
+  "@generateVideoSecondsWithPrompt": {
+    "placeholders": {
+      "seconds": { "type": "int" },
+      "prompt": { "type": "String" }
+    }
   }
 }
