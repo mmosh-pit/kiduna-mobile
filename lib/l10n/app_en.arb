@@ -134,7 +134,7 @@
   "dreaming": "Dreaming",
   "engaged": "Engaged",
   "openState": "Open",
-  "invitationMessageFor": "{name}, Alice has invited you to join Kinship Duna. This is a personal invitation — when you arrive, Ki will know who sent you and help you find your way.",
+  "invitationMessageFor": "{name}, you have been invited to join Kinship Duna. This is a personal invitation — when you arrive, Ki will know who sent you and help you find your way.",
   "@invitationMessageFor": {
     "placeholders": {
       "name": {
@@ -212,7 +212,7 @@
     }
   },
   "persona": "Persona",
-  "aliceCatalyst": "Alice — Catalyst",
+  "aliceCatalyst": "Catalyst",
   "view": "View",
   "viewNcev": "T1 · S1 · 1.0 — Newly Created Ecosystem View (NCEV)",
   "viewAev": "T1 · S1 · 1.1 — Advanced Ecosystem View (AEV)",
@@ -227,7 +227,7 @@
   "scene": "Scene",
   "yourAllies": "Your Allies",
   "messageKi": "Message Ki…",
-  "aevKiWelcome": "Welcome Alice. Kinship Duna is the current Realm. The Field shows the other Realms visible through this Source’s authority and relationships.",
+  "aevKiWelcome": "Welcome. Kinship Duna is the current Realm. The Field shows the other Realms visible through this Source’s authority and relationships.",
   "aevKiWelcomeDetail": "Possible Actions starts with Kinship Duna. Select another Realm to inspect what may be done there.",
   "whatShouldIDoFirst": "What should I do first?",
   "tellMeMoreAboutKinshipDuna": "Tell me more about Kinship Duna.",
@@ -381,7 +381,7 @@
   "trigger": "Trigger",
   "prepareSelectedAutomations": "Prepare selected Automations",
   "everyAccountSpecificAndVerified": "Every account is specific and verified",
-  "stopWhenAuthorityExpires": "Stop when authority expires, the work conflicts, or Alice pauses it.",
+  "stopWhenAuthorityExpires": "Stop when authority expires, the work conflicts, or you pause it.",
   "connectedDisconnect": "Connected · Disconnect",
   "googleDocsOrDriveLink": "Google Docs or Drive link",
   "checkAccess": "Check access",
