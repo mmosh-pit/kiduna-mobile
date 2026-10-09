@@ -19,6 +19,7 @@ import '../../../features/auth/enums/auth_status.dart';
 import '../../../features/dashboard/controllers/ecosystem_controller.dart';
 import '../../../features/field/controllers/field_controller.dart';
 import 'ally_controller.dart';
+import 'image_attachment_restore.dart';
 
 @immutable
 class KiChatState {
@@ -173,9 +174,11 @@ class KiChatController extends Notifier<KiChatState> {
       if (!ref.mounted) return;
       final withVideos = await _restoreVideoAttachments(messages);
       if (!ref.mounted) return;
+      final withMedia = await _restoreImageAttachments(withVideos);
+      if (!ref.mounted) return;
       state = state.copyWith(
         isLoading: false,
-        messages: withVideos,
+        messages: withMedia,
         historyLoaded: true,
       );
       AppLogger.info(
@@ -475,6 +478,26 @@ class KiChatController extends Notifier<KiChatState> {
     }
 
     return restored;
+  }
+
+  /// Put previously generated images back onto reloaded chat history.
+  Future<List<ChatMessageModel>> _restoreImageAttachments(
+    List<ChatMessageModel> messages,
+  ) async {
+    final wallet = _userWallet;
+    if (wallet == null || wallet.isEmpty || messages.isEmpty) return messages;
+
+    final List<ImageJobModel> jobs;
+    try {
+      jobs = await ImageGenerationService.instance.fetchMyJobs(wallet: wallet);
+    } on AppException catch (e) {
+      AppLogger.warning(
+        'Could not restore image attachments: ${e.message}',
+        tag: 'KiChat',
+      );
+      return messages;
+    }
+    return restoreImageAttachments(messages, jobs);
   }
 
   /// Decode a tool's JSON return value from a `toolResult` payload.

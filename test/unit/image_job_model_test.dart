@@ -1,7 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kiduna/core/network/api_endpoints.dart';
 import 'package:kiduna/data/models/image_job_model.dart';
 
 void main() {
+  test('builds the owner-scoped image jobs endpoint', () {
+    final path = ApiEndpoints.imageJobs('WALLET/1', limit: 25);
+    expect(path, '/api/image-jobs?wallet=WALLET%2F1&limit=25');
+  });
+
   group('ImageJobModel', () {
     test('parses a ready image job', () {
       final job = ImageJobModel.fromJson(const {
