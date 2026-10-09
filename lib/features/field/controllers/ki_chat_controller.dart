@@ -12,6 +12,7 @@ import '../../../data/models/sse_event.dart';
 import '../../../data/services/chat_service.dart';
 import '../../../data/services/image_generation_service.dart';
 import '../../../features/auth/controllers/auth_controller.dart';
+import '../../ki_chat/controllers/image_attachment_restore.dart';
 import '../controllers/field_controller.dart';
 import 'ally_controller.dart';
 
@@ -103,9 +104,11 @@ class KiChatController extends Notifier<KiChatState> {
         userWallet: userWallet,
       );
       if (!ref.mounted) return;
+      final withImages = await _restoreImageAttachments(messages);
+      if (!ref.mounted) return;
       state = state.copyWith(
         isLoading: false,
-        messages: messages,
+        messages: withImages,
         historyLoaded: true,
       );
       AppLogger.info(
@@ -133,6 +136,26 @@ class KiChatController extends Notifier<KiChatState> {
         error: 'Unable to load conversation history.',
         historyLoaded: true,
       );
+    }
+  }
+
+  Future<List<ChatMessageModel>> _restoreImageAttachments(
+    List<ChatMessageModel> messages,
+  ) async {
+    final wallet = _userWallet;
+    if (wallet == null || wallet.isEmpty || messages.isEmpty) return messages;
+
+    try {
+      final jobs = await ImageGenerationService.instance.fetchMyJobs(
+        wallet: wallet,
+      );
+      return restoreImageAttachments(messages, jobs);
+    } on AppException catch (error) {
+      AppLogger.warning(
+        'Could not restore image attachments: ${error.message}',
+        tag: 'KiChat',
+      );
+      return messages;
     }
   }
 

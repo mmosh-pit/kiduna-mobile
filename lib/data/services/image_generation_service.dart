@@ -39,4 +39,31 @@ class ImageGenerationService {
       );
     }
   }
+
+  /// Every image the caller has generated, newest first.
+  Future<List<ImageJobModel>> fetchMyJobs({
+    required String wallet,
+    int limit = 50,
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.imageJobs(wallet, limit: limit),
+      );
+      final raw = response.data?['jobs'] as List<dynamic>? ?? <dynamic>[];
+      return raw
+          .map((item) => ImageJobModel.fromJson(item as Map<String, dynamic>))
+          .toList();
+    } on DioException catch (e) {
+      if (e.error is AppException) throw e.error!;
+      AppLogger.error(
+        'Failed to fetch my image jobs',
+        tag: 'ImageGenerationService',
+        error: e,
+        stackTrace: e.stackTrace,
+      );
+      throw const NetworkException(
+        'Unable to connect. Please check your internet.',
+      );
+    }
+  }
 }
