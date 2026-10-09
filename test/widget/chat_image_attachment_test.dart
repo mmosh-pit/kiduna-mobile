@@ -40,4 +40,22 @@ void main() {
 
     expect(find.textContaining('ran out of memory'), findsOneWidget);
   });
+
+  testWidgets('falls back to an HTML image when web CORS blocks decoding', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      subject(
+        const ImageJobModel(
+          jobId: 'image-3',
+          status: ImageJobStatus.ready,
+          imageUrl: 'https://storage.googleapis.com/example/image.jpg',
+        ),
+      ),
+    );
+
+    final image = tester.widget<Image>(find.byType(Image));
+    final provider = image.image as NetworkImage;
+    expect(provider.webHtmlElementStrategy, WebHtmlElementStrategy.fallback);
+  });
 }

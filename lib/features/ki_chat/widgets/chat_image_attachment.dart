@@ -108,6 +108,11 @@ class _ReadyImage extends StatelessWidget {
             child: Image.network(
               imageUrl,
               fit: BoxFit.cover,
+              // Flutter Web normally downloads image bytes for CanvasKit,
+              // which requires the remote host to allow CORS. Public GCS
+              // objects can still be displayed safely through an HTML image
+              // element if a bucket policy is missing or temporarily stale.
+              webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
               loadingBuilder: (context, child, progress) {
                 if (progress == null) return child;
                 return _Frame(
