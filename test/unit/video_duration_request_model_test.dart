@@ -9,6 +9,7 @@ void main() {
       'step_seconds': 5,
       'initial_seconds': 15,
       'usdc_per_second': 0.56,
+      'video_prompt': 'A moonlit forest',
     });
 
     expect(request.minSeconds, 5);
@@ -16,6 +17,7 @@ void main() {
     expect(request.stepSeconds, 5);
     expect(request.initialSeconds, 15);
     expect(request.usdcPerSecond, 0.56);
+    expect(request.videoPrompt, 'A moonlit forest');
     expect(request.estimatedUsdcCost(15), closeTo(8.4, 0.000001));
     expect(request.isSubmitted, isFalse);
   });

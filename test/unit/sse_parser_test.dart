@@ -1,8 +1,9 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kiduna_mobile/core/utils/sse_parser.dart';
-import 'package:kiduna_mobile/data/models/sse_event.dart';
+import 'package:kiduna/core/utils/sse_parser.dart';
+import 'package:kiduna/data/models/sse_event.dart';
 
 /// Helper: encode a string as a single-element byte stream.
 Stream<List<int>> _bytesFrom(String data) async* {
@@ -42,6 +43,47 @@ void main() {
       expect(events[1], isA<SseTokenEvent>());
       expect(events[2], isA<SseDoneEvent>());
       expect((events[2] as SseDoneEvent).fullResponse, 'Hi there');
+    });
+
+    test('parses standard CRLF-delimited events', () async {
+      final stream = _bytesFrom(
+        'data: {"event":"token","token":"Hi"}\r\n\r\n'
+        'data: {"event":"done","fullResponse":"Hi"}\r\n\r\n',
+      );
+
+      final events = await SseParser.parse(stream).toList();
+
+      expect(events, hasLength(2));
+      expect((events[0] as SseTokenEvent).token, 'Hi');
+      expect((events[1] as SseDoneEvent).fullResponse, 'Hi');
+    });
+
+    test('accepts Dio-style Uint8List response streams', () async {
+      final Stream<Uint8List> dioStream = Stream.value(
+        Uint8List.fromList(
+          utf8.encode('data: {"event":"token","token":"Hi"}\r\n\r\n'),
+        ),
+      );
+      final Stream<List<int>> stream = dioStream;
+
+      final events = await SseParser.parse(stream).toList();
+
+      expect(events, hasLength(1));
+      expect((events.single as SseTokenEvent).token, 'Hi');
+    });
+
+    test('handles a CRLF frame boundary split across chunks', () async {
+      final stream = _chunkedBytesFrom([
+        'data: {"event":"token","token":"a"}\r',
+        '\n\r',
+        '\ndata: {"event":"token","token":"b"}\r\n\r\n',
+      ]);
+
+      final events = await SseParser.parse(stream).toList();
+
+      expect(events, hasLength(2));
+      expect((events[0] as SseTokenEvent).token, 'a');
+      expect((events[1] as SseTokenEvent).token, 'b');
     });
 
     test('handles event split across two chunks', () async {

@@ -9,6 +9,7 @@ class VideoDurationRequestModel {
     this.stepSeconds = 5,
     this.initialSeconds = 15,
     this.usdcPerSecond,
+    this.videoPrompt = '',
     this.submittedSeconds,
   });
 
@@ -17,6 +18,7 @@ class VideoDurationRequestModel {
   final int stepSeconds;
   final int initialSeconds;
   final double? usdcPerSecond;
+  final String videoPrompt;
   final int? submittedSeconds;
 
   bool get isSubmitted => submittedSeconds != null;
@@ -62,6 +64,7 @@ class VideoDurationRequestModel {
       stepSeconds: stepSeconds,
       initialSeconds: initialSeconds,
       usdcPerSecond: usdcPerSecond,
+      videoPrompt: (json['video_prompt'] as String?)?.trim() ?? '',
     );
   }
 
@@ -71,6 +74,7 @@ class VideoDurationRequestModel {
     int? stepSeconds,
     int? initialSeconds,
     double? usdcPerSecond,
+    String? videoPrompt,
     int? submittedSeconds,
     bool clearUsdcPerSecond = false,
     bool clearSubmittedSeconds = false,
@@ -83,6 +87,7 @@ class VideoDurationRequestModel {
       usdcPerSecond: clearUsdcPerSecond
           ? null
           : (usdcPerSecond ?? this.usdcPerSecond),
+      videoPrompt: videoPrompt ?? this.videoPrompt,
       submittedSeconds: clearSubmittedSeconds
           ? null
           : (submittedSeconds ?? this.submittedSeconds),
@@ -102,6 +107,7 @@ class VideoDurationRequestModel {
             stepSeconds == other.stepSeconds &&
             initialSeconds == other.initialSeconds &&
             usdcPerSecond == other.usdcPerSecond &&
+            videoPrompt == other.videoPrompt &&
             submittedSeconds == other.submittedSeconds;
   }
 
@@ -112,6 +118,7 @@ class VideoDurationRequestModel {
     stepSeconds,
     initialSeconds,
     usdcPerSecond,
+    videoPrompt,
     submittedSeconds,
   );
 }

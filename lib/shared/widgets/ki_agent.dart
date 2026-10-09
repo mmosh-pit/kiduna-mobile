@@ -62,8 +62,14 @@ class _KiAgentState extends ConsumerState<KiAgent> {
     ref.read(kiChatControllerProvider.notifier).sendMessage(text);
   }
 
-  Future<void> _selectVideoDuration(String messageId, int seconds) async {
-    final followUpMessage = context.l10n.generateDiscussedVideoSeconds(seconds);
+  Future<void> _selectVideoDuration(
+    String messageId,
+    int seconds,
+    String videoPrompt,
+  ) async {
+    final followUpMessage = videoPrompt.isEmpty
+        ? context.l10n.generateDiscussedVideoSeconds(seconds)
+        : context.l10n.generateVideoSecondsWithPrompt(seconds, videoPrompt);
     await ref
         .read(kiChatControllerProvider.notifier)
         .submitVideoDuration(
@@ -253,7 +259,7 @@ class _KiChatThread extends StatelessWidget {
   final String streamingBuffer;
   final bool isLoading;
   final String? error;
-  final Future<void> Function(String messageId, int seconds)
+  final Future<void> Function(String messageId, int seconds, String videoPrompt)
   onVideoDurationSelected;
 
   @override
@@ -319,7 +325,11 @@ class _KiChatThread extends StatelessWidget {
             padding: const EdgeInsets.only(top: 8),
             child: VideoDurationPicker(
               request: durationRequest,
-              onGenerate: (seconds) => onVideoDurationSelected(msg.id, seconds),
+              onGenerate: (seconds) => onVideoDurationSelected(
+                msg.id,
+                seconds,
+                durationRequest.videoPrompt,
+              ),
             ),
           ),
         );
